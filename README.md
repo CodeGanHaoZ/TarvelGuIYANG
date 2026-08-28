@@ -43,6 +43,14 @@ pnpm start
 
 本工作区可用 `node_modules/.bin/tsc.cmd --noEmit`、`node_modules/.bin/oxlint.cmd`、`node_modules/.bin/vinext.cmd build`，测试为 `node --experimental-strip-types --test tests/travel.test.mjs`。这些命令需先把可用 Node 添加到 PATH。
 
+## 首页社交灵感与轮播（新增）
+
+- 首页提供 2 条可播放 MP4 演示短片、3 篇可阅读图文，使用虚构的抖音/小红书账号、互动数与内容。视频由现有风景图合成，配中文分镜字幕，不冒充真实平台视频。
+- 点“AI 整理”可处理单篇，也可勾选多篇加入灵感篮后合并。Mock 规则按样例分镜提取地点、合并重复项、保留来源与时间码。
+- 路线草稿支持地图点位联动、增删、上下调序、偏好推荐和手动搜索。进入定制后选择日期、预算与节奏，生成后继续沿用原有行程编辑。
+- 社交内容、今日景区推荐和六类主题均为单行横向轮播；支持触摸滑动、触控板、左右箭头以及轨道聚焦后的方向键/Home/End；不自动轮播。
+- 本轮无新增运行时依赖；`scripts/create-demo-videos.py` 仅供重新生成视频素材，所用 imageio-ffmpeg 为临时制作工具，不参与网站运行。
+
 ## 建议演示流程
 
 1. 首页粘贴 `https://www.xiaohongshu.com/explore/qianlv-demo`，点击生成攻略。支持的社交域名**统一返回贵阳样例，不抓取实际链接**；也可输入“甲秀楼、贵州省博物馆”。

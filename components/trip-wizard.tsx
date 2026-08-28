@@ -30,9 +30,29 @@ export function TripWizard({
   imported?: string[];
 }) {
   const [step, setStep] = useState(0),
-    [destination, setDestination] = useState('贵州'),
+    [destination, setDestination] = useState(() => {
+      const regions = [...new Set(imported.map((id) => placeById(id).region))];
+      return regions.length === 1 ? regions[0] : '贵州';
+    }),
     [start, setStart] = useState('2026-08-29'),
-    [days, setDays] = useState(3),
+    [days, setDays] = useState(() => {
+      if (!imported.length) return 3;
+      const counts: Record<string, number> = {};
+      for (const id of new Set(imported)) {
+        const region = placeById(id).region;
+        counts[region] = (counts[region] || 0) + 1;
+      }
+      return Math.min(
+        7,
+        Math.max(
+          1,
+          Object.values(counts).reduce(
+            (n, count) => n + Math.ceil(count / 3),
+            0,
+          ),
+        ),
+      );
+    }),
     [people, setPeople] = useState('我、小夏'),
     [budget, setBudget] = useState(3000),
     [preferences, setPreferences] = useState<Theme[]>([]),

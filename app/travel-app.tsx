@@ -57,6 +57,8 @@ import { Progress } from '@/components/ui/progress';
 import { RouteMap } from '@/components/route-map';
 import { PlaceDetail } from '@/components/place-detail';
 import { TripWizard } from '@/components/trip-wizard';
+import { HomeCarousel } from '@/components/home-carousel';
+import { SocialInspiration } from '@/components/social-inspiration';
 import {
   initialData,
   restore,
@@ -653,38 +655,47 @@ export default function TravelApp() {
                   </Button>
                 </form>
               </section>
-              <div className="section-heading">
-                <div>
-                  <h2>
-                    今天，值得去哪里？{' '}
-                    <span className="soft-label">AI 精选</span>
-                  </h2>
-                  <p>不只看评分，更看今天适不适合你。</p>
-                </div>
-                <button
-                  className="text-btn"
-                  onClick={() => {
-                    go('discover');
-                    setTripTab('探索');
-                  }}
-                >
-                  探索更多 <ArrowRight size={16} />
-                </button>
-              </div>
-              <div className="destination-grid">
-                {['xiaoqikong', 'xijiang', 'jiaxiu'].map(card)}
-              </div>
-              <div className="section-heading">
-                <div>
-                  <h2>六种方式，遇见贵州</h2>
-                  <p>从山河到烟火，每一种喜欢都值得出发。</p>
-                </div>
-              </div>
-              <div className="theme-categories">
+              <SocialInspiration
+                onCustomize={(ids) => {
+                  setImported(ids);
+                  open('create');
+                }}
+              />
+              <HomeCarousel
+                title="今天，值得去哪里？"
+                subtitle="AI 精选 · 不只看评分，更看今天适不适合你。"
+                actions={
+                  <button
+                    className="text-btn"
+                    onClick={() => {
+                      go('discover');
+                      setTripTab('探索');
+                    }}
+                  >
+                    探索更多 <ArrowRight size={16} />
+                  </button>
+                }
+              >
+                {[
+                  'xiaoqikong',
+                  'xijiang',
+                  'jiaxiu',
+                  'huangguoshu',
+                  'museum',
+                  'qingyan',
+                  'zunyi',
+                ].map(card)}
+              </HomeCarousel>
+              <HomeCarousel
+                compact
+                title="六种方式，遇见贵州"
+                subtitle="从山河到烟火，每一种喜欢都值得出发。"
+              >
                 {themes.map((t, i) => {
                   const C = categoryIcons[i];
                   return (
                     <button
+                      className="theme-carousel-card"
                       key={t}
                       onClick={() => {
                         go('discover');
@@ -698,7 +709,7 @@ export default function TravelApp() {
                     </button>
                   );
                 })}
-              </div>
+              </HomeCarousel>
               <DataFootnote />
             </main>
           )}

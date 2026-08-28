@@ -649,6 +649,207 @@ export function splitExpenses(expenses: Expense[], people: string[]) {
     transfers,
   };
 }
+export type SocialPost = {
+  id: string;
+  platform: '抖音' | '小红书';
+  kind: 'video' | 'article';
+  title: string;
+  author: string;
+  cover: string;
+  likes: string;
+  tags: string[];
+  intro: string;
+  mentions: { placeId: string; quote: string; at?: string }[];
+  media?: string;
+  captions?: string;
+  duration?: string;
+};
+/** All creators, engagement counts, copy and media are fictional demo fixtures. */
+export const socialPosts: SocialPost[] = [
+  {
+    id: 'dy-guizhou',
+    platform: '抖音',
+    kind: 'video',
+    title: '把贵州的三种心动，装进一段旅行',
+    author: '阿禾的山野日记',
+    cover: '/images/xiaoqikong.jpg',
+    likes: '2.8万',
+    tags: ['山水漫游', '贵州三站'],
+    intro:
+      '从小七孔的绿，到苗寨的灯，再到甲秀楼的晚风。这份跨城灵感，请留出交通时间，别赶在一天走完。',
+    media: '/videos/guizhou-demo.mp4',
+    captions: '/videos/guizhou-demo.vtt',
+    duration: '00:09',
+    mentions: [
+      {
+        placeId: 'xiaoqikong',
+        at: '00:00',
+        quote: '第一站荔波小七孔，把半天交给山水。',
+      },
+      {
+        placeId: 'xijiang',
+        at: '00:03',
+        quote: '第二站西江千户苗寨，等一盏灯亮起来。',
+      },
+      {
+        placeId: 'jiaxiu',
+        at: '00:06',
+        quote: '最后来到甲秀楼，沿南明河慢慢走。',
+      },
+    ],
+  },
+  {
+    id: 'xhs-guiyang',
+    platform: '小红书',
+    kind: 'article',
+    title: '贵阳慢游日记｜从河边晚风到一口烟火气',
+    author: '小满在路上',
+    cover: '/images/jiaxiu.jpg',
+    likes: '3,216',
+    tags: ['城市漫步', '美食体验'],
+    intro:
+      '不赶路的一天，留给贵阳的老城与小店。这是一份可以随时删改的路线草稿，营业时间和预约请出发前再确认。',
+    mentions: [
+      {
+        placeId: 'jiaxiu',
+        quote: '从甲秀楼开始，沿南明河散步，给拍照留点时间。',
+      },
+      {
+        placeId: 'qingyun',
+        quote: '再去青云路美食街，按自己的口味挑一两样小吃。',
+      },
+      {
+        placeId: 'batik',
+        quote: '想加点手作，就把贵阳蜡染体验工坊放进备选。工坊为虚构样例。',
+      },
+    ],
+  },
+  {
+    id: 'dy-waterfall',
+    platform: '抖音',
+    kind: 'video',
+    title: '听，山水在说话｜黄果树与小七孔',
+    author: '山间放映室',
+    cover: '/images/huangguoshu.jpg',
+    likes: '1.6万',
+    tags: ['瀑布', '自然景观'],
+    intro:
+      '两处山水、两段慢时光。安顺与荔波之间需要单独安排交通，不是一条当日步行路线。',
+    media: '/videos/waterfall-demo.mp4',
+    captions: '/videos/waterfall-demo.vtt',
+    duration: '00:06',
+    mentions: [
+      {
+        placeId: 'huangguoshu',
+        at: '00:00',
+        quote: '黄果树瀑布，留出充足游览与接驳时间。',
+      },
+      {
+        placeId: 'xiaoqikong',
+        at: '00:03',
+        quote: '下一段旅行去荔波小七孔，慢慢看水。',
+      },
+    ],
+  },
+  {
+    id: 'xhs-miao',
+    platform: '小红书',
+    kind: 'article',
+    title: '苗寨不止夜景，还有值得慢下来的手艺',
+    author: '蓝染小巷',
+    cover: '/images/xijiang.jpg',
+    likes: '5,082',
+    tags: ['民族文化', '在地体验'],
+    intro:
+      '把拍照之外的时间留给文化与餐桌。体验项目和店铺均为演示样例，没有真实预约入口。',
+    mentions: [
+      {
+        placeId: 'xijiang',
+        quote: '西江千户苗寨先走一走，拍摄居民前记得征求同意。',
+      },
+      {
+        placeId: 'silver',
+        quote: '苗乡银饰体验，看看纹样背后的故事。此工坊为虚构供给。',
+      },
+      {
+        placeId: 'sourfish',
+        quote: '最后留一餐给苗家酸汤鱼体验，辣度和过敏原先问清。',
+      },
+    ],
+  },
+  {
+    id: 'xhs-anshun',
+    platform: '小红书',
+    kind: 'article',
+    title: '安顺两日灵感｜瀑布、石桥与屯堡故事',
+    author: '一颗旅行松果',
+    cover: '/images/huangguoshu.jpg',
+    likes: '2,469',
+    tags: ['自然景观', '人文慢游'],
+    intro:
+      '自然与人文各留一段时间。以下只是内容示例，具体排期交给你的偏好、体力与天气。',
+    mentions: [
+      {
+        placeId: 'huangguoshu',
+        quote: '先去黄果树瀑布，雨具和防滑鞋提前准备。',
+      },
+      { placeId: 'tianxing', quote: '天星桥景区按体力选择步行长度。' },
+      {
+        placeId: 'tunbao',
+        quote: '另留一天给天龙屯堡，演出场次需要实际核验。',
+      },
+    ],
+  },
+];
+export function organizeSocialPosts(postIds: string[]) {
+  const selected = [...new Set(postIds)]
+    .map((id) => socialPosts.find((p) => p.id === id))
+    .filter((p): p is SocialPost => Boolean(p));
+  if (!selected.length) throw new Error('请先选择至少一篇演示内容。');
+  const stops: {
+    placeId: string;
+    sources: { postId: string; quote: string; at?: string }[];
+  }[] = [];
+  for (const post of selected)
+    for (const mention of post.mentions) {
+      if (!places.some((p) => p.id === mention.placeId)) continue;
+      let stop = stops.find((s) => s.placeId === mention.placeId);
+      if (!stop) {
+        stop = { placeId: mention.placeId, sources: [] };
+        stops.push(stop);
+      }
+      stop.sources.push({
+        postId: post.id,
+        quote: mention.quote,
+        at: mention.at,
+      });
+    }
+  return {
+    stops,
+    postIds: selected.map((p) => p.id),
+    regions: [...new Set(stops.map((s) => placeById(s.placeId).region))],
+  };
+}
+export function recommendSocialPlaces(
+  routeIds: string[],
+  preferences: Theme[] = [],
+) {
+  const known = places.filter((p) => routeIds.includes(p.id));
+  const regions = new Set(known.map((p) => p.region));
+  return places
+    .filter(
+      (p) =>
+        !routeIds.includes(p.id) &&
+        regions.has(p.region) &&
+        (!preferences.length || preferences.includes(p.category)),
+    )
+    .sort((a, b) => score(b).total - score(a).total)
+    .slice(0, 4)
+    .map((p) => ({
+      placeId: p.id,
+      reason: `${p.region}同区域补充 · ${preferences.length ? '符合所选偏好' : p.category} · 模拟推荐`,
+    }));
+}
 export async function parseGuide(input: string): Promise<string[]> {
   await new Promise((r) => setTimeout(r, 850));
   const text = input.trim();

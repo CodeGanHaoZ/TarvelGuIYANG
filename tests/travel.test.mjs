@@ -15,7 +15,82 @@ import {
   splitExpenses,
   parseGuide,
   replan,
+  organizeSocialPosts,
+  recommendSocialPlaces,
 } from '../lib/travel.ts';
+
+test('social extraction merges overlapping posts while retaining ordered source evidence', () => {
+  const result = organizeSocialPosts([
+    'dy-guizhou',
+    'xhs-guiyang',
+    'dy-guizhou',
+  ]);
+  assert.deepEqual(result.postIds, ['dy-guizhou', 'xhs-guiyang']);
+  assert.deepEqual(
+    result.stops.map((s) => s.placeId),
+    ['xiaoqikong', 'xijiang', 'jiaxiu', 'qingyun', 'batik'],
+  );
+  assert.deepEqual(
+    result.stops
+      .find((s) => s.placeId === 'jiaxiu')
+      .sources.map((s) => s.postId),
+    ['dy-guizhou', 'xhs-guiyang'],
+  );
+  assert.equal(result.stops[0].sources[0].at, '00:00');
+  result.stops[0].sources[0].quote = 'changed locally';
+  assert.notEqual(
+    organizeSocialPosts(['dy-guizhou']).stops[0].sources[0].quote,
+    'changed locally',
+  );
+});
+
+test('social recommendations stay in selected regions, respect preferences and exclude chosen stops', () => {
+  const ids = ['jiaxiu', 'qingyun'];
+  const recommendations = recommendSocialPlaces(ids, ['民族文化']);
+  assert.ok(recommendations.length > 0);
+  for (const recommendation of recommendations) {
+    const p = places.find((p) => p.id === recommendation.placeId);
+    assert.equal(p.region, '贵阳');
+    assert.equal(p.category, '民族文化');
+    assert.ok(!ids.includes(p.id));
+  }
+  assert.deepEqual(recommendSocialPlaces([], ['自然景观']), []);
+  assert.deepEqual(recommendSocialPlaces(ids, ['红色旅游']), []);
+});
+
+test('customized social draft carries edits into a separately editable trip', () => {
+  const draft = organizeSocialPosts(['xhs-guiyang']);
+  const edited = [
+    'museum',
+    ...draft.stops.filter((s) => s.placeId === 'qingyun').map((s) => s.placeId),
+  ];
+  const trip = makeTrip(
+    {
+      destination: '贵阳',
+      start: '2026-09-01',
+      dayCount: 1,
+      people: ['我'],
+      budget: 1000,
+      pace: '均衡',
+      preferences: [],
+    },
+    edited,
+  );
+  assert.deepEqual(
+    trip.days[0].items.map((i) => i.placeId),
+    ['museum', 'qingyun'],
+  );
+  trip.days[0].items.reverse();
+  assert.deepEqual(
+    organizeSocialPosts(['xhs-guiyang']).stops.map((s) => s.placeId),
+    ['jiaxiu', 'qingyun', 'batik'],
+  );
+});
+
+test('empty or unknown social selections cannot create a fabricated route', () => {
+  assert.throws(() => organizeSocialPosts([]), /选择/);
+  assert.throws(() => organizeSocialPosts(['missing']), /选择/);
+});
 
 test('low budget filters unaffordable mock experiences and explains omissions', () => {
   const t = makeTrip({

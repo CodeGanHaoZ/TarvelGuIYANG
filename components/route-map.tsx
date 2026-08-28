@@ -15,11 +15,13 @@ export function RouteMap({
   selected,
   onSelect,
   dayIndex,
+  label,
 }: {
   items: TripItem[];
   selected: string | null;
   onSelect: (id: string) => void;
   dayIndex: number;
+  label?: string;
 }) {
   const [zoom, setZoom] = useState(1),
     [labels, setLabels] = useState(true),
@@ -46,7 +48,7 @@ export function RouteMap({
       <div className="map-topline">
         <span className="map-badge">
           <MapPin size={14} />
-          {coords[0]?.region || '贵州'} · 第 {dayIndex + 1} 天
+          {label || `${coords[0]?.region || '贵州'} · 第 ${dayIndex + 1} 天`}
         </span>
         <span className="map-mock">地理示意图 · 非导航</span>
       </div>
