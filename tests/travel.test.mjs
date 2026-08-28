@@ -51,6 +51,348 @@ import {
   amapRouteUrl,
   transportCost,
 } from '../lib/transport.ts';
+import {
+  buildDayPlan,
+  goScore,
+  chooseDayTransport,
+  replaceDayPlace,
+  dayPlanMarkdown,
+  transportForProfile,
+} from '../lib/day-plan.ts';
+
+function dailyTestTrip(ids = ['qianling', 'museum']) {
+  const trip = initialData().trips[0];
+  trip.days[0] = {
+    id: 'test-day',
+    date: '2026-09-01',
+    title: '测试日',
+    items: ids.map(makeItem),
+  };
+  return trip;
+}
+
+test('daily plans enrich all six themes and legacy days without changing chosen POIs', () => {
+  for (const theme of themes) {
+    const trip = makeTrip({
+      ...tripCreationDefaults([], theme),
+      start: '2026-09-01',
+      people: ['我', '家人'],
+      budget: 8000,
+      pace: '均衡',
+    });
+    const before = JSON.stringify(trip);
+    trip.days.forEach((day, index) => {
+      const plan = buildDayPlan(trip, index);
+      assert.ok(plan.visits.length);
+      assert.equal(plan.visits.length, day.items.length);
+      assert.ok(plan.visits.every((v) => v.place.category === theme));
+      assert.equal(plan.events[0].kind, 'hotel');
+      assert.equal(plan.events.at(-1).kind, 'hotel');
+      assert.equal(plan.segments.length, day.items.length + 1);
+      for (const meal of ['breakfast', 'lunch', 'dinner'])
+        assert.equal(
+          plan.events.filter((e) => e.meal === meal).length,
+          1,
+          `${theme} ${index} ${meal}`,
+        );
+      assert.ok(plan.events.every((e) => e.end >= e.start));
+      assert.equal(
+        new Set(plan.events.map((e) => e.key)).size,
+        plan.events.length,
+      );
+      for (const visit of plan.visits) {
+        assert.equal(visit.details.length, 3);
+        assert.equal(
+          visit.details.reduce((n, s) => n + s.minutes, 0),
+          visit.item.duration,
+        );
+        assert.equal(visit.goScore.factors.length, 5);
+      }
+    });
+    assert.equal(JSON.stringify(trip), before);
+  }
+  const legacy = dailyTestTrip(['tunbao']);
+  const plan = buildDayPlan(legacy, 0);
+  assert.ok(plan.events.length >= 9);
+  assert.equal(plan.visits[0].place.id, 'tunbao');
+  assert.ok(!legacy.days[0].settings && !legacy.days[0].guide);
+});
+
+test('three-day preset summaries include complete services and consistent per-person totals', () => {
+  for (const preset of itineraryPresets) {
+    const trip = createPresetTrip(preset.id, {
+      start: '2026-09-01',
+      people: ['我', '家人'],
+      budget: 6000,
+    });
+    trip.days.forEach((_day, index) => {
+      const plan = buildDayPlan(trip, index);
+      assert.equal(
+        plan.summary.trafficMinutes,
+        plan.segments.reduce((n, s) => n + s.option.minutes, 0),
+      );
+      assert.equal(
+        plan.summary.perPerson,
+        Math.round(
+          Object.values(plan.summary.costs).reduce((a, b) => a + b, 0),
+        ),
+      );
+      assert.ok(
+        Number.isFinite(plan.summary.walkingKm) && plan.summary.walkingKm >= 0,
+      );
+      assert.equal(plan.summary.costs.hotel, index === 2 ? 0 : 120);
+      for (const meal of ['breakfast', 'lunch', 'dinner'])
+        assert.equal(
+          plan.events.filter((e) => e.meal === meal).length,
+          1,
+          `${preset.id} day${index} ${meal}`,
+        );
+    });
+  }
+});
+
+test('extending, reordering, deleting and adding stops recomputes downstream times', () => {
+  const trip = dailyTestTrip();
+  trip.days[0].settings = {
+    includeHotel: false,
+    includeMeals: false,
+    departure: 540,
+  };
+  const before = buildDayPlan(trip, 0);
+  const extended = structuredClone(trip);
+  extended.days[0].items[0].duration += 30;
+  const after = buildDayPlan(extended, 0);
+  assert.equal(after.visits[1].start, before.visits[1].start + 30);
+  assert.equal(after.visits[1].end, before.visits[1].end + 30);
+  assert.equal(trip.days[0].items[0].duration, before.visits[0].item.duration);
+  extended.days[0].items.reverse();
+  assert.equal(buildDayPlan(extended, 0).visits[0].place.id, 'museum');
+  extended.days[0].items.pop();
+  assert.equal(buildDayPlan(extended, 0).segments.length, 0);
+  extended.days[0].items.push(makeItem('jiaxiu'));
+  assert.equal(buildDayPlan(extended, 0).segments.length, 1);
+});
+
+test('replacement preserves position and clears route choices bound to the old location', () => {
+  const trip = dailyTestTrip(),
+    day = trip.days[0];
+  const [first, second] = day.items;
+  first.plan = { earliestStart: 540, activity: '原活动', tips: ['原提示'] };
+  day.settings = {
+    transportModes: { [`${first.id}>${second.id}`]: 'transit' },
+  };
+  second.transport = { fromId: first.id, mode: 'transit' };
+  const before = JSON.stringify(day);
+  const replaced = replaceDayPlace(day, first.id, 'huaxi-park');
+  assert.equal(replaced.items[0].id, first.id);
+  assert.equal(replaced.items[0].placeId, 'huaxi-park');
+  assert.equal(replaced.items[0].plan.earliestStart, 540);
+  assert.equal(replaced.items[0].duration, placeById('huaxi-park').duration);
+  assert.equal(replaced.items[1].transport, undefined);
+  assert.deepEqual(replaced.settings.transportModes, {});
+  assert.equal(JSON.stringify(day), before);
+  assert.equal(replaceDayPlace(day, first.id, 'museum'), day);
+  assert.equal(replaceDayPlace(day, first.id, 'not-a-place'), day);
+});
+
+test('hotel and intermediate traffic choices update the same timing and summary model', () => {
+  const trip = dailyTestTrip();
+  const before = buildDayPlan(trip, 0);
+  const between = before.segments.find(
+    (s) => s.from.id === 'qianling' && s.to.id === 'museum',
+  );
+  trip.days[0] = chooseDayTransport(trip.days[0], between, 'transit');
+  const after = buildDayPlan(trip, 0);
+  assert.equal(
+    after.segments.find((s) => s.key === between.key).option.id,
+    'transit',
+  );
+  assert.equal(
+    after.summary.trafficMinutes - before.summary.trafficMinutes,
+    74 - between.option.minutes,
+  );
+  const home = after.segments.at(-1);
+  assert.equal(home.boundary, 'return');
+  assert.match(home.to.id, /^hotel:/);
+  assert.ok(
+    new URL(amapRouteUrl(home.from, home.to, 'drive')).searchParams
+      .get('to')
+      .includes(home.to.name),
+  );
+  assert.equal(chooseDayTransport(trip.days[0], home, 'rail'), trip.days[0]);
+});
+
+test('GoScore exposes five factors without endorsing closed or late visits', () => {
+  const place = placeById('huangguoshu');
+  assert.deepEqual(
+    goScore(place).factors.map((f) => f.name),
+    ['天气', '人流', '适合你', '交通', '时间'],
+  );
+  for (const scenario of ['normal', 'rain', 'crowd', 'closed']) {
+    const result = goScore(place, { scenario });
+    assert.ok(result.total >= 0 && result.total <= 100);
+    assert.ok(
+      result.factors.every((f) => f.value >= 0 && f.value <= 100 && f.note),
+    );
+  }
+  assert.equal(goScore(place, { scenario: 'closed' }).total, 0);
+  const late = goScore(place, { start: 1200, end: 1380 });
+  assert.ok(late.total <= 45 && late.warnings.length);
+  assert.equal(late.factors[4].value, 20);
+  assert.ok(
+    goScore(placeById('fanjing-hike'), { scenario: 'rain' }).total <= 35,
+  );
+});
+
+test('family, elder and child profiles adjust intensity, fit and walking time', () => {
+  const trip = dailyTestTrip(['fanjing-hike']);
+  const normal = buildDayPlan(trip, 0);
+  for (const profile of ['family', 'senior', 'children']) {
+    const plan = buildDayPlan({ ...trip, travelerProfile: profile }, 0);
+    assert.equal(plan.summary.intensity, '特种兵');
+    assert.ok(
+      plan.visits[0].goScore.factors[2].value <
+        normal.visits[0].goScore.factors[2].value,
+    );
+    assert.ok(plan.summary.stars <= 3);
+    assert.ok(plan.summary.warnings.some((w) => w.includes('参与条件')));
+    const option = transportOptions(
+      placeById('jiaxiu'),
+      placeById('qingyun'),
+    ).find((o) => o.id === 'walk');
+    const adapted = transportForProfile(option, profile);
+    assert.ok(adapted.minutes > option.minutes);
+    assert.equal(
+      adapted.minutes,
+      adapted.steps.reduce((sum, step) => sum + step.minutes, 0),
+    );
+  }
+});
+
+test('food POIs replace support meals and disabled services are not charged', () => {
+  const trip = dailyTestTrip(['changwang', 'guanshan-food', 'qingyun']);
+  trip.days[0].items.forEach(
+    (item, i) =>
+      (item.plan = {
+        earliestStart: [480, 720, 1080][i],
+        activity: '用餐',
+        tips: [],
+      }),
+  );
+  const plan = buildDayPlan(trip, 0);
+  assert.equal(plan.summary.costs.meals, 0);
+  assert.equal(plan.events.filter((e) => e.kind === 'meal').length, 0);
+  assert.equal(
+    plan.summary.costs.places,
+    trip.days[0].items.reduce((sum, i) => sum + placeById(i.placeId).price, 0),
+  );
+  trip.days[0].settings = { includeHotel: false, includeMeals: false };
+  const off = buildDayPlan(trip, 0);
+  assert.ok(off.events.every((e) => e.kind !== 'hotel' && e.kind !== 'meal'));
+  assert.equal(off.summary.costs.hotel, 0);
+});
+
+test('room costs divide per person and last day excludes another night', () => {
+  const trip = dailyTestTrip(['tunbao']);
+  trip.people = ['A', 'B', 'C'];
+  trip.days[0].settings = { roomPrice: 300 };
+  assert.equal(buildDayPlan(trip, 0).summary.costs.hotel, 200);
+  trip.days = trip.days.slice(0, 1);
+  assert.equal(buildDayPlan(trip, 0).summary.costs.hotel, 0);
+});
+
+test('cross-day transfers start at the previous hotel and lunch precedes late sightseeing', () => {
+  const trip = dailyTestTrip(['qingyan']);
+  trip.days[1] = {
+    id: 'far-day',
+    date: '2026-09-02',
+    title: '跨城',
+    items: [makeItem('xiaoqikong')],
+  };
+  const previous = buildDayPlan(trip, 0),
+    next = buildDayPlan(trip, 1);
+  assert.equal(next.segments[0].from.id, previous.segments.at(-1).to.id);
+  assert.equal(next.segments[0].crossDay, true);
+  assert.ok(
+    next.events.find((e) => e.meal === 'lunch').end <= next.visits[0].start,
+  );
+});
+
+test('day settings roundtrip and corrupt optional data is rejected without breaking legacy storage', () => {
+  const data = initialData();
+  data.trips[0].travelerProfile = 'family';
+  data.trips[0].days[0].settings = {
+    departure: 450,
+    includeHotel: false,
+    includeMeals: true,
+    mealMinutes: 50,
+    hotelLat: 26.5,
+    hotelLng: 106.7,
+  };
+  const restored = restore(JSON.stringify(data));
+  assert.equal(restored.trips[0].travelerProfile, 'family');
+  assert.equal(restored.trips[0].days[0].settings.departure, 450);
+  assert.ok(restore(JSON.stringify(initialData())));
+  for (const bad of [
+    { departure: -1 },
+    { departure: 1440 },
+    { hotelLat: 91 },
+    { roomPrice: -1 },
+    { includeHotel: 'false' },
+    { scenario: 'storm' },
+    { mealMinutes: 1 },
+    { transportModes: { 'a>b': 'plane' } },
+    null,
+    [],
+  ]) {
+    const corrupted = structuredClone(data);
+    corrupted.trips[0].days[0].settings = bad;
+    assert.equal(restore(JSON.stringify(corrupted)), null, JSON.stringify(bad));
+  }
+});
+
+test('copying plans remaps hotel and stop bindings and preserves settings', () => {
+  const trip = dailyTestTrip();
+  const plan = buildDayPlan(trip, 0);
+  trip.days[0] = chooseDayTransport(trip.days[0], plan.segments[0], 'drive');
+  trip.days[0] = chooseDayTransport(trip.days[0], plan.segments[1], 'transit');
+  trip.days[0] = chooseDayTransport(
+    trip.days[0],
+    plan.segments.at(-1),
+    'drive',
+  );
+  trip.travelerProfile = 'senior';
+  const copy = copyTripWithNewIds(trip),
+    cloned = buildDayPlan(copy, 0);
+  assert.notEqual(copy.days[0].id, trip.days[0].id);
+  assert.equal(copy.travelerProfile, 'senior');
+  for (const segment of cloned.segments)
+    assert.equal(
+      copy.days[0].settings.transportModes[segment.key],
+      segment.option.id,
+    );
+  assert.equal(cloned.segments[1].option.id, 'transit');
+});
+
+test('empty days stay empty and exported guides use the visible detailed plan', () => {
+  const empty = dailyTestTrip([]),
+    blank = buildDayPlan(empty, 0);
+  assert.equal(blank.events.length, 0);
+  assert.equal(blank.summary.stars, 0);
+  assert.equal(blank.summary.perPerson, 0);
+  assert.equal(blank.summary.intensity, '待规划');
+  const trip = dailyTestTrip(['tunbao']),
+    plan = buildDayPlan(trip, 0);
+  const text = dayPlanMarkdown(plan);
+  assert.match(text, /今日行程强度/);
+  assert.match(text, /GoScore/);
+  assert.match(text, /早餐/);
+  assert.match(text, /午餐/);
+  assert.match(text, /晚餐/);
+  assert.match(text, /返回/);
+  assert.match(text, /去高德查询/);
+  assert.ok(text.includes(`¥${plan.summary.perPerson}/人`));
+});
 
 test('three-day regional presets have detailed, feasible days and independently editable fixtures', () => {
   const before = JSON.stringify(itineraryPresets);

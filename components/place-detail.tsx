@@ -1,14 +1,7 @@
 'use client';
 /* oxlint-disable next/no-img-element -- Self-hosted demo photos use fixed CSS dimensions; no Next image service is required by this Vite app. */
 import { useState } from 'react';
-import {
-  type Place,
-  score,
-  factorNames,
-  type Theme,
-  money,
-  places,
-} from '@/lib/travel';
+import { type Place, score, type Theme, money, places } from '@/lib/travel';
 import {
   MapPin,
   Clock,
@@ -22,7 +15,8 @@ import {
   Mountain,
 } from '@/components/travel-icons';
 import { Button } from '@/components/ui/button';
-import { RecommendationScore } from '@/components/recommendation-score';
+import { GoScoreCard } from '@/components/go-score';
+import { goScore, type GoScore } from '@/lib/day-plan';
 export function PlaceDetail({
   place,
   onAdd,
@@ -30,6 +24,7 @@ export function PlaceDetail({
   saved,
   compact = false,
   preferences = [],
+  journeyScore,
 }: {
   place: Place;
   onAdd: (id: string) => void;
@@ -37,10 +32,11 @@ export function PlaceDetail({
   saved: boolean;
   compact?: boolean;
   preferences?: Theme[];
+  journeyScore?: GoScore;
 }) {
   const [tab, setTab] = useState('推荐');
   const [scenario, setScenario] = useState('normal');
-  const s = score(place, scenario, preferences);
+  const s = journeyScore ?? goScore(place, { scenario, preferences });
   return (
     <div className={'place-detail ' + (compact ? 'compact' : '')}>
       <div className="detail-title-row">
@@ -64,41 +60,26 @@ export function PlaceDetail({
       {!compact && place.image && (
         <img className="detail-cover" src={place.image} alt={place.name} />
       )}
-      <div className="score-panel">
-        <div>
-          <div className="score-caption">
-            品类推荐指数 <span>Mock</span>
-          </div>
-          <strong>
-            {s.total}
-            <small>/100</small>
-          </strong>
-          <p>
-            {s.label} · {s.attributes.nature}
-          </p>
-        </div>
-        <div className="score-overview">
-          {s.factors.slice(0, 4).map((f, i) => (
-            <div key={i}>
-              <span>{factorNames[i]}</span>
-              <b>{f}</b>
-              <div className="mini-meter">
-                <i style={{ width: f + '%' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <label className="score-scenario">
-        模拟情景
-        <select value={scenario} onChange={(e) => setScenario(e.target.value)}>
-          <option value="normal">常规场景</option>
-          <option value="rain">降雨</option>
-          <option value="crowd">拥挤</option>
-          <option value="closed">闭园 / 不营业</option>
-        </select>
-        <span>仅调整当前评分预览</span>
-      </label>
+      <GoScoreCard score={s} placeName={place.name} />
+      {journeyScore ? (
+        <p className="source-note">
+          已按当前时间轴、交通与同行类型计算。在“今日概览”调整后会同步更新。
+        </p>
+      ) : (
+        <label className="score-scenario">
+          模拟情景
+          <select
+            value={scenario}
+            onChange={(e) => setScenario(e.target.value)}
+          >
+            <option value="normal">常规场景</option>
+            <option value="rain">降雨</option>
+            <option value="crowd">拥挤</option>
+            <option value="closed">闭园 / 不营业</option>
+          </select>
+          <span>仅调整当前评分预览</span>
+        </label>
+      )}
       {s.warnings.map((w) => (
         <p className="score-warning" key={w}>
           {w}
@@ -166,12 +147,18 @@ export function PlaceDetail({
       )}
       {tab === '评分依据' && (
         <div className="detail-tab-body">
-          <RecommendationScore
-            place={place}
-            preferences={preferences}
-            scenario={scenario}
-            expanded
-          />
+          {s.factors.map((f) => (
+            <p key={f.name}>
+              <b>
+                {f.name} · {f.value}分
+              </b>
+              <br />
+              {f.note}
+            </p>
+          ))}
+          <p className="source-note">
+            分数越高表示越适宜；不同玩法沿用各自的品类特征。天气、开放与交通信息都是模拟输入，不是实时评估。
+          </p>
         </div>
       )}
       {tab === '出行信息' && (

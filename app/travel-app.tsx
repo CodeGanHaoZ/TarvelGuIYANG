@@ -61,7 +61,14 @@ import { TripWizard } from '@/components/trip-wizard';
 import { ItineraryLibrary } from '@/components/itinerary-library';
 import { TransportPlanner } from '@/components/transport-planner';
 import { DayBrief } from '@/components/day-brief';
-import { selectTransport, amapRouteUrl } from '@/lib/transport';
+import { DayEvent } from '@/components/day-event';
+import { GoScoreCard } from '@/components/go-score';
+import {
+  buildDayPlan,
+  chooseDayTransport,
+  replaceDayPlace,
+  dayPlanMarkdown,
+} from '@/lib/day-plan';
 import { HomeCarousel } from '@/components/home-carousel';
 import { SocialInspiration } from '@/components/social-inspiration';
 import {
@@ -73,8 +80,6 @@ import {
   themes,
   themeInfo,
   makeItem,
-  metrics,
-  timeline,
   previousDayConnection,
   copyTripWithNewIds,
   clock,
@@ -93,6 +98,7 @@ import {
   type TripItem,
   type SharedTrip,
   type Theme,
+  type TripDay,
 } from '@/lib/travel';
 type Page = 'home' | 'trip' | 'discover' | 'profile';
 type Modal =
@@ -100,6 +106,7 @@ type Modal =
   | 'import'
   | 'detail'
   | 'add'
+  | 'replace'
   | 'optimize'
   | 'weather'
   | 'expense'
@@ -167,17 +174,41 @@ export default function TravelApp() {
     [answer, setAnswer] = useState(''),
     [dragId, setDragId] = useState<string | null>(null);
   const [transportTo, setTransportTo] = useState<string | undefined>();
+  const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trip =
     data.trips.find((t) => t.id === data.activeTripId) || data.trips[0];
   const day = trip.days[Math.min(dayIndex, trip.days.length - 1)];
   const selectedItem = day.items.find((i) => i.id === selected) || day.items[0];
   const previous = previousDayConnection(trip, dayIndex);
-  const dayMetrics = metrics(day.items, previous);
-  const scheduled = timeline(day.items, previous);
-  const optimizedItems =
+  const dayPlan = buildDayPlan(trip, Math.min(dayIndex, trip.days.length - 1));
+  const dayMetrics = {
+    km: dayPlan.summary.trafficKm,
+    minutes: dayPlan.summary.trafficMinutes,
+  };
+  const scheduled = dayPlan.visits;
+  const optimizationCandidate =
     modal === 'optimize' ? optimize(day.items, previous) : day.items;
-  const optimizedMetrics = metrics(optimizedItems, previous);
+  const candidatePlan =
+    modal === 'optimize'
+      ? buildDayPlan(
+          {
+            ...trip,
+            days: trip.days.map((d) =>
+              d.id === day.id ? { ...d, items: optimizationCandidate } : d,
+            ),
+          },
+          dayIndex,
+        )
+      : dayPlan;
+  const improvesRoute =
+    candidatePlan.summary.trafficMinutes <= dayPlan.summary.trafficMinutes;
+  const optimizedItems = improvesRoute ? optimizationCandidate : day.items;
+  const optimizedPlan = improvesRoute ? candidatePlan : dayPlan;
+  const optimizedMetrics = {
+    km: optimizedPlan.summary.trafficKm,
+    minutes: optimizedPlan.summary.trafficMinutes,
+  };
   const expenses = data.expenses.filter((e) => e.tripId === trip.id);
   const settlement = splitExpenses(expenses, trip.people);
   const filteredPlaces = places.filter(
@@ -273,6 +304,18 @@ export default function TravelApp() {
       ...trip,
       days: trip.days.map((d) => (d.id === day.id ? { ...d, items } : d)),
     });
+  }
+  function updateDay(next: TripDay) {
+    updateTrip({
+      ...trip,
+      days: trip.days.map((d) => (d.id === next.id ? next : d)),
+    });
+  }
+  function startReplace(item: TripItem) {
+    setReplaceTarget(item.id);
+    setQuery('');
+    setFilter(placeById(item.placeId).category);
+    open('replace');
   }
   function showTransport(toId?: string) {
     setTransportTo(toId);
@@ -424,24 +467,7 @@ export default function TravelApp() {
     const text =
       `# ${trip.title}\n\n> AI 黔驴演示攻略。评分、交通、价格均为 Mock，出发前请核验。\n\n日期：${trip.start} 起\n同行：${trip.people.join('、')}\n总预算：¥${trip.budget}\n\n` +
       trip.days
-        .map(
-          (d, dayNumber) =>
-            `## ${dateLabel(d.date)} · ${d.title}\n\n` +
-            (d.guide
-              ? `${d.guide.summary}\n\n用餐：${d.guide.meals}\n住宿：${d.guide.stay}\n准备：${d.guide.preparation.join('；')}\n\n`
-              : '') +
-            timeline(d.items, previousDayConnection(trip, dayNumber))
-              .map((t, index) => {
-                const from =
-                  d.items[index - 1] ?? previousDayConnection(trip, dayNumber);
-                const transport =
-                  t.transit && from
-                    ? `交通：${t.transit.mode}，约${t.transit.minutes}分钟 / ${t.transit.km} km（Mock）。${t.transit.option.summary}\n${t.transit.option.steps.map((s) => `  - ${s.title}：${s.detail}（约${s.minutes}分钟）`).join('\n')}\n[去高德查询](${amapRouteUrl(placeById(from.placeId), t.place, t.transit.option.id)})\n\n`
-                    : '';
-                return `${transport}- ${clock(t.start)}—${clock(t.end)} ${t.place.name}：停留 ${t.item.duration} 分钟；参考 ¥${t.place.price}/人；模拟推荐指数 ${score(t.place, 'normal', trip.preferences).total}。${t.warning ? '⚠ 超出模拟营业时间。' : ''}\n  ${t.item.plan?.activity ?? t.place.description}\n  ${[t.place.tip, ...(t.item.plan?.tips ?? [])].join(' ')}`;
-              })
-              .join('\n'),
-        )
+        .map((_d, dayNumber) => dayPlanMarkdown(buildDayPlan(trip, dayNumber)))
         .join('\n\n') +
       `\n\n## 我的旅行笔记\n\n${trip.notes}\n` +
       (trip.sourcePostIds?.length
@@ -851,6 +877,18 @@ export default function TravelApp() {
                         </button>
                       ))}
                     </div>
+                    <DayBrief
+                      plan={dayPlan}
+                      onSettings={(settings) =>
+                        updateDay({
+                          ...day,
+                          settings: { ...day.settings, ...settings },
+                        })
+                      }
+                      onProfile={(travelerProfile) =>
+                        updateTrip({ ...trip, travelerProfile })
+                      }
+                    />
                     <div className="day-heading">
                       <div>
                         <h2>{dateLabel(day.date)}</h2>
@@ -883,7 +921,7 @@ export default function TravelApp() {
                     <div className="day-route-tools">
                       <button
                         className="outline-btn"
-                        disabled={day.items.length < 2 && !previous}
+                        disabled={!dayPlan.segments.length}
                         onClick={() => showTransport()}
                       >
                         <Route size={16} /> 交通方案与线路查询{' '}
@@ -896,16 +934,10 @@ export default function TravelApp() {
                         <Sparkles size={15} /> 换一份三日灵感
                       </button>
                     </div>
-                    <DayBrief
-                      day={day}
-                      previous={previous}
-                      people={trip.people.length}
-                    />
-                    {previous && (
+                    {dayPlan.segments.some((segment) => segment.crossDay) && (
                       <p className="cross-day-note">
-                        跨城接续已计入：上日尾站「
-                        {placeById(previous.placeId).name}」→
-                        今日首站。以08:30出发估算；住宿绕行、进站与实际班次仍需核验。
+                        已计入上日住宿 /
+                        尾站到今日首站的跨城接续，出发时间随今日安排更新；实际接驳与班次仍需核验。
                       </p>
                     )}
                     <button
@@ -935,9 +967,12 @@ export default function TravelApp() {
                             place: p,
                             start,
                             end,
-                            transit,
                             warning,
-                            wait,
+                            eventsBefore,
+                            breaks,
+                            details,
+                            goScore: currentScore,
+                            meal,
                           },
                           i,
                         ) => (
@@ -951,26 +986,13 @@ export default function TravelApp() {
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={() => onDrop(item.id)}
                           >
-                            {transit && (
-                              <button
-                                className="transit"
-                                onClick={() => showTransport(item.id)}
-                                aria-label={`查询到${p.name}的交通方案`}
-                              >
-                                <Route size={13} />
-                                {transit.mode} · {transit.minutes} 分钟 ·{' '}
-                                {transit.km} km <span>估算</span>
-                                <strong>
-                                  查看方案 <ChevronRight size={12} />
-                                </strong>
-                              </button>
-                            )}
-                            {wait >= 20 && (
-                              <p className="schedule-rest">
-                                <Clock size={12} /> 预留 {wait} 分钟休息 / 用餐
-                                / 等待开放，可自行安排
-                              </p>
-                            )}
+                            {eventsBefore.map((event) => (
+                              <DayEvent
+                                event={event}
+                                key={event.key}
+                                onTransport={showTransport}
+                              />
+                            ))}
                             <div
                               className={
                                 'timeline-card ' +
@@ -992,12 +1014,18 @@ export default function TravelApp() {
                                     <span className="mini-tag">
                                       {p.category}
                                     </span>
+                                    {meal && (
+                                      <span className="mini-tag">
+                                        {meal === 'breakfast'
+                                          ? '早餐'
+                                          : meal === 'lunch'
+                                            ? '午餐'
+                                            : '晚餐'}
+                                      </span>
+                                    )}
                                     <span className="score-inline">
-                                      {
-                                        score(p, 'normal', trip.preferences)
-                                          .total
-                                      }{' '}
-                                      <small>推荐指数</small>
+                                      <Clock size={13} /> 游玩 {item.duration}{' '}
+                                      分钟
                                     </span>
                                   </span>
                                 </div>
@@ -1010,6 +1038,26 @@ export default function TravelApp() {
                                   </div>
                                 )}
                               </button>
+                              <GoScoreCard
+                                score={currentScore}
+                                placeName={p.name}
+                              />
+                              <ol className="visit-steps">
+                                {details.map((step, n) => (
+                                  <li key={step.label}>
+                                    <i>{n + 1}</i>
+                                    <span>{step.label}</span>
+                                    <small>{step.minutes}分</small>
+                                  </li>
+                                ))}
+                              </ol>
+                              {breaks.map((event) => (
+                                <DayEvent
+                                  event={event}
+                                  key={event.key}
+                                  onTransport={showTransport}
+                                />
+                              ))}
                               <details className="stop-practical">
                                 <summary>游玩提示与时间安排</summary>
                                 <p>{p.tip}</p>
@@ -1020,38 +1068,40 @@ export default function TravelApp() {
                                   模拟开放 {p.hours[0]}:00—{p.hours[1]}:00 ·
                                   参考费用 ¥{money(p.price)}/人 · 出发前核验
                                 </p>
-                                {item.plan && (
-                                  <label>
-                                    不早于此时间开始{' '}
-                                    <input
-                                      type="time"
-                                      aria-label={p.name + '建议开始时间'}
-                                      value={clock(item.plan.earliestStart)}
-                                      onChange={(e) => {
-                                        if (
-                                          !/^\d{2}:\d{2}$/.test(e.target.value)
-                                        )
-                                          return;
-                                        const [h, m] = e.target.value
-                                          .split(':')
-                                          .map(Number);
-                                        updateItems(
-                                          day.items.map((x) =>
-                                            x.id === item.id && x.plan
-                                              ? {
-                                                  ...x,
-                                                  plan: {
-                                                    ...x.plan,
-                                                    earliestStart: h * 60 + m,
-                                                  },
-                                                }
-                                              : x,
-                                          ),
-                                        );
-                                      }}
-                                    />
-                                  </label>
-                                )}
+                                <label>
+                                  不早于此时间开始{' '}
+                                  <input
+                                    type="time"
+                                    aria-label={p.name + '建议开始时间'}
+                                    value={clock(
+                                      item.plan?.earliestStart ??
+                                        p.hours[0] * 60,
+                                    )}
+                                    onChange={(e) => {
+                                      if (!/^\d{2}:\d{2}$/.test(e.target.value))
+                                        return;
+                                      const [h, m] = e.target.value
+                                        .split(':')
+                                        .map(Number);
+                                      updateItems(
+                                        day.items.map((x) =>
+                                          x.id === item.id
+                                            ? {
+                                                ...x,
+                                                plan: {
+                                                  activity:
+                                                    x.plan?.activity ??
+                                                    p.description,
+                                                  tips: x.plan?.tips ?? [p.tip],
+                                                  earliestStart: h * 60 + m,
+                                                },
+                                              }
+                                            : x,
+                                        ),
+                                      );
+                                    }}
+                                  />
+                                </label>
                               </details>
                               <div className="stop-toolbar">
                                 <GripVertical size={15} />
@@ -1099,6 +1149,35 @@ export default function TravelApp() {
                                   </select>
                                 </label>
                                 <button
+                                  className="text-btn duration-more"
+                                  disabled={item.duration >= 720}
+                                  onClick={() =>
+                                    updateItems(
+                                      day.items.map((x) =>
+                                        x.id === item.id
+                                          ? {
+                                              ...x,
+                                              duration: Math.min(
+                                                720,
+                                                x.duration + 30,
+                                              ),
+                                            }
+                                          : x,
+                                      ),
+                                    )
+                                  }
+                                  aria-label={`延长${p.name}30分钟`}
+                                >
+                                  +30分钟
+                                </button>
+                                <button
+                                  className="text-btn replace-stop"
+                                  onClick={() => startReplace(item)}
+                                  aria-label={`替换${p.name}`}
+                                >
+                                  替换
+                                </button>
+                                <button
                                   className="icon-btn"
                                   aria-label={'上移' + p.name}
                                   disabled={i === 0}
@@ -1144,6 +1223,13 @@ export default function TravelApp() {
                           </div>
                         ),
                       )}
+                      {dayPlan.afterEvents.map((event) => (
+                        <DayEvent
+                          event={event}
+                          key={event.key}
+                          onTransport={showTransport}
+                        />
+                      ))}
                     </div>
                     {!day.items.length && (
                       <div className="empty-itinerary">
@@ -1172,13 +1258,14 @@ export default function TravelApp() {
                       添加地点 <span>让旅行更像你</span>
                     </button>
                     <p className="timeline-help">
-                      拖动卡片调整顺序 · 手机可使用上下箭头
+                      拖动卡片或使用上下箭头排序 · 修改后自动重算后续时间
                     </p>
                   </section>
                   <aside className="map-pane">
                     <RouteMap
                       items={day.items}
                       previous={previous}
+                      summaryOverride={dayMetrics}
                       selected={selectedItem?.id || null}
                       dayIndex={dayIndex}
                       onSelect={(id) => {
@@ -1197,6 +1284,10 @@ export default function TravelApp() {
                         onSave={toggleSave}
                         onAdd={addPlace}
                         preferences={trip.preferences}
+                        journeyScore={
+                          scheduled.find((v) => v.item.id === selectedItem.id)
+                            ?.goScore
+                        }
                         compact
                       />
                     ) : (
@@ -2047,6 +2138,7 @@ export default function TravelApp() {
                   import: '从链接生成攻略',
                   detail: '地点详情',
                   add: '添加地点',
+                  replace: '替换行程地点',
                   optimize: '优化路线',
                   weather: '应对旅途变化',
                   expense: '记录费用',
@@ -2079,14 +2171,12 @@ export default function TravelApp() {
             {modal === 'transport' && (
               <TransportPlanner
                 key={day.id + (transportTo ?? '')}
-                day={day}
-                previous={previous}
-                people={trip.people.length}
+                plan={dayPlan}
                 initialTo={transportTo}
-                onChoose={(toId, from, mode) => {
-                  updateItems(
-                    selectTransport(day.items, toId, from, mode, placeById),
-                  );
+                onChoose={(key, mode) => {
+                  const segment = dayPlan.segments.find((s) => s.key === key);
+                  if (segment)
+                    updateDay(chooseDayTransport(day, segment, mode));
                 }}
               />
             )}
@@ -2109,6 +2199,9 @@ export default function TravelApp() {
                 onSave={toggleSave}
                 saved={data.savedPlaces.includes(detailId)}
                 preferences={trip.preferences}
+                journeyScore={
+                  scheduled.find((v) => v.place.id === detailId)?.goScore
+                }
               />
             )}
             {modal === 'import' && (
@@ -2233,12 +2326,18 @@ export default function TravelApp() {
                 )}
               </div>
             )}
-            {modal === 'add' && (
+            {(modal === 'add' || modal === 'replace') && (
               <div className="modal-body">
                 <span className="eyebrow">A PLACE TO REMEMBER</span>
-                <h2>给旅行，加一点喜欢。</h2>
+                <h2>
+                  {modal === 'replace'
+                    ? '换一站，遇见新的风景。'
+                    : '给旅行，加一点喜欢。'}
+                </h2>
                 <p>
-                  添加到「{trip.title}」第 {dayIndex + 1} 天。
+                  {modal === 'replace'
+                    ? `替换「${placeById(day.items.find((i) => i.id === replaceTarget)?.placeId ?? '').name}」。默认显示同主题，切换分类可选择其他玩法。保留此站的位置与最早开始时间。`
+                    : `添加到「${trip.title}」第 ${dayIndex + 1} 天。`}
                 </p>
                 <ExploreHeader
                   query={query}
@@ -2252,21 +2351,32 @@ export default function TravelApp() {
                       <span className="feature-icon">
                         <MapPin size={20} />
                       </span>
-                      <button
-                        className="result-name"
-                        onClick={() => showPlace(p.id)}
-                      >
+                      <div className="result-name">
                         <b>{p.name}</b>
                         <small>
                           {p.region} · {p.category} · 推荐指数{' '}
                           {score(p, 'normal', trip.preferences).total} · Mock
                         </small>
-                      </button>
+                        <small>{p.description}</small>
+                      </div>
                       <button
                         className="icon-btn"
-                        aria-label={'添加' + p.name}
+                        aria-label={
+                          (modal === 'replace' ? '替换为' : '添加') + p.name
+                        }
                         disabled={day.items.some((i) => i.placeId === p.id)}
-                        onClick={() => addPlace(p.id)}
+                        onClick={() => {
+                          if (modal === 'replace' && replaceTarget) {
+                            updateDay(
+                              replaceDayPlace(day, replaceTarget, p.id),
+                            );
+                            setSelected(replaceTarget);
+                            setModal(null);
+                            notify(
+                              `已替换为「${p.name}」，时间、交通和 GoScore 已重新计算。`,
+                            );
+                          } else addPlace(p.id);
+                        }}
                       >
                         {day.items.some((i) => i.placeId === p.id) ? (
                           <Check size={19} />

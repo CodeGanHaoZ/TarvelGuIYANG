@@ -113,6 +113,23 @@ export type TripDay = {
   title: string;
   items: TripItem[];
   guide?: DayGuide;
+  settings?: DaySettings;
+};
+export type TravelerProfile = 'standard' | 'family' | 'senior' | 'children';
+export type DaySettings = {
+  departure?: number;
+  scenario?: 'normal' | 'rain' | 'crowd' | 'closed';
+  hotelName?: string;
+  hotelLat?: number;
+  hotelLng?: number;
+  roomPrice?: number;
+  mealMinutes?: number;
+  lunchPrice?: number;
+  dinnerPrice?: number;
+  breakfastPrice?: number;
+  includeMeals?: boolean;
+  includeHotel?: boolean;
+  transportModes?: Record<string, import('./transport').TransportMode>;
 };
 export type Trip = {
   id: string;
@@ -126,6 +143,7 @@ export type Trip = {
   days: TripDay[];
   notes: string;
   sourcePostIds?: string[];
+  travelerProfile?: TravelerProfile;
 };
 export type Expense = {
   id: string;
@@ -780,9 +798,33 @@ export function copyTripWithNewIds(trip: Trip): Trip {
     ),
   );
   copy.id = uid();
+  const dayIds = new Map(copy.days.map((day) => [day.id, uid()]));
+  const remapEndpoint = (endpoint: string) => {
+    if (ids.has(endpoint)) return ids.get(endpoint)!;
+    for (const [oldId, newId] of dayIds) {
+      if (endpoint.startsWith(`hotel:${oldId}:`))
+        return endpoint.replace(`hotel:${oldId}:`, `hotel:${newId}:`);
+    }
+    return endpoint;
+  };
   copy.days = copy.days.map((day) => ({
     ...day,
-    id: uid(),
+    id: dayIds.get(day.id)!,
+    ...(day.settings
+      ? {
+          settings: {
+            ...day.settings,
+            transportModes: Object.fromEntries(
+              Object.entries(day.settings.transportModes ?? {}).map(
+                ([key, mode]) => [
+                  key.split('>').map(remapEndpoint).join('>'),
+                  mode,
+                ],
+              ),
+            ),
+          },
+        }
+      : {}),
     items: day.items.map((item) => {
       const next = { ...item, id: ids.get(item.id)! };
       if (item.transport && ids.has(item.transport.fromId))
@@ -1590,6 +1632,10 @@ export function restore(raw: string): AppData | null {
         typeof t.destination !== 'string' ||
         !t.days?.length ||
         typeof t.notes !== 'string' ||
+        (t.travelerProfile !== undefined &&
+          !['standard', 'family', 'senior', 'children'].includes(
+            t.travelerProfile,
+          )) ||
         (t.sourcePostIds !== undefined &&
           (!Array.isArray(t.sourcePostIds) ||
             t.sourcePostIds.some(
@@ -1602,6 +1648,8 @@ export function restore(raw: string): AppData | null {
       ];
       if (t.preferences.some((p) => !themes.includes(p))) return null;
       for (const day of t.days) {
+        if (day.settings !== undefined && !validDaySettings(day.settings))
+          return null;
         if (
           day.guide !== undefined &&
           (!day.guide ||
@@ -1659,4 +1707,70 @@ export function restore(raw: string): AppData | null {
   } catch {
     return null;
   }
+}
+
+function validDaySettings(settings: DaySettings): boolean {
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings))
+    return false;
+  const ranges: Partial<Record<keyof DaySettings, [number, number]>> = {
+    departure: [0, 1439],
+    hotelLat: [-90, 90],
+    hotelLng: [-180, 180],
+    roomPrice: [0, 10000],
+    mealMinutes: [15, 120],
+    lunchPrice: [0, 1000],
+    dinnerPrice: [0, 1000],
+    breakfastPrice: [0, 1000],
+  };
+  for (const [key, range] of Object.entries(ranges)) {
+    const value = settings[key as keyof DaySettings];
+    if (
+      value !== undefined &&
+      (typeof value !== 'number' ||
+        !Number.isFinite(value) ||
+        value < range[0] ||
+        value > range[1])
+    )
+      return false;
+  }
+  if (settings.departure !== undefined && !Number.isInteger(settings.departure))
+    return false;
+  if (
+    settings.mealMinutes !== undefined &&
+    !Number.isInteger(settings.mealMinutes)
+  )
+    return false;
+  if (
+    settings.hotelName !== undefined &&
+    (typeof settings.hotelName !== 'string' || settings.hotelName.length > 100)
+  )
+    return false;
+  if (
+    settings.scenario !== undefined &&
+    !['normal', 'rain', 'crowd', 'closed'].includes(settings.scenario)
+  )
+    return false;
+  if (
+    settings.includeMeals !== undefined &&
+    typeof settings.includeMeals !== 'boolean'
+  )
+    return false;
+  if (
+    settings.includeHotel !== undefined &&
+    typeof settings.includeHotel !== 'boolean'
+  )
+    return false;
+  if (
+    settings.transportModes !== undefined &&
+    (!settings.transportModes ||
+      typeof settings.transportModes !== 'object' ||
+      Array.isArray(settings.transportModes) ||
+      Object.entries(settings.transportModes).some(
+        ([key, value]) =>
+          key.split('>').length !== 2 ||
+          !['walk', 'transit', 'drive', 'rail'].includes(value),
+      ))
+  )
+    return false;
+  return true;
 }

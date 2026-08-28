@@ -1,21 +1,14 @@
 'use client';
 import { useState } from 'react';
-import {
-  placeById,
-  timeline,
-  clock,
-  money,
-  type TripDay,
-  type TripItem,
-} from '@/lib/travel';
+import { clock, money } from '@/lib/travel';
 import {
   amapRouteUrl,
   railQueryUrl,
   transportOptions,
-  resolveTransport,
   transportCost,
   type TransportMode,
 } from '@/lib/transport';
+import { transportForProfile, type DayPlan } from '@/lib/day-plan';
 import { Button } from '@/components/ui/button';
 import {
   ArrowRight,
@@ -30,45 +23,32 @@ import {
 } from '@/components/travel-icons';
 
 export function TransportPlanner({
-  day,
-  previous,
-  people,
+  plan,
   initialTo,
   onChoose,
 }: {
-  day: TripDay;
-  previous?: TripItem;
-  people: number;
+  plan: DayPlan;
   initialTo?: string;
-  onChoose: (toId: string, from: TripItem, mode: TransportMode) => void;
+  onChoose: (key: string, mode: TransportMode) => void;
 }) {
-  const segments = day.items.flatMap((to, i) => {
-    const from = day.items[i - 1] ?? previous;
-    return from ? [{ from, to, crossDay: i === 0 }] : [];
-  });
-  const [target, setTarget] = useState(initialTo ?? segments[0]?.to.id ?? '');
+  const { segments, people } = plan;
+  const [target, setTarget] = useState(initialTo ?? segments[0]?.key ?? '');
   const [mode, setMode] = useState<TransportMode | 'all'>('all');
   const [sort, setSort] = useState('time');
   const [applied, setApplied] = useState('');
-  const segment = segments.find((s) => s.to.id === target) ?? segments[0];
+  const segment = segments.find((s) => s.key === target) ?? segments[0];
   if (!segment)
     return (
       <div className="transport-planner">
-        <h2>先连接两个地点</h2>
-        <p>
-          当天至少添加两个地点后，即可对比逐段出行方案。跨城日也会显示上日尾站到今日首站的接续交通。
-        </p>
+        <h2>添加地点，开始规划交通</h2>
+        <p>添加地点并开启酒店往返，或添加两个游览地点，即可对比出行方案。</p>
       </div>
     );
-  const a = placeById(segment.from.placeId),
-    b = placeById(segment.to.placeId);
-  const selected = resolveTransport(
-    a,
-    b,
-    segment.to.transport,
-    segment.from.id,
-  );
+  const a = segment.from,
+    b = segment.to;
+  const selected = segment.option;
   const options = transportOptions(a, b)
+    .map((option) => transportForProfile(option, plan.profile))
     .filter((o) => mode === 'all' || o.id === mode)
     .sort((x, y) => {
       if (x.available !== y.available) return x.available ? -1 : 1;
@@ -83,9 +63,7 @@ export function TransportPlanner({
         return x.walking - y.walking || x.minutes - y.minutes;
       return x.minutes - y.minutes;
     });
-  const rows = timeline(day.items, previous);
-  const rowIndex = rows.findIndex((r) => r.item.id === segment.to.id);
-  const departure = rowIndex > 0 ? rows[rowIndex - 1].end : 8 * 60 + 30;
+  const departure = segment.departure;
   return (
     <div className="transport-planner">
       <span className="eyebrow">
@@ -94,19 +72,23 @@ export function TransportPlanner({
       <h2>下一站，怎么去？</h2>
       <p>对比时间、费用与换乘，把合适的方案放进行程。</p>
       <label className="field-label" htmlFor="transport-segment">
-        <span>查询路段 · {day.date}</span>
+        <span>查询路段 · {plan.date}</span>
         <select
           id="transport-segment"
-          value={segment.to.id}
+          value={segment.key}
           onChange={(e) => {
             setTarget(e.target.value);
             setApplied('');
           }}
         >
           {segments.map((s, i) => (
-            <option value={s.to.id} key={s.to.id}>
-              {s.crossDay ? '跨日接续' : `路段 ${i + 1}`}：
-              {placeById(s.from.placeId).name} → {placeById(s.to.placeId).name}
+            <option value={s.key} key={s.key}>
+              {s.crossDay
+                ? '跨日接续'
+                : s.boundary === 'return'
+                  ? '返回酒店'
+                  : `路段 ${i + 1}`}
+              ：{s.from.name} → {s.to.name}
             </option>
           ))}
         </select>
@@ -129,7 +111,7 @@ export function TransportPlanner({
       </div>
       <div className="transport-departure">
         <Clock size={14} /> 计划 {clock(departure)} 出发 · {people}人
-        {segment.crossDay && ' · 上日尾站接续，未含住宿绕行'}
+        {segment.crossDay && ' · 上日住宿 / 尾站接续'}
       </div>
       <div className="transport-tabs" aria-label="交通方式">
         {(
@@ -254,7 +236,7 @@ export function TransportPlanner({
                   className={active ? 'outline-btn' : 'primary-btn'}
                   disabled={!option.available || active}
                   onClick={() => {
-                    onChoose(segment.to.id, segment.from, option.id);
+                    onChoose(segment.key, option.id);
                     setApplied(
                       `已选择${option.label}，时间轴与交通汇总已更新。`,
                     );
@@ -319,7 +301,7 @@ export function TransportPlanner({
           <span>
             在铁路12306核实班次
             <small>
-              查询日期 {day.date} · 以实际车站、票价和余票为准，需手动选择日期
+              查询日期 {plan.date} · 以实际车站、票价和余票为准，需手动选择日期
             </small>
           </span>
           <ArrowUpRight size={17} />

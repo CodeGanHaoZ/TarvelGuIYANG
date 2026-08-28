@@ -17,6 +17,7 @@ export function RouteMap({
   dayIndex,
   label,
   previous,
+  summaryOverride,
 }: {
   items: TripItem[];
   selected: string | null;
@@ -24,6 +25,7 @@ export function RouteMap({
   dayIndex: number;
   label?: string;
   previous?: TripItem;
+  summaryOverride?: { km: number; minutes: number };
 }) {
   const [zoom, setZoom] = useState(1),
     [labels, setLabels] = useState(true),
@@ -42,7 +44,7 @@ export function RouteMap({
     x: 90 + ((p.lng - minLng) / width) * 410,
     y: 110 + ((maxLat - p.lat) / height) * 320,
   }));
-  const summary = metrics(items, previous);
+  const summary = summaryOverride ?? metrics(items, previous);
   const colors = ['#dc7357', '#3f9387', '#79629f', '#b68e39'];
   const color = colors[dayIndex % colors.length];
   return (
@@ -242,9 +244,11 @@ export function RouteMap({
         </span>
       </div>
       <div className="map-attribution">
-        {previous
-          ? '汇总含跨城接续，连线仅示意当日地点 · 非导航'
-          : '点位坐标与道路为演示近似 · 交通为模型估算'}
+        {summaryOverride
+          ? '汇总含所列酒店往返 / 跨城接续；连线仅示意景点，不是实际导航'
+          : previous
+            ? '汇总含跨城接续，连线仅示意当日地点 · 非导航'
+            : '点位坐标与道路为演示近似 · 交通为模型估算'}
       </div>
     </div>
   );
