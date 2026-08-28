@@ -11,6 +11,7 @@ import {
   storageKey,
   type SocialPost,
   type Theme,
+  themeInfo,
 } from '@/lib/travel';
 import {
   ArrowLeft,
@@ -104,6 +105,7 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
       <main>
         <div className="story-heading">
           <div className="eyebrow">
+            {post.theme || '综合灵感'} ·{' '}
             {post.kind === 'video' ? '演示视频' : '图文笔记'}
           </div>
           <h1>{post.title}</h1>
@@ -117,6 +119,16 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
             ))}
           </div>
         </div>
+        {post.theme && (
+          <aside className="content-theme-note">
+            <b>
+              {post.theme} · {themeInfo[post.theme].subtitle} · 以“
+              {themeInfo[post.theme].verb}”为核心
+            </b>
+            <p>{post.recommendation}</p>
+            <small>{themeInfo[post.theme].boundary}</small>
+          </aside>
+        )}
         <div className="story-layout">
           <article className="story-article">
             <div

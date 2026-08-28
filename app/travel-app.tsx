@@ -66,6 +66,7 @@ import {
   placeById,
   score,
   themes,
+  themeInfo,
   makeItem,
   metrics,
   timeline,
@@ -99,14 +100,14 @@ type Modal =
   | 'assistant'
   | 'export'
   | null;
-const categoryIcons = [Utensils, TreePine, Footprints, Landmark, Route, Flag];
+const categoryIcons = [TreePine, Utensils, Landmark, Route, Footprints, Flag];
 const themeImages: Record<Theme, string> = {
-  美食体验: '/images/theme-food.jpg',
-  自然景观: '/images/xiaoqikong.jpg',
-  身体力行: '/images/theme-hiking.jpg',
-  民族文化: '/images/xijiang.jpg',
-  经典路线: '/images/huangguoshu.jpg',
-  红色旅游: '/images/theme-history.jpg',
+  舌尖黔味: '/images/theme-food.jpg',
+  山水奇观: '/images/xiaoqikong.jpg',
+  野趣户外: '/images/theme-hiking.jpg',
+  多彩民族: '/images/xijiang.jpg',
+  古镇遗韵: '/images/qingyan.jpg',
+  红色征程: '/images/theme-history.jpg',
 };
 const pageLabels: Record<Page, string> = {
   home: '旅行灵感',
@@ -694,7 +695,7 @@ export default function TravelApp() {
                 <div className="section-heading">
                   <div>
                     <h2 id="theme-discovery-title">六种方式，遇见贵州</h2>
-                    <p>从山河到烟火，每一种喜欢都值得出发。</p>
+                    <p>看山水、尝黔味、感民族、访古镇、动起来、忆历史。</p>
                   </div>
                 </div>
                 <div className="theme-image-grid">
@@ -704,6 +705,9 @@ export default function TravelApp() {
                       <button
                         className="theme-image-card"
                         key={t}
+                        title={
+                          themeInfo[t].definition + ' ' + themeInfo[t].boundary
+                        }
                         onClick={() => {
                           go('discover');
                           setFilter(t);
@@ -714,6 +718,7 @@ export default function TravelApp() {
                         <span className="theme-image-label">
                           <C size={24} />
                           <b>{t}</b>
+                          <small>{themeInfo[t].subtitle}</small>
                         </span>
                         <ArrowUpRight size={16} aria-hidden="true" />
                       </button>
@@ -1054,7 +1059,9 @@ export default function TravelApp() {
                               <NotebookPen size={16} />
                               <span>
                                 {p.title}
-                                <small>{p.platform} · 可重新定制</small>
+                                <small>
+                                  {p.theme || '综合灵感'} · 可重新定制
+                                </small>
                               </span>
                               <ArrowUpRight size={16} />
                             </a>
@@ -1441,7 +1448,7 @@ export default function TravelApp() {
                             <div className="pill-group">
                               {(post.trip.preferences.length
                                 ? post.trip.preferences
-                                : ['自然景观', '民族文化']
+                                : ['山水奇观', '多彩民族']
                               ).map((t) => (
                                 <span className="mini-tag" key={t}>
                                   {t}
@@ -1653,7 +1660,7 @@ export default function TravelApp() {
                         <span>
                           <b>{p.title}</b>
                           <small>
-                            {p.platform} ·{' '}
+                            {p.theme || '综合灵感'} ·{' '}
                             {p.kind === 'video' ? '视频' : '图文'} · Mock
                           </small>
                         </span>
@@ -1793,6 +1800,38 @@ export default function TravelApp() {
                     rel="noreferrer"
                   >
                     遵义会议旧址
+                  </a>{' '}
+                  ·{' '}
+                  <a
+                    href="https://city.cri.cn/20171212/25ff4ee6-a818-28a4-f711-1abbcc869b3b.html"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    青岩古镇（新华社 / 国际在线）
+                  </a>{' '}
+                  ·{' '}
+                  <a
+                    href="https://you.ctrip.com/sight/jiangkou2334/4747351.html"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    梵净山蘑菇石
+                  </a>{' '}
+                  ·{' '}
+                  <a
+                    href="https://you.ctrip.com/sight/xingyi519/17707.html"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    马岭河峡谷
+                  </a>{' '}
+                  ·{' '}
+                  <a
+                    href="https://www.sohu.com/a/439876229_100195554"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    丹寨蜡染（乐玩日志）
                   </a>
                 </details>
               </div>

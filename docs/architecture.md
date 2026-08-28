@@ -35,17 +35,17 @@ localStorage：本机状态         Service Worker：按需静态资源缓存
 
 ## 推荐未来接口（仅设计，当前无这些 HTTP 端点）
 
-| 接口 | 用途 | 关键要求 |
-|---|---|---|
-| POST /api/guides/parse | 授权来源内容解析 | 来源域白名单、授权、超时、配额、结构化实体、人工校验 |
-| POST /api/trips/plan | 规划候选路线 | 时间窗、交通矩阵、预算约束、可解释拒绝/降级 |
-| PATCH /api/trips/:id | 保存行程 | 登录、所有权校验、版本号、冲突处理 |
-| POST /api/trips/:id/optimize | 优化路线 | 保留已锁定节点、可靠路线矩阵、前后对比 |
-| GET /api/places/:id/context | 今日指数与事实 | 每个字段的来源、更新时间、实时/预测类型 |
-| POST /api/trips/:id/replan | 处理突发变化 | 用户确认后应用，不擅自取消预订 |
-| POST /api/discover | 发布行程 | 默认脱敏、审核、举报、权限控制 |
-| POST /api/companions | 发起结伴 | 鉴权、限流、反骚扰、接收方确认 |
-| POST /api/sync | 同步离线修改 | 幂等 mutationId、乐观版本、冲突合并与重试 |
+| 接口                         | 用途             | 关键要求                                             |
+| ---------------------------- | ---------------- | ---------------------------------------------------- |
+| POST /api/guides/parse       | 授权来源内容解析 | 来源域白名单、授权、超时、配额、结构化实体、人工校验 |
+| POST /api/trips/plan         | 规划候选路线     | 时间窗、交通矩阵、预算约束、可解释拒绝/降级          |
+| PATCH /api/trips/:id         | 保存行程         | 登录、所有权校验、版本号、冲突处理                   |
+| POST /api/trips/:id/optimize | 优化路线         | 保留已锁定节点、可靠路线矩阵、前后对比               |
+| GET /api/places/:id/context  | 今日指数与事实   | 每个字段的来源、更新时间、实时/预测类型              |
+| POST /api/trips/:id/replan   | 处理突发变化     | 用户确认后应用，不擅自取消预订                       |
+| POST /api/discover           | 发布行程         | 默认脱敏、审核、举报、权限控制                       |
+| POST /api/companions         | 发起结伴         | 鉴权、限流、反骚扰、接收方确认                       |
+| POST /api/sync               | 同步离线修改     | 幂等 mutationId、乐观版本、冲突合并与重试            |
 
 ## 可靠性与隐私
 
@@ -56,6 +56,10 @@ localStorage：本机状态         Service Worker：按需静态资源缓存
 Service Worker 只缓存同源 GET 页面/静态资源，不上传。只在用户点击缓存后注册；离线无法保证新页面或未缓存模块可用。生产上线若加入鉴权，需重新设计页面缓存与退出清除策略，不能直接沿用 Demo 策略。
 
 ## 验证策略
+
+`lib/themed-fixtures.ts` 保存六类热门内容、具体玩法、全文与品类原始值，仅通过 type import 依赖模型。`travel.ts` 聚合新旧内容，旧内容 ID 与存储版本保持不变；恢复时将旧主题名迁移为新的六类名称。TypeScript 直接导入扩展名用于保持原生 Node 规则测试与 Vite 构建一致。
+
+分类单元为“地点 + 玩法”。可选 `locationId` 表示同一地理场所，`id` 表示独立玩法。提取只按 `id` 去重；同 `locationId` 的不同玩法保留、提示且默认分日。建议天数与日程使用同一分组函数，按区域、8 小时模拟时长和每日数量约束，无法排入的地点写入备注。此时长模型不是导航或体力适宜性保证。
 
 原生 Node test 覆盖评分、日期边界、偏好过滤、导入去重、预算、路线优化、时间冲突、精确分摊、异常重排、本地数据恢复与解析降级。TypeScript 检查组件与数据模型，oxlint 检查代码及基础可访问性，Vinext/Vite 产出 Worker 构建。
 

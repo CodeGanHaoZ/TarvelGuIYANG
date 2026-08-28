@@ -33,6 +33,8 @@ import {
   places,
   placeById,
   themes,
+  themeInfo,
+  planningWarnings,
   score,
   type Theme,
 } from '@/lib/travel';
@@ -71,6 +73,7 @@ export function SocialInspiration({
         const next = organizeSocialPosts([id]);
         setResult(next);
         setRoute(next.stops.map((s) => s.placeId));
+        setPreferences(next.themes);
         setPanel('route');
         url.searchParams.delete('plan');
         window.history.replaceState(
@@ -91,6 +94,8 @@ export function SocialInspiration({
     [],
   );
   const post = socialPosts.find((p) => p.id === postId)!;
+  const popular = socialPosts.filter((p) => p.featured);
+  const warnings = planningWarnings(route);
   const recommended = recommendSocialPlaces(route, preferences);
   const matches = query.trim()
     ? places
@@ -131,6 +136,7 @@ export function SocialInspiration({
       const next = organizeSocialPosts(ids);
       setResult(next);
       setRoute(next.stops.map((s) => s.placeId));
+      setPreferences(next.themes);
     } catch (e) {
       if (token === request.current) setError((e as Error).message);
     } finally {
@@ -155,10 +161,10 @@ export function SocialInspiration({
     <>
       <HomeCarousel
         variant="social"
-        title="把刷到的心动，变成你的路线"
-        subtitle="旅行视频与笔记 · 内容与账号均为 Mock 演示样例"
+        title="热门推荐，把喜欢变成下一程"
+        subtitle={`六类主题 · ${popular.length} 条旅行灵感 · 视频、帖子与热度均为 Mock`}
       >
-        {socialPosts.map((p) => (
+        {popular.map((p) => (
           <article
             key={p.id}
             className={
@@ -184,6 +190,9 @@ export function SocialInspiration({
               )}
             </button>
             <div className="social-copy">
+              <span className="social-topic">
+                {p.theme} · {p.kind === 'video' ? '视频' : '图文'}
+              </span>
               <a className="social-title" href={'/inspiration/' + p.id}>
                 <h3>{p.title}</h3>
               </a>
@@ -308,11 +317,22 @@ export function SocialInspiration({
               </div>
               <div className="post-article">
                 <span className="eyebrow">
+                  {post.theme || '综合灵感'} ·{' '}
                   {post.kind === 'video' ? '视频分镜' : '图文笔记'} · MOCK
                 </span>
                 <h2>{post.title}</h2>
                 <p className="post-byline">{post.author} · 虚构创作者</p>
                 <p>{post.intro}</p>
+                {post.theme && (
+                  <div className="content-theme-note">
+                    <b>
+                      {post.theme} · {themeInfo[post.theme].subtitle} · 以“
+                      {themeInfo[post.theme].verb}”为核心
+                    </b>
+                    <p>{post.recommendation}</p>
+                    <small>{themeInfo[post.theme].boundary}</small>
+                  </div>
+                )}
                 {post.mentions.map((m, i) => (
                   <div className="post-paragraph" key={m.placeId}>
                     <b>
@@ -393,6 +413,16 @@ export function SocialInspiration({
                           : regions[0] || '空白草稿'}
                       </span>
                     </div>
+                    {warnings.length > 0 && (
+                      <aside
+                        className="planning-cautions"
+                        aria-label="玩法与规划提醒"
+                      >
+                        {warnings.map((warning) => (
+                          <p key={warning}>{warning}</p>
+                        ))}
+                      </aside>
+                    )}
                     <div className="social-workbench">
                       <div className="social-draft">
                         <div className="row-between">

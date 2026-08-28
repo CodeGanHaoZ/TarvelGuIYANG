@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
 import {
   initialData,
   restore,
@@ -22,7 +23,136 @@ import {
   attachTripSources,
   socialPosts,
   socialStories,
+  themes,
+  planningWarnings,
+  suggestedTripDays,
 } from '../lib/travel.ts';
+
+test('featured feed covers all six themes with a video and article without mixing activity categories', () => {
+  const featured = socialPosts.filter((post) => post.featured);
+  assert.equal(featured.length, 12);
+  assert.equal(new Set(places.map((place) => place.id)).size, places.length);
+  assert.equal(
+    new Set(socialPosts.map((post) => post.id)).size,
+    socialPosts.length,
+  );
+  for (const theme of themes) {
+    const entries = featured.filter((post) => post.theme === theme);
+    assert.deepEqual(entries.map((post) => post.kind).sort(), [
+      'article',
+      'video',
+    ]);
+    for (const post of entries) {
+      assert.ok(post.recommendation);
+      assert.ok(existsSync(new URL(`../public${post.cover}`, import.meta.url)));
+      const draft = organizeSocialPosts([post.id]);
+      assert.ok(draft.stops.length);
+      for (const stop of draft.stops)
+        assert.equal(places.find((p) => p.id === stop.placeId).category, theme);
+      const ids = draft.stops.map((stop) => stop.placeId);
+      const trip = attachTripSources(
+        makeTrip(
+          {
+            destination: '贵州',
+            start: '2026-09-01',
+            dayCount: suggestedTripDays(ids),
+            people: ['我'],
+            budget: 5000,
+            pace: '均衡',
+            preferences: draft.themes,
+          },
+          ids,
+        ),
+        [post.id],
+      );
+      assert.deepEqual(
+        trip.days
+          .flatMap((day) => day.items.map((item) => item.placeId))
+          .sort(),
+        [...ids].sort(),
+      );
+      assert.deepEqual(trip.sourcePostIds, [post.id]);
+      if (post.kind === 'video') {
+        assert.ok(
+          existsSync(new URL(`../public${post.media}`, import.meta.url)),
+        );
+        const captions = readFileSync(
+          new URL(`../public${post.captions}`, import.meta.url),
+          'utf8',
+        );
+        assert.match(captions, /^WEBVTT/);
+        for (const mention of post.mentions)
+          assert.ok(captions.includes(`00:${mention.at}.000`));
+      }
+    }
+  }
+});
+
+test('same geographic location keeps sightseeing and outdoor activities separate through extraction and planning', () => {
+  const draft = organizeSocialPosts(['hot-nature-note', 'hot-outdoor-note']);
+  const ids = draft.stops.map((stop) => stop.placeId);
+  for (const pair of [
+    ['fanjing-view', 'fanjing-hike'],
+    ['maling-view', 'maling-rafting'],
+  ]) {
+    const [view, activity] = pair.map((id) => places.find((p) => p.id === id));
+    assert.equal(view.locationId, activity.locationId);
+    assert.equal(view.category, '山水奇观');
+    assert.equal(activity.category, '野趣户外');
+    assert.ok(pair.every((id) => ids.includes(id)));
+  }
+  assert.ok(
+    planningWarnings(ids).some((warning) => warning.includes('同地不同玩法')),
+  );
+  assert.equal(suggestedTripDays(ids), 5);
+  const trip = makeTrip(
+    {
+      destination: '贵州',
+      start: '2026-09-01',
+      dayCount: 5,
+      people: ['我'],
+      budget: 5000,
+      pace: '均衡',
+      preferences: draft.themes,
+    },
+    ids,
+  );
+  assert.equal(trip.days.flatMap((day) => day.items).length, ids.length);
+  for (const day of trip.days) {
+    const locations = day.items
+      .map((item) => places.find((p) => p.id === item.placeId).locationId)
+      .filter(Boolean);
+    assert.equal(new Set(locations).size, locations.length);
+  }
+  assert.deepEqual(
+    places
+      .filter((p) => ['qingyan', 'tunbao'].includes(p.id))
+      .map((p) => p.category),
+    ['古镇遗韵', '古镇遗韵'],
+  );
+  assert.equal(places.find((p) => p.id === 'sourfish').category, '舌尖黔味');
+  assert.equal(places.find((p) => p.id === 'xijiang').category, '多彩民族');
+});
+
+test('renamed themes migrate existing trips and feed preferences without losing source material', () => {
+  const data = initialData();
+  data.trips[0].preferences = ['自然景观', '身体力行', '经典路线'];
+  data.feed[0].trip.preferences = ['民族文化', '美食体验', '红色旅游'];
+  data.savedPostIds = ['dy-guizhou', 'xhs-miao'];
+  const migrated = restore(JSON.stringify(data));
+  assert.deepEqual(migrated.trips[0].preferences, [
+    '山水奇观',
+    '野趣户外',
+    '古镇遗韵',
+  ]);
+  assert.deepEqual(migrated.feed[0].trip.preferences, [
+    '多彩民族',
+    '舌尖黔味',
+    '红色征程',
+  ]);
+  assert.deepEqual(migrated.savedPostIds, data.savedPostIds);
+  assert.deepEqual(migrated.trips[0].days, data.trips[0].days);
+});
 
 test('social extraction merges overlapping posts while retaining ordered source evidence', () => {
   const result = organizeSocialPosts([
@@ -51,16 +181,16 @@ test('social extraction merges overlapping posts while retaining ordered source 
 
 test('social recommendations stay in selected regions, respect preferences and exclude chosen stops', () => {
   const ids = ['jiaxiu', 'qingyun'];
-  const recommendations = recommendSocialPlaces(ids, ['民族文化']);
+  const recommendations = recommendSocialPlaces(ids, ['多彩民族']);
   assert.ok(recommendations.length > 0);
   for (const recommendation of recommendations) {
     const p = places.find((p) => p.id === recommendation.placeId);
     assert.equal(p.region, '贵阳');
-    assert.equal(p.category, '民族文化');
+    assert.equal(p.category, '多彩民族');
     assert.ok(!ids.includes(p.id));
   }
-  assert.deepEqual(recommendSocialPlaces([], ['自然景观']), []);
-  assert.deepEqual(recommendSocialPlaces(ids, ['红色旅游']), []);
+  assert.deepEqual(recommendSocialPlaces([], ['山水奇观']), []);
+  assert.deepEqual(recommendSocialPlaces(ids, ['红色征程']), []);
 });
 
 test('customized social draft carries edits into a separately editable trip', () => {
@@ -149,11 +279,11 @@ test('category recommendation combines eight travel factors with place-specific 
     assert.ok(result.total >= 0 && result.total <= 100);
   }
   assert.ok(score(places[0], 'rain').total < score(places[0]).total);
-  assert.equal(score(places.find((p) => p.id === 'museum')).total, 89);
+  assert.equal(score(places.find((p) => p.id === 'museum')).total, 90);
   assert.equal(score(places.find((p) => p.id === 'qingyun')).total, 86);
   assert.ok(
-    recommendationProfiles['自然景观'].weights[0] >
-      recommendationProfiles['美食体验'].weights[0],
+    recommendationProfiles['山水奇观'].weights[0] >
+      recommendationProfiles['舌尖黔味'].weights[0],
   );
 });
 
@@ -175,8 +305,8 @@ test('closure and weather-sensitive activities cannot be recommended by unrelate
 test('preference contribution changes scores without rewriting place fixtures', () => {
   const food = places.find((p) => p.id === 'qingyun');
   const before = [...food.factors];
-  const matched = score(food, 'normal', ['美食体验']);
-  const unmatched = score(food, 'normal', ['自然景观']);
+  const matched = score(food, 'normal', ['舌尖黔味']);
+  const unmatched = score(food, 'normal', ['山水奇观']);
   assert.ok(matched.total > score(food).total);
   assert.ok(score(food).total > unmatched.total);
   assert.deepEqual(food.factors, before);
@@ -230,7 +360,7 @@ test('trip creation respects region, selected preferences and requested day coun
     people: ['我'],
     budget: 2000,
     pace: '留白',
-    preferences: ['民族文化'],
+    preferences: ['多彩民族'],
   });
   assert.equal(t.days.length, 3);
   assert.equal(t.days[1].date, '2026-09-01');
@@ -239,7 +369,7 @@ test('trip creation respects region, selected preferences and requested day coun
     for (const item of day.items) {
       const p = places.find((x) => x.id === item.placeId);
       assert.equal(p.region, '贵阳');
-      assert.equal(p.category, '民族文化');
+      assert.equal(p.category, '多彩民族');
     }
   }
   const ids = t.days.flatMap((d) => d.items.map((i) => i.placeId));
@@ -312,7 +442,10 @@ test('budget settlement handles unequal payments and exact cents', () => {
 test('rain replacement stays in region and avoids duplicated indoor places', () => {
   const items = ['qianling', 'museum', 'jiaxiu'].map(makeItem);
   const changed = replan(items, 'rain');
-  assert.equal(changed.items[0].placeId, 'batik');
+  const replacement = places.find((p) => p.id === changed.items[0].placeId);
+  assert.equal(replacement.indoor, true);
+  assert.equal(replacement.region, '贵阳');
+  assert.ok(!items.some((item) => item.placeId === replacement.id));
   assert.equal(new Set(changed.items.map((i) => i.placeId)).size, 3);
   assert.equal(items[0].placeId, 'qianling');
 });

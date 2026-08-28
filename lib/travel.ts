@@ -1,18 +1,75 @@
+import {
+  additionalPlaces,
+  additionalAttributes,
+  featuredPosts,
+  featuredStories,
+} from './themed-fixtures.ts';
+
 export type Theme =
-  | '美食体验'
-  | '自然景观'
-  | '身体力行'
-  | '民族文化'
-  | '经典路线'
-  | '红色旅游';
+  | '舌尖黔味'
+  | '山水奇观'
+  | '野趣户外'
+  | '多彩民族'
+  | '古镇遗韵'
+  | '红色征程';
 export const themes: Theme[] = [
-  '美食体验',
-  '自然景观',
-  '身体力行',
-  '民族文化',
-  '经典路线',
-  '红色旅游',
+  '山水奇观',
+  '舌尖黔味',
+  '多彩民族',
+  '古镇遗韵',
+  '野趣户外',
+  '红色征程',
 ];
+export const themeInfo: Record<
+  Theme,
+  { subtitle: string; verb: string; definition: string; boundary: string }
+> = {
+  山水奇观: {
+    subtitle: '纯观光',
+    verb: '看',
+    definition: '以观赏自然景观为主，选择成熟观景台、索道与栈道游览。',
+    boundary: '不含漂流、攀岩、探洞或徒步登山；索道观光也需按体力选择步行段。',
+  },
+  舌尖黔味: {
+    subtitle: '美食',
+    verb: '吃',
+    definition: '贵州特色餐饮、小吃、酒文化及饮食场景。',
+    boundary: '苗寨长桌宴的用餐归美食；村寨文化互动另归多彩民族，不重复归类。',
+  },
+  多彩民族: {
+    subtitle: '文化体验',
+    verb: '感',
+    definition: '与少数民族居民或手艺人直接互动，了解建筑、歌舞、手艺与生活。',
+    boundary: '少数民族活态文化，不把明清古镇、汉族屯堡或普通展馆混入此类。',
+  },
+  古镇遗韵: {
+    subtitle: '历史人文',
+    verb: '访',
+    definition: '明清古镇、军事屯堡、商埠古道与古代历史人文遗存。',
+    boundary: '聚焦古代军政与汉文化历史；不归入少数民族活态文化或革命纪念。',
+  },
+  野趣户外: {
+    subtitle: '身体力行',
+    verb: '动',
+    definition: '需要亲身参与和体力投入的登山、漂流、攀岩等户外体验。',
+    boundary:
+      '按具体玩法拆分；不能将观景步道等同漂流，也不能将索道观光等同徒步登山。',
+  },
+  红色征程: {
+    subtitle: '历史缅怀',
+    verb: '忆',
+    definition: '红军长征、革命历史相关的纪念地、旧址与纪念馆。',
+    boundary: '聚焦革命历史，与古代历史人文、民族村寨文化分开。',
+  },
+};
+const legacyThemes: Record<string, Theme> = {
+  自然景观: '山水奇观',
+  美食体验: '舌尖黔味',
+  民族文化: '多彩民族',
+  经典路线: '古镇遗韵',
+  身体力行: '野趣户外',
+  红色旅游: '红色征程',
+};
 export type Place = {
   id: string;
   name: string;
@@ -29,6 +86,8 @@ export type Place = {
   factors: number[];
   tip: string;
   culture?: string;
+  /** Different activities at one location remain distinct bookable/plannable candidates. */
+  locationId?: string;
 };
 export type TripItem = { id: string; placeId: string; duration: number };
 export type TripDay = {
@@ -96,7 +155,7 @@ export const places: Place[] = [
     id: 'qianling',
     name: '黔灵山公园',
     region: '贵阳',
-    category: '自然景观',
+    category: '山水奇观',
     description: '把第一段时光，留给城市里的森林。',
     lat: 26.603,
     lng: 106.688,
@@ -111,8 +170,8 @@ export const places: Place[] = [
     id: 'museum',
     name: '贵州省博物馆',
     region: '贵阳',
-    category: '民族文化',
-    description: '从一件苗绣开始，读懂多彩贵州。',
+    category: '古镇遗韵',
+    description: '历史人文展陈样例，不作为少数民族活态互动体验。',
     lat: 26.646,
     lng: 106.648,
     duration: 100,
@@ -127,7 +186,7 @@ export const places: Place[] = [
     id: 'jiaxiu',
     name: '甲秀楼',
     region: '贵阳',
-    category: '经典路线',
+    category: '古镇遗韵',
     description: '沿着南明河，慢慢走进贵阳的旧时光。',
     lat: 26.569,
     lng: 106.721,
@@ -143,7 +202,7 @@ export const places: Place[] = [
     id: 'qingyun',
     name: '青云路美食街',
     region: '贵阳',
-    category: '美食体验',
+    category: '舌尖黔味',
     description: '丝娃娃、豆腐圆子与酸汤，都是贵州的相遇。',
     lat: 26.561,
     lng: 106.714,
@@ -158,8 +217,9 @@ export const places: Place[] = [
     id: 'qingyan',
     name: '青岩古镇',
     region: '贵阳',
-    category: '民族文化',
-    description: '石板路与老院子，藏着小镇的日常。',
+    category: '古镇遗韵',
+    description: '沿着明清军事要塞的石墙与老街，读一段贵州古镇史。',
+    image: '/images/qingyan.jpg',
     lat: 26.331,
     lng: 106.683,
     duration: 120,
@@ -173,8 +233,8 @@ export const places: Place[] = [
     id: 'batik',
     name: '贵阳蜡染体验工坊',
     region: '贵阳',
-    category: '民族文化',
-    description: '以蜡为笔、以蓝为墨，带走一段手作时光。',
+    category: '多彩民族',
+    description: '与苗族手艺人交流纹样并动手蜡染的虚构体验场景。',
     lat: 26.573,
     lng: 106.711,
     duration: 90,
@@ -189,7 +249,7 @@ export const places: Place[] = [
     id: 'huangguoshu',
     name: '黄果树瀑布',
     region: '安顺',
-    category: '自然景观',
+    category: '山水奇观',
     description: '听见水声，也看见山河的力量。',
     lat: 25.992,
     lng: 105.666,
@@ -205,7 +265,7 @@ export const places: Place[] = [
     id: 'tianxing',
     name: '天星桥景区',
     region: '安顺',
-    category: '自然景观',
+    category: '山水奇观',
     description: '沿水而行，寻找石与树交织的奇境。',
     lat: 25.975,
     lng: 105.677,
@@ -220,8 +280,8 @@ export const places: Place[] = [
     id: 'tunbao',
     name: '天龙屯堡',
     region: '安顺',
-    category: '民族文化',
-    description: '从老街到地戏，听一段延续至今的故事。',
+    category: '古镇遗韵',
+    description: '从明代军屯、石头建筑与地戏，了解屯堡的汉文化历史。',
     lat: 26.418,
     lng: 106.243,
     duration: 120,
@@ -236,8 +296,8 @@ export const places: Place[] = [
     id: 'xijiang',
     name: '西江千户苗寨',
     region: '黔东南',
-    category: '民族文化',
-    description: '在群山与万家灯火里，遇见苗乡。',
+    category: '多彩民族',
+    description: '在苗族居民讲解、歌舞交流与吊脚楼生活中，认识苗乡。',
     lat: 26.496,
     lng: 108.171,
     duration: 180,
@@ -253,7 +313,7 @@ export const places: Place[] = [
     id: 'silver',
     name: '苗乡银饰体验',
     region: '黔东南',
-    category: '民族文化',
+    category: '多彩民族',
     description: '一锤一錾，读懂银饰背后的手艺。',
     lat: 26.501,
     lng: 108.164,
@@ -269,7 +329,7 @@ export const places: Place[] = [
     id: 'sourfish',
     name: '苗家酸汤鱼体验',
     region: '黔东南',
-    category: '美食体验',
+    category: '舌尖黔味',
     description: '一锅红酸汤，让味蕾也来一次旅行。',
     lat: 26.498,
     lng: 108.173,
@@ -284,7 +344,7 @@ export const places: Place[] = [
     id: 'xiaoqikong',
     name: '荔波小七孔',
     region: '荔波',
-    category: '自然景观',
+    category: '山水奇观',
     description: '一抹翡翠，藏在山水之间。',
     lat: 25.257,
     lng: 107.748,
@@ -298,9 +358,9 @@ export const places: Place[] = [
   },
   {
     id: 'shuichun',
-    name: '水春河户外体验',
+    name: '水春河漂流',
     region: '荔波',
-    category: '身体力行',
+    category: '野趣户外',
     description: '沿河亲近自然，也给勇气留一点空间。',
     lat: 25.429,
     lng: 107.916,
@@ -315,20 +375,79 @@ export const places: Place[] = [
     id: 'zunyi',
     name: '遵义会议会址',
     region: '遵义',
-    category: '红色旅游',
+    category: '红色征程',
     description: '沿历史的足迹，读懂这座城的记忆。',
     lat: 27.687,
     lng: 106.917,
     duration: 120,
     price: 0,
     indoor: true,
+    image: '/images/theme-history.jpg',
     hours: [9, 17],
     factors: [100, 84, 100, 90, 95, 90, 90, 92],
     tip: '预约、闭馆日与展陈安排待接入官方信息，请提前核实。',
   },
+  ...additionalPlaces,
 ];
+export const travelRegions = [...new Set(places.map((p) => p.region))];
 export const placeById = (id: string): Place =>
   places.find((p) => p.id === id) ?? places[0];
+export function planningWarnings(ids: string[]) {
+  const selected = places.filter((p) => ids.includes(p.id));
+  const locations = [
+    ...new Set(selected.map((p) => p.locationId).filter(Boolean)),
+  ];
+  const warnings = locations.flatMap((location) => {
+    const activities = selected.filter((p) => p.locationId === location);
+    return activities.length > 1
+      ? [
+          `${activities.map((p) => p.name).join(' / ')} 是同地不同玩法，可二选一；都保留时会分天安排。`,
+        ]
+      : [];
+  });
+  if (selected.some((p) => p.category === '野趣户外'))
+    warnings.push(
+      '户外挑战需先核验天气、开放、运营与个人能力；Mock 推荐指数不代表安全许可。',
+    );
+  return warnings;
+}
+function selectDayPlaces(ids: string[], pace: string) {
+  const selected: string[] = [];
+  let minutes = 0;
+  for (const id of ids) {
+    const place = placeById(id);
+    const transit = selected.length
+      ? leg(placeById(selected.at(-1)!), place).minutes
+      : 0;
+    const sameLocation =
+      place.locationId &&
+      selected.some((p) => placeById(p).locationId === place.locationId);
+    if (
+      selected.length &&
+      (sameLocation ||
+        minutes + transit + place.duration > 480 ||
+        selected.length >= (pace === '留白' ? 2 : pace === '紧凑' ? 4 : 3))
+    )
+      break;
+    selected.push(id);
+    minutes += transit + place.duration;
+  }
+  return selected;
+}
+export function suggestedTripDays(ids: string[], pace = '均衡') {
+  let remaining = [...new Set(ids)].filter((id) =>
+    places.some((p) => p.id === id),
+  );
+  let days = 0;
+  while (remaining.length) {
+    const region = placeById(remaining[0]).region;
+    const group = remaining.filter((id) => placeById(id).region === region);
+    const selected = selectDayPlaces(group, pace);
+    remaining = remaining.filter((id) => !selected.includes(id));
+    days++;
+  }
+  return Math.max(1, Math.min(7, days));
+}
 export const uid = () =>
   globalThis.crypto?.randomUUID?.() ??
   `id-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -341,38 +460,39 @@ export const recommendationProfiles: Record<
     description: string;
   }
 > = {
-  自然景观: {
+  山水奇观: {
     weights: [25, 15, 15, 10, 10, 15, 5, 5],
     dimensions: ['景观丰富度', '季节体验', '步道友好度'],
     specialtyWeights: [40, 35, 25],
     description: '优先看天气、季节与景观体验，兼顾步道和停留条件。',
   },
-  美食体验: {
+  舌尖黔味: {
     weights: [5, 15, 15, 10, 25, 5, 5, 20],
     dimensions: ['地方风味', '价格友好度', '饮食适配'],
     specialtyWeights: [45, 25, 30],
     description:
       '优先看地方风味与个人口味，天气占比较低。饮食过敏仍需向商家核验。',
   },
-  身体力行: {
+  野趣户外: {
     weights: [30, 10, 20, 10, 10, 10, 5, 5],
     dimensions: ['参与体验', '体力友好度', '装备便利'],
     specialtyWeights: [35, 40, 25],
     description: '优先看天气、可开展条件和体力要求，不能用高热度替代运营核验。',
   },
-  民族文化: {
+  多彩民族: {
     weights: [5, 10, 15, 10, 20, 10, 15, 15],
     dimensions: ['文化内容', '互动参与', '讲解条件'],
     specialtyWeights: [45, 30, 25],
     description: '优先看文化内容、讲解和互动参与，尊重居民与传承人的意愿。',
   },
-  经典路线: {
+  古镇遗韵: {
     weights: [15, 15, 15, 15, 15, 10, 5, 10],
-    dimensions: ['地标价值', '路线串联', '停留弹性'],
+    dimensions: ['历史遗存', '古建与街巷', '历史解读'],
     specialtyWeights: [40, 35, 25],
-    description: '优先看地标特色、交通串联与时间弹性，适合纳入城市路线。',
+    description:
+      '优先看古代历史遗存、古建街巷与历史解读，不与民族活态文化或革命历史混类。',
   },
-  红色旅游: {
+  红色征程: {
     weights: [5, 10, 20, 10, 20, 5, 15, 15],
     dimensions: ['史料展示', '学习价值', '讲解条件'],
     specialtyWeights: [40, 35, 25],
@@ -388,6 +508,7 @@ export const placeAttributes: Record<
     weatherSensitive?: boolean;
   }
 > = {
+  ...additionalAttributes,
   qianling: {
     nature: '城市森林公园',
     values: [89, 88, 82],
@@ -494,14 +615,14 @@ export function score(
     warnings.push('模拟闭园：不推荐安排，其他高分不能抵消未开放。');
   } else if (
     scenario === 'rain' &&
-    p.category === '身体力行' &&
+    p.category === '野趣户外' &&
     attributes.weatherSensitive
   ) {
     total = Math.min(total, 35);
-    warnings.push('模拟降雨：水上户外项目暂缓，需核验运营方与天气条件。');
+    warnings.push('模拟降雨：户外挑战项目暂缓，需核验运营方、体力与天气条件。');
   } else if (scenario === 'rain' && attributes.weatherSensitive) {
     total = Math.min(total, 60);
-    warnings.push('模拟降雨：水系景区降级推荐，步道与开放情况需核验。');
+    warnings.push('模拟降雨：天气敏感景观降级推荐，步道与开放情况需核验。');
   }
   return {
     factors,
@@ -565,9 +686,8 @@ export function makeTrip(
 ): Trip {
   const destination = options.destination.trim() || '贵州';
   const region =
-    ['贵阳', '安顺', '黔东南', '荔波', '遵义'].find((r) =>
-      destination.includes(r),
-    ) ?? (destination.includes('苗寨') ? '黔东南' : undefined);
+    travelRegions.find((r) => destination.includes(r)) ??
+    (destination.includes('苗寨') ? '黔东南' : undefined);
   const pool = places.filter(
     (p) =>
       (!region || p.region === region) &&
@@ -597,10 +717,7 @@ export function makeTrip(
             (id) => placeById(id).region === placeById(first).region,
           )
         : [];
-      ids = group.slice(
-        0,
-        options.pace === '留白' ? 2 : options.pace === '紧凑' ? 4 : 3,
-      );
+      ids = selectDayPlaces(group, options.pace);
       remaining = remaining.filter((id) => !ids.includes(id));
     }
     if (!imported.length)
@@ -624,11 +741,12 @@ export function makeTrip(
   });
   return {
     id: uid(),
-    title: `${destination}${count}日 · 山水与烟火`,
+    title: `${destination}${count}日 · ${options.preferences.length === 1 ? options.preferences[0] : '山水与烟火'}`,
     ...options,
     destination,
     days,
     notes: [
+      ...planningWarnings(selected),
       imported.length && remaining.length
         ? `另有 ${remaining.length} 个地点未排入，请在添加地点中补充或延长旅行。`
         : '',
@@ -656,7 +774,7 @@ export function initialData(): AppData {
     start: '2026-09-04',
     dayCount: 2,
     people: ['阿禾'],
-    preferences: ['民族文化', '美食体验'],
+    preferences: ['多彩民族', '舌尖黔味'],
     pace: '留白',
     budget: 1800,
   });
@@ -851,9 +969,18 @@ export type SocialPost = {
   media?: string;
   captions?: string;
   duration?: string;
+  theme?: Theme;
+  featured?: boolean;
+  recommendation?: string;
+};
+export type SocialStory = {
+  readTime: string;
+  sections: { title: string; text: string }[];
+  tips: string[];
 };
 /** All creators, engagement counts, copy and media are fictional demo fixtures. */
 export const socialPosts: SocialPost[] = [
+  ...featuredPosts,
   {
     id: 'dy-guizhou',
     platform: '抖音',
@@ -894,7 +1021,7 @@ export const socialPosts: SocialPost[] = [
     author: '小满在路上',
     cover: '/images/jiaxiu.jpg',
     likes: '3,216',
-    tags: ['城市漫步', '美食体验'],
+    tags: ['城市漫步', '舌尖黔味'],
     intro:
       '不赶路的一天，留给贵阳的老城与小店。这是一份可以随时删改的路线草稿，营业时间和预约请出发前再确认。',
     mentions: [
@@ -920,7 +1047,7 @@ export const socialPosts: SocialPost[] = [
     author: '山间放映室',
     cover: '/images/huangguoshu.jpg',
     likes: '1.6万',
-    tags: ['瀑布', '自然景观'],
+    tags: ['瀑布', '山水奇观'],
     intro:
       '两处山水、两段慢时光。安顺与荔波之间需要单独安排交通，不是一条当日步行路线。',
     media: '/videos/waterfall-demo.mp4',
@@ -947,7 +1074,7 @@ export const socialPosts: SocialPost[] = [
     author: '蓝染小巷',
     cover: '/images/xijiang.jpg',
     likes: '5,082',
-    tags: ['民族文化', '在地体验'],
+    tags: ['多彩民族', '在地体验'],
     intro:
       '把拍照之外的时间留给文化与餐桌。体验项目和店铺均为演示样例，没有真实预约入口。',
     mentions: [
@@ -973,7 +1100,7 @@ export const socialPosts: SocialPost[] = [
     author: '一颗旅行松果',
     cover: '/images/huangguoshu.jpg',
     likes: '2,469',
-    tags: ['自然景观', '人文慢游'],
+    tags: ['山水奇观', '人文慢游'],
     intro:
       '自然与人文各留一段时间。以下只是内容示例，具体排期交给你的偏好、体力与天气。',
     mentions: [
@@ -1016,16 +1143,11 @@ export function organizeSocialPosts(postIds: string[]) {
     stops,
     postIds: selected.map((p) => p.id),
     regions: [...new Set(stops.map((s) => placeById(s.placeId).region))],
+    themes: [...new Set(stops.map((s) => placeById(s.placeId).category))],
   };
 }
-export const socialStories: Record<
-  string,
-  {
-    readTime: string;
-    sections: { title: string; text: string }[];
-    tips: string[];
-  }
-> = {
+export const socialStories: Record<string, SocialStory> = {
+  ...featuredStories,
   'dy-guizhou': {
     readTime: '9 秒视频 · 2 分钟阅读',
     sections: [
@@ -1078,8 +1200,8 @@ export const socialStories: Record<
         text: '黄果树的瀑布与小七孔的水色是两种不同的自然体验。两地分属不同区域，这段合成视频不代表它们就在彼此旁边，更不是当日步行路线。',
       },
       {
-        title: '自然景观，要看当天条件',
-        text: '水系景区的天气与步道状况比视频里的观感更重要。推荐指数使用自然景观模型，天气、季节和步道体验会参与计算。模拟降雨时会下调建议，真实出行仍需查看景区公告。',
+        title: '山水奇观，要看当天条件',
+        text: '水系景区的天气与步道状况比视频里的观感更重要。推荐指数使用山水奇观模型，天气、季节和步道体验会参与计算。模拟降雨时会下调建议，真实出行仍需查看景区公告。',
       },
       {
         title: '先选最想去的一处',
@@ -1119,7 +1241,7 @@ export const socialStories: Record<
     sections: [
       {
         title: '第一段：给自然足够的时间',
-        text: '黄果树与天星桥可以成为安顺路线的自然景观候选。是否安排在同一天，要结合体力、接驳和实际开放情况；演示不会替你判断真实道路是否可通行。',
+        text: '黄果树与天星桥可以成为安顺路线的山水奇观候选。是否安排在同一天，要结合体力、接驳和实际开放情况；演示不会替你判断真实道路是否可通行。',
       },
       {
         title: '第二段：从山水转向故事',
@@ -1285,6 +1407,10 @@ export function restore(raw: string): AppData | null {
             )))
       )
         return null;
+      t.preferences = [
+        ...new Set(t.preferences.map((p) => legacyThemes[p] ?? p)),
+      ];
+      if (t.preferences.some((p) => !themes.includes(p))) return null;
       for (const day of t.days) {
         if (
           !/^\d{4}-\d{2}-\d{2}$/.test(day.date) ||

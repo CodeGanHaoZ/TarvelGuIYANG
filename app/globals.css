@@ -3630,6 +3630,11 @@ textarea {
   font-size: 16px;
   letter-spacing: 1px;
 }
+.theme-image-label small {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.94;
+}
 .theme-image-card > svg:last-child {
   position: absolute;
   top: 12px;
@@ -3714,6 +3719,45 @@ textarea {
 .social-title {
   text-align: left;
   margin: 0 0 9px;
+}
+.social-topic {
+  color: var(--primary);
+  font-size: 10px;
+  line-height: 1.5;
+  margin-bottom: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.content-theme-note {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--accent);
+  padding: 15px 18px;
+  margin: 18px 0;
+  line-height: 1.8;
+}
+.content-theme-note b {
+  font-size: 14px;
+  color: var(--primary);
+}
+.content-theme-note p {
+  font-size: 13px;
+  margin: 6px 0;
+}
+.content-theme-note small {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.planning-cautions {
+  background: #fff5e8;
+  border: 1px solid #e9d0aa;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  color: #745321;
+  font-size: 12px;
+  line-height: 1.8;
 }
 .social-title h3 {
   font-size: 13px;

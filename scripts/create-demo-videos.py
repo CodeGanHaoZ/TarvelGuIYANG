@@ -1,6 +1,7 @@
 """Optional asset regeneration: pip install imageio-ffmpeg (wheel only).
 
-Creates silent MP4 slideshow fixtures from existing licensed-for-demo photos.
+Creates silent MP4 slideshow fixtures from existing reference photos.
+Photo rights must be reviewed before public/commercial release.
 No real social video is downloaded; captions and creators are fictional.
 """
 from pathlib import Path
@@ -18,8 +19,16 @@ out.mkdir(exist_ok=True)
 clips = {
     'guizhou-demo': [('xiaoqikong', '第一站：荔波小七孔'), ('xijiang', '第二站：西江千户苗寨'), ('jiaxiu', '第三站：甲秀楼')],
     'waterfall-demo': [('huangguoshu', '安顺：黄果树瀑布'), ('xiaoqikong', '荔波：小七孔')],
+    'nature-hot': [('huangguoshu', '山水奇观：黄果树观光游览'), ('xiaoqikong', '山水奇观：小七孔成熟栈道游览')],
+    'food-hot': [('theme-food', '舌尖黔味：丝娃娃菜品参考'), ('theme-food', '按口味选择一餐，门店与地址为Mock')],
+    'culture-hot': [('xijiang', '多彩民族：西江苗寨居民交流'), ('xijiang', '手艺交流为Mock场景，照片仅展示苗寨')],
+    'heritage-hot': [('qingyan', '古镇遗韵：青岩石墙与明清古镇'), ('jiaxiu', '古镇遗韵：甲秀楼历史建筑')],
+    'outdoor-hot': [('theme-hiking', '野趣户外：梵净山徒步登山'), ('theme-hiking', '高体力投入，须核验天气、开放与自身条件')],
+    'red-hot': [('theme-history', '红色征程：遵义会议旧址相关场馆'), ('theme-history', '照片合成演示，展陈与讲解需核验')],
 }
 for name, images in clips.items():
+    if len(sys.argv) > 1 and name not in sys.argv[1:]:
+        continue
     args = [encoder, '-y', '-hide_banner', '-loglevel', 'error']
     for image, _ in images:
         args += ['-loop', '1', '-t', '3', '-i', str(root / 'public' / 'images' / (image + '.jpg'))]

@@ -7,6 +7,8 @@ import {
   type Theme,
   type Trip,
   placeById,
+  travelRegions,
+  suggestedTripDays,
 } from '@/lib/travel';
 import {
   ArrowLeft,
@@ -37,25 +39,13 @@ export function TripWizard({
     [start, setStart] = useState('2026-08-29'),
     [days, setDays] = useState(() => {
       if (!imported.length) return 3;
-      const counts: Record<string, number> = {};
-      for (const id of new Set(imported)) {
-        const region = placeById(id).region;
-        counts[region] = (counts[region] || 0) + 1;
-      }
-      return Math.min(
-        7,
-        Math.max(
-          1,
-          Object.values(counts).reduce(
-            (n, count) => n + Math.ceil(count / 3),
-            0,
-          ),
-        ),
-      );
+      return suggestedTripDays(imported);
     }),
     [people, setPeople] = useState('我、小夏'),
     [budget, setBudget] = useState(3000),
-    [preferences, setPreferences] = useState<Theme[]>([]),
+    [preferences, setPreferences] = useState<Theme[]>(() => [
+      ...new Set(imported.map((id) => placeById(id).category)),
+    ]),
     [pace, setPace] = useState('均衡'),
     [error, setError] = useState(''),
     [building, setBuilding] = useState(-1);
@@ -81,7 +71,7 @@ export function TripWizard({
         !Number.isInteger(days) ||
         days < 1 ||
         days > 7 ||
-        !['贵州', '贵阳', '安顺', '黔东南', '荔波', '遵义', '苗寨'].some((r) =>
+        !['贵州', ...travelRegions, '苗寨'].some((r) =>
           destination.includes(r),
         ))
     ) {
