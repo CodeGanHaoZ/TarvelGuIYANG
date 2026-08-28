@@ -448,6 +448,34 @@ export function suggestedTripDays(ids: string[], pace = '均衡') {
   }
   return Math.max(1, Math.min(7, days));
 }
+const themeDestinations: Record<Theme, string> = {
+  山水奇观: '安顺',
+  舌尖黔味: '贵阳',
+  多彩民族: '黔东南',
+  古镇遗韵: '贵阳',
+  野趣户外: '荔波',
+  红色征程: '遵义',
+};
+export function tripCreationDefaults(imported: string[] = [], theme?: Theme) {
+  const candidates = theme
+    ? places.filter(
+        (p) => p.category === theme && p.region === themeDestinations[theme],
+      )
+    : [...new Set(imported)].flatMap((id) => {
+        const place = places.find((p) => p.id === id);
+        return place ? [place] : [];
+      });
+  const regions = [...new Set(candidates.map((p) => p.region))];
+  return {
+    destination: regions.length === 1 ? regions[0] : '贵州',
+    dayCount: candidates.length
+      ? suggestedTripDays(candidates.map((p) => p.id))
+      : 3,
+    preferences: theme
+      ? [theme]
+      : [...new Set(candidates.map((p) => p.category))],
+  };
+}
 export const uid = () =>
   globalThis.crypto?.randomUUID?.() ??
   `id-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -734,7 +762,7 @@ export function makeTrip(
       id: uid(),
       date: dateAfter(options.start, i),
       title: ids.length
-        ? `${placeById(ids[0]).region} · ${i === 0 ? '初见山水' : '慢慢相遇'}`
+        ? `${placeById(ids[0]).region} · ${options.preferences.length === 1 ? options.preferences[0] : i === 0 ? '初见山水' : '慢慢相遇'}`
         : '自由探索 · 留一点空白',
       items: ids.map(makeItem),
     };

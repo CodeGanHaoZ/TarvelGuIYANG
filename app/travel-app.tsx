@@ -138,6 +138,7 @@ export default function TravelApp() {
     [guide, setGuide] = useState<string[]>([]),
     [imported, setImported] = useState<string[]>([]),
     [importedSourceIds, setImportedSourceIds] = useState<string[]>([]),
+    [creationTheme, setCreationTheme] = useState<Theme | undefined>(),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [toast, setToast] = useState(''),
@@ -229,8 +230,11 @@ export default function TravelApp() {
     )
       setTripTab('行程');
   }
-  function open(which: Modal, sources: string[] = []) {
-    if (which === 'create') setImportedSourceIds(sources);
+  function open(which: Modal, sources: string[] = [], theme?: Theme) {
+    if (which === 'create') {
+      setImportedSourceIds(sources);
+      setCreationTheme(theme);
+    }
     setError('');
     setModal(which);
   }
@@ -316,6 +320,7 @@ export default function TravelApp() {
     setLastTrip(null);
     setImported([]);
     setImportedSourceIds([]);
+    setCreationTheme(undefined);
     setModal(null);
     setTripTab('行程');
     go('trip');
@@ -695,7 +700,7 @@ export default function TravelApp() {
                 <div className="section-heading">
                   <div>
                     <h2 id="theme-discovery-title">六种方式，遇见贵州</h2>
-                    <p>看山水、尝黔味、感民族、访古镇、动起来、忆历史。</p>
+                    <p>点击喜欢的主题，生成你的专属行程路线。</p>
                   </div>
                 </div>
                 <div className="theme-image-grid">
@@ -705,13 +710,13 @@ export default function TravelApp() {
                       <button
                         className="theme-image-card"
                         key={t}
+                        aria-label={`${t} · ${themeInfo[t].subtitle}，创建主题行程`}
                         title={
                           themeInfo[t].definition + ' ' + themeInfo[t].boundary
                         }
                         onClick={() => {
-                          go('discover');
-                          setFilter(t);
-                          setTripTab('探索');
+                          setImported([]);
+                          open('create', [], t);
                         }}
                       >
                         <img src={themeImages[t]} alt="" loading="lazy" />
@@ -1894,7 +1899,9 @@ export default function TravelApp() {
             </DialogDescription>
             {modal === 'create' && (
               <TripWizard
+                key={creationTheme ?? 'custom'}
                 imported={imported}
+                initialTheme={creationTheme}
                 onCreate={(t) =>
                   createTrip(attachTripSources(t, importedSourceIds))
                 }

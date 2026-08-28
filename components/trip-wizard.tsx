@@ -8,7 +8,8 @@ import {
   type Trip,
   placeById,
   travelRegions,
-  suggestedTripDays,
+  tripCreationDefaults,
+  themeInfo,
 } from '@/lib/travel';
 import {
   ArrowLeft,
@@ -27,25 +28,22 @@ import { Progress } from '@/components/ui/progress';
 export function TripWizard({
   onCreate,
   imported = [],
+  initialTheme,
 }: {
   onCreate: (t: Trip) => void;
   imported?: string[];
+  initialTheme?: Theme;
 }) {
+  const [defaults] = useState(() =>
+    tripCreationDefaults(imported, initialTheme),
+  );
   const [step, setStep] = useState(0),
-    [destination, setDestination] = useState(() => {
-      const regions = [...new Set(imported.map((id) => placeById(id).region))];
-      return regions.length === 1 ? regions[0] : '贵州';
-    }),
+    [destination, setDestination] = useState(defaults.destination),
     [start, setStart] = useState('2026-08-29'),
-    [days, setDays] = useState(() => {
-      if (!imported.length) return 3;
-      return suggestedTripDays(imported);
-    }),
+    [days, setDays] = useState(defaults.dayCount),
     [people, setPeople] = useState('我、小夏'),
     [budget, setBudget] = useState(3000),
-    [preferences, setPreferences] = useState<Theme[]>(() => [
-      ...new Set(imported.map((id) => placeById(id).category)),
-    ]),
+    [preferences, setPreferences] = useState<Theme[]>(defaults.preferences),
     [pace, setPace] = useState('均衡'),
     [error, setError] = useState(''),
     [building, setBuilding] = useState(-1);
@@ -105,11 +103,6 @@ export function TripWizard({
       setError('请填写 1—8 位有效同行人姓名。');
       return;
     }
-    for (let i = 0; i < 4; i++) {
-      setBuilding(i);
-      await new Promise((r) => setTimeout(r, 450));
-      if (!mounted.current) return;
-    }
     const trip = makeTrip(
       {
         destination,
@@ -122,6 +115,17 @@ export function TripWizard({
       },
       imported,
     );
+    if (!trip.days.some((day) => day.items.length)) {
+      setError(
+        '当前条件下暂无可安排的地点。请返回调整目的地或预算，或选择其他主题。',
+      );
+      return;
+    }
+    for (let i = 0; i < 4; i++) {
+      setBuilding(i);
+      await new Promise((r) => setTimeout(r, 450));
+      if (!mounted.current) return;
+    }
     onCreate(trip);
   }
   if (building >= 0)
@@ -188,7 +192,9 @@ export function TripWizard({
         <Progress value={((step + 1) / 3) * 100} aria-label="创建步骤" />
         <small>0{step + 1} / 03</small>
       </div>
-      <span className="eyebrow">MAKE IT YOURS</span>
+      <span className="eyebrow">
+        {initialTheme ? `${initialTheme} · 定制行程` : 'MAKE IT YOURS'}
+      </span>
       <h2>
         {
           [
@@ -207,6 +213,20 @@ export function TripWizard({
           ][step]
         }
       </p>
+      {initialTheme && (
+        <div className="notice">
+          <Sparkles size={18} aria-hidden="true" />
+          <div>
+            <b>
+              从「{initialTheme} · {themeInfo[initialTheme].subtitle}」出发
+            </b>
+            <div>{themeInfo[initialTheme].boundary}</div>
+            <div>
+              已预选主题与建议目的地、天数，均可修改；确认后生成每日路线。
+            </div>
+          </div>
+        </div>
+      )}
       {imported.length > 0 && (
         <div className="notice">
           已带入 {imported.length} 个地点：
@@ -407,7 +427,10 @@ export function TripWizard({
       >
         {step === 2 ? (
           <>
-            <Sparkles /> 为我生成每日行程
+            <Sparkles />{' '}
+            {preferences.length === 1
+              ? `生成${preferences[0]}行程`
+              : '为我生成每日行程'}
           </>
         ) : (
           <>

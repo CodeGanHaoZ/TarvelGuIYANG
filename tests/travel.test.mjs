@@ -26,7 +26,102 @@ import {
   themes,
   planningWarnings,
   suggestedTripDays,
+  tripCreationDefaults,
 } from '../lib/travel.ts';
+
+test('all six theme entries produce nonempty, category-specific daily routes from their defaults', () => {
+  for (const theme of themes) {
+    const defaults = tripCreationDefaults([], theme);
+    const trip = makeTrip({
+      ...defaults,
+      start: '2026-08-31',
+      people: ['我', '小夏'],
+      budget: 3000,
+      pace: '均衡',
+    });
+    assert.deepEqual(trip.preferences, [theme]);
+    assert.ok(trip.title.includes(theme));
+    assert.equal(trip.sourcePostIds, undefined);
+    const ids = trip.days.flatMap((day, i) => {
+      assert.ok(
+        day.items.length,
+        `${theme} day ${i + 1} should contain a route`,
+      );
+      assert.equal(day.date, dateAfter('2026-08-31', i));
+      assert.ok(day.title.includes(theme));
+      assert.ok(timeline(day.items).every((stop) => !stop.warning));
+      return day.items.map((item) => {
+        const place = places.find((p) => p.id === item.placeId);
+        assert.equal(place.category, theme);
+        assert.equal(place.region, defaults.destination);
+        return place.id;
+      });
+    });
+    assert.equal(new Set(ids).size, ids.length);
+    assert.deepEqual(
+      [...ids].sort(),
+      places
+        .filter(
+          (p) => p.category === theme && p.region === defaults.destination,
+        )
+        .map((p) => p.id)
+        .sort(),
+    );
+    if (theme === '野趣户外') assert.match(trip.notes, /不代表安全许可/);
+  }
+});
+
+test('theme creation stays independent from imported content and generic creation', () => {
+  const imported = [
+    'fanjing-hike',
+    'fanjing-view',
+    'maling-view',
+    'maling-rafting',
+  ];
+  const fromPost = tripCreationDefaults([...imported, imported[0], 'unknown']);
+  assert.equal(fromPost.dayCount, suggestedTripDays(imported));
+  assert.equal(fromPost.destination, '贵州');
+  assert.deepEqual(fromPost.preferences, ['野趣户外', '山水奇观']);
+  const fromTheme = tripCreationDefaults(imported, '红色征程');
+  assert.equal(fromTheme.destination, '遵义');
+  assert.deepEqual(fromTheme.preferences, ['红色征程']);
+  fromTheme.preferences.push('山水奇观');
+  assert.deepEqual(tripCreationDefaults([], '红色征程').preferences, [
+    '红色征程',
+  ]);
+  assert.deepEqual(tripCreationDefaults(), {
+    destination: '贵州',
+    dayCount: 3,
+    preferences: [],
+  });
+});
+
+test('theme route defaults can be customized before generation', () => {
+  const options = {
+    ...tripCreationDefaults([], '山水奇观'),
+    destination: '荔波',
+    dayCount: 2,
+    start: '2026-09-15',
+    people: ['我'],
+    budget: 500,
+    pace: '留白',
+  };
+  const trip = makeTrip(options);
+  assert.equal(trip.days.length, 2);
+  assert.equal(trip.days[0].date, '2026-09-15');
+  assert.deepEqual(
+    trip.days[0].items.map((item) => item.placeId),
+    ['xiaoqikong'],
+  );
+  assert.equal(trip.pace, '留白');
+  assert.equal(trip.budget, 500);
+  const changedTheme = makeTrip({ ...options, preferences: ['野趣户外'] });
+  assert.deepEqual(
+    changedTheme.days[0].items.map((item) => item.placeId),
+    ['shuichun'],
+  );
+  assert.match(changedTheme.notes, /不代表安全许可/);
+});
 
 test('featured feed covers all six themes with a video and article without mixing activity categories', () => {
   const featured = socialPosts.filter((post) => post.featured);
