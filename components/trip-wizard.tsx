@@ -25,14 +25,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import type { PlanningContext } from '@/lib/planning-input';
 export function TripWizard({
   onCreate,
   imported = [],
   initialTheme,
+  initialPlan,
 }: {
   onCreate: (t: Trip) => void;
   imported?: string[];
   initialTheme?: Theme;
+  initialPlan?: PlanningContext;
 }) {
   const [defaults] = useState(() =>
     tripCreationDefaults(imported, initialTheme),
@@ -40,11 +43,19 @@ export function TripWizard({
   const [step, setStep] = useState(0),
     [destination, setDestination] = useState(defaults.destination),
     [start, setStart] = useState('2026-08-29'),
-    [days, setDays] = useState(defaults.dayCount),
-    [people, setPeople] = useState('我、小夏'),
-    [budget, setBudget] = useState(3000),
+    [days, setDays] = useState(
+      initialPlan?.constraints.dayCount ?? defaults.dayCount,
+    ),
+    [people, setPeople] = useState(() =>
+      initialPlan?.constraints.peopleCount
+        ? Array.from({ length: initialPlan.constraints.peopleCount }, (_, i) =>
+            i === 0 ? '我' : `同行人${i}`,
+          ).join('、')
+        : '我、小夏',
+    ),
+    [budget, setBudget] = useState(initialPlan?.constraints.budget ?? 3000),
     [preferences, setPreferences] = useState<Theme[]>(defaults.preferences),
-    [pace, setPace] = useState('均衡'),
+    [pace, setPace] = useState(initialPlan?.constraints.pace ?? '均衡'),
     [error, setError] = useState(''),
     [building, setBuilding] = useState(-1);
   const [month, setMonth] = useState(7);
@@ -126,7 +137,10 @@ export function TripWizard({
       await new Promise((r) => setTimeout(r, 450));
       if (!mounted.current) return;
     }
-    onCreate(trip);
+    onCreate({
+      ...trip,
+      notes: [trip.notes, initialPlan?.notes].filter(Boolean).join('\n\n'),
+    });
   }
   if (building >= 0)
     return (
@@ -232,6 +246,11 @@ export function TripWizard({
           已带入 {imported.length} 个地点：
           {imported.map((id) => placeById(id).name).join('、')}
         </div>
+      )}
+      {initialPlan && (
+        <p className="notice">
+          已带入对话中识别的旅行要求，请核对日期、天数、同行人数与总预算；需要时可以修改。
+        </p>
       )}
       {step === 0 && (
         <>

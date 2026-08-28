@@ -3517,6 +3517,405 @@ textarea {
 }
 
 /* Homepage inspiration shelves: one row at every viewport, with a visible next card. */
+.inspiration-planner {
+  min-width: 0;
+  margin-bottom: 34px;
+}
+.planner-chat {
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: linear-gradient(140deg, var(--accent), var(--background) 52%);
+  box-shadow: 0 5px 24px #24272204;
+}
+.planner-chat-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.planner-avatar {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  background: var(--primary);
+  color: white;
+  border-radius: 15px;
+  flex-shrink: 0;
+}
+.planner-chat-heading b {
+  font-size: 15px;
+}
+.planner-chat-heading p {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 4px;
+}
+.planner-chat-heading > button {
+  margin-left: auto;
+  color: var(--muted-foreground);
+}
+.planner-messages {
+  max-height: 340px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 0 20px;
+  padding: 2px;
+  scrollbar-width: thin;
+}
+.planner-message {
+  max-width: 92%;
+  padding: 13px 17px;
+  border: 1px solid var(--border);
+  border-radius: 16px 16px 16px 4px;
+  background: var(--background);
+  align-self: flex-start;
+}
+.planner-message.user {
+  align-self: flex-end;
+  background: var(--accent);
+  border-color: transparent;
+  border-radius: 16px 16px 4px 16px;
+}
+.planner-message > small {
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+.planner-message p {
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.planner-ocr-text {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.planner-ocr-text summary,
+.planner-capabilities summary {
+  cursor: pointer;
+}
+.planner-ocr-text > div {
+  padding: 10px 0;
+}
+.planner-ocr-text p {
+  max-height: 150px;
+  overflow: auto;
+}
+.planner-choices {
+  margin: 0 0 20px;
+  font-size: 13px;
+}
+.planner-choices > div {
+  padding-block: 8px;
+}
+.planner-choices > div > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.planner-choices button {
+  background: var(--background);
+}
+.planner-route {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+.planner-route > .row-between {
+  gap: 10px;
+  font-size: 13px;
+}
+.planner-route > .row-between b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.planner-route > .row-between > span {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.planner-route ol {
+  list-style: none;
+  max-height: 310px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0;
+  margin: 14px 0;
+  scrollbar-width: thin;
+}
+.planner-route li {
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr) 32px;
+  align-items: start;
+  gap: 9px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+.planner-route li:last-child {
+  border-bottom: 0;
+}
+.planner-stop-index {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  background: var(--accent);
+  color: var(--primary);
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+}
+.planner-route li b {
+  font-size: 13px;
+}
+.planner-route li small {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  margin-top: 5px;
+}
+.planner-route .planner-source {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.planner-route li .recommendation-details {
+  margin-top: 8px;
+}
+.planner-warning {
+  padding: 12px;
+  background: var(--accent);
+  color: var(--foreground);
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.planner-route-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+.planner-route-footer > span {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.planner-composer {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  transition: border-color 160ms;
+}
+.planner-composer:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.planner-composer textarea {
+  display: block;
+  width: 100%;
+  min-height: 86px;
+  resize: vertical;
+  max-height: 300px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 1.8;
+  padding: 0;
+}
+.planner-composer textarea::placeholder {
+  color: var(--muted-foreground);
+}
+.planner-composer-footer,
+.planner-input-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.planner-composer-footer {
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+.planner-input-actions > button {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  padding-inline: 8px;
+}
+.planner-input-actions > span {
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+.planner-composer-footer .primary-btn,
+.planner-route-footer .primary-btn {
+  font-size: 12px;
+  min-height: 40px;
+  padding: 10px 18px;
+}
+.planner-link-field {
+  display: flex;
+  gap: 7px;
+  margin-top: 12px;
+  align-items: center;
+}
+.planner-link-field input {
+  flex: 1;
+}
+.planner-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.planner-attachments > div {
+  position: relative;
+  width: 88px;
+  min-width: 0;
+}
+.planner-attachments img {
+  height: 76px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+}
+.planner-attachments span {
+  display: block;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  margin-top: 5px;
+}
+.planner-attachments button {
+  position: absolute;
+  right: -5px;
+  top: -5px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--foreground);
+  color: white;
+  border: 2px solid var(--background);
+}
+.planner-progress {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--primary);
+  padding: 12px 2px 0;
+}
+.planner-examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+}
+.planner-examples > span {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.planner-examples button {
+  font-size: 11px;
+  font-weight: 400;
+  background: var(--background);
+  border-radius: 30px;
+  height: auto;
+  min-height: 30px;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.5;
+  padding: 6px 11px;
+}
+.planner-capabilities {
+  margin-top: 15px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  line-height: 1.8;
+}
+.planner-capabilities p {
+  max-width: 860px;
+  margin-top: 8px;
+}
+@media (max-width: 760px) {
+  .planner-chat {
+    padding: 16px;
+    border-radius: 20px;
+  }
+  .planner-chat-heading {
+    gap: 9px;
+    align-items: flex-start;
+  }
+  .planner-chat-heading > button span {
+    display: none;
+  }
+  .planner-chat-heading p {
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .planner-composer {
+    padding: 13px;
+  }
+  .planner-composer textarea {
+    font-size: 16px;
+  }
+  .planner-composer-footer {
+    align-items: stretch;
+  }
+  .planner-composer-footer > button {
+    margin-left: auto;
+  }
+  .planner-input-actions {
+    width: 100%;
+    gap: 4px;
+  }
+  .planner-input-actions > button {
+    min-height: 44px;
+  }
+  .planner-input-actions > span {
+    margin-left: auto;
+  }
+  .planner-route {
+    padding: 13px;
+  }
+  .planner-route-footer > button {
+    width: 100%;
+  }
+  .planner-route li {
+    grid-template-columns: 25px minmax(0, 1fr) 36px;
+    gap: 7px;
+  }
+  .planner-route li > button {
+    width: 36px;
+    min-height: 40px;
+  }
+  .planner-choices button {
+    height: auto;
+    min-height: 44px;
+    white-space: normal;
+  }
+  .planner-message {
+    max-width: 98%;
+    padding: 11px 13px;
+  }
+}
 .home-carousel {
   min-width: 0;
   max-width: 100%;

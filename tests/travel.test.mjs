@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import {
+  organizePlanningMaterial,
+  emptyPlanningDraft,
+  planningPostFromUrl,
+  planningContext,
+  validatePlanningImage,
+} from '../lib/planning-input.ts';
+import {
   initialData,
   restore,
   places,
@@ -28,6 +35,177 @@ import {
   suggestedTripDays,
   tripCreationDefaults,
 } from '../lib/travel.ts';
+
+const plannerOrigin = 'http://localhost:3000';
+test('planning chat merges text, exact demo links and screenshot OCR with source evidence', () => {
+  const result = organizePlanningMaterial({
+    origin: plannerOrigin,
+    text: '甲秀楼、黄果树，3天慢游，2个人，预算1500元\nhttps://www.xiaohongshu.com/explore/xhs-guiyang',
+    images: [{ name: '攻略.png', text: '甲 秀 楼\n荔波小\n七孔' }],
+  });
+  const ids = result.stops.map((stop) => stop.placeId);
+  assert.ok(
+    ['jiaxiu', 'qingyun', 'batik', 'huangguoshu', 'xiaoqikong'].every((id) =>
+      ids.includes(id),
+    ),
+  );
+  assert.equal(new Set(ids).size, ids.length);
+  assert.equal(
+    result.stops.find((stop) => stop.placeId === 'jiaxiu').sources.length,
+    3,
+  );
+  assert.deepEqual(result.postIds, ['xhs-guiyang']);
+  assert.deepEqual(result.constraints, {
+    dayCount: 3,
+    peopleCount: 2,
+    budget: 1500,
+    pace: '留白',
+  });
+  const context = planningContext(result);
+  assert.match(context.notes, /截图「攻略.png」/);
+  assert.deepEqual(context.constraints, result.constraints);
+});
+
+test('planning conversation adds and removes places without mutating earlier replies', () => {
+  const first = organizePlanningMaterial({
+    text: '甲秀楼和青岩古镇',
+    origin: plannerOrigin,
+  });
+  const second = organizePlanningMaterial(
+    { text: '不去甲秀楼，再加黄果树，预算2000', origin: plannerOrigin },
+    first,
+  );
+  assert.deepEqual(
+    first.stops.map((stop) => stop.placeId),
+    ['jiaxiu', 'qingyan'],
+  );
+  assert.deepEqual(
+    second.stops.map((stop) => stop.placeId),
+    ['qingyan', 'huangguoshu'],
+  );
+  assert.equal(second.constraints.budget, 2000);
+  assert.deepEqual(emptyPlanningDraft().stops, []);
+});
+
+test('unqualified geographic names ask for activity choice instead of mixing categories', () => {
+  const ambiguous = organizePlanningMaterial({
+    text: '梵净山和马岭河峡谷',
+    origin: plannerOrigin,
+  });
+  assert.equal(ambiguous.stops.length, 0);
+  assert.equal(ambiguous.choices.length, 2);
+  const clarified = organizePlanningMaterial(
+    { text: '梵净山索道观光，马岭河峡谷漂流', origin: plannerOrigin },
+    ambiguous,
+  );
+  assert.equal(clarified.choices.length, 0);
+  assert.deepEqual(
+    clarified.stops.map((stop) => stop.placeId),
+    ['fanjing-view', 'maling-rafting'],
+  );
+  const removed = organizePlanningMaterial(
+    { text: '不去梵净山', origin: plannerOrigin },
+    clarified,
+  );
+  assert.deepEqual(
+    removed.stops.map((stop) => stop.placeId),
+    ['maling-rafting'],
+  );
+});
+
+test('unknown and spoofed links never manufacture an unrelated itinerary', () => {
+  for (const url of [
+    'https://www.xiaohongshu.com/explore/unknown-id',
+    'https://www.xiaohongshu.com.attacker.test/explore/xhs-guiyang',
+    'http://169.254.169.254/latest/meta-data',
+    'https://attacker.test/黄果树',
+    'https://user:pass@www.xiaohongshu.com/explore/xhs-guiyang',
+  ]) {
+    assert.equal(planningPostFromUrl(url, plannerOrigin), undefined);
+    const result = organizePlanningMaterial({
+      text: url,
+      origin: plannerOrigin,
+    });
+    assert.equal(result.stops.length, 0);
+    assert.ok(result.warnings.some((warning) => warning.includes('无法读取')));
+  }
+  assert.equal(
+    planningPostFromUrl(
+      plannerOrigin + '/inspiration/hot-nature-video',
+      plannerOrigin,
+    ).id,
+    'hot-nature-video',
+  );
+  const withText = organizePlanningMaterial({
+    text: 'https://xhslink.com/unknown 另外想去甲秀楼',
+    origin: plannerOrigin,
+  });
+  assert.deepEqual(
+    withText.stops.map((stop) => stop.placeId),
+    ['jiaxiu'],
+  );
+});
+
+test('image errors and unrecognized content stay actionable and do not invent destinations', () => {
+  const result = organizePlanningMaterial({
+    text: '',
+    origin: plannerOrigin,
+    images: [
+      { name: '风景.jpg', text: '' },
+      { name: '坏图.png', text: '', error: '无法解码' },
+    ],
+  });
+  assert.equal(result.stops.length, 0);
+  assert.ok(
+    result.warnings.some((warning) => warning.includes('不做地标识别')),
+  );
+  assert.ok(result.warnings.some((warning) => warning.includes('无法解码')));
+  assert.ok(validatePlanningImage({ type: 'image/svg+xml', size: 100 }));
+  assert.ok(
+    validatePlanningImage({ type: 'image/jpeg', size: 9 * 1024 * 1024 }),
+  );
+  assert.ok(validatePlanningImage({ type: 'image/png', size: 0 }));
+  assert.equal(validatePlanningImage({ type: 'image/png', size: 1024 }), '');
+  assert.throws(
+    () =>
+      organizePlanningMaterial({
+        text: 'a'.repeat(4001),
+        origin: plannerOrigin,
+      }),
+    /4,000/,
+  );
+  assert.deepEqual(
+    organizePlanningMaterial({
+      text: '12天，20人，预算1000000',
+      origin: plannerOrigin,
+    }).constraints,
+    {},
+  );
+});
+
+test('confirmed chat content generates editable day routes with the selected places only', () => {
+  const draft = organizePlanningMaterial({
+    text: '黄果树和天星桥，2人，预算1500元',
+    origin: plannerOrigin,
+  });
+  const ids = draft.stops.map((stop) => stop.placeId);
+  const trip = makeTrip(
+    {
+      ...tripCreationDefaults(ids),
+      start: '2026-09-01',
+      people: ['我', '同行人1'],
+      budget: draft.constraints.budget,
+      pace: '均衡',
+    },
+    ids,
+  );
+  assert.deepEqual(
+    trip.days.flatMap((day) => day.items.map((item) => item.placeId)),
+    ids,
+  );
+  trip.days[0].items.pop();
+  assert.equal(draft.stops.length, 2);
+});
 
 test('all six theme entries produce nonempty, category-specific daily routes from their defaults', () => {
   for (const theme of themes) {

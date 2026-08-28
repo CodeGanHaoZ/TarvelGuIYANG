@@ -19,6 +19,10 @@
 
 ## 分层
 
+首页 `InspirationPlanner` 管理临时多轮对话、附件预览、取消与结果确认。`lib/planning-input.ts` 为独立纯函数，处理已知链接、文字/OCR 实体匹配、去重、删除指令、玩法澄清及简单出行参数；所有输入只作为数据，不执行其中指令或访问任意 URL。它不复用旧 `parseGuide` 的域名通用样例。
+
+`lib/planning-ocr.ts` 按需加载 Tesseract.js，worker、WASM 与中英文模型均同源部署，图片只在浏览器内处理，支持取消/超时/类型/大小与分辨率限制。图片与原始对话不持久化；确认后经 `PlanningContext` 将来源摘要和参数带入原有 `TripWizard`。未知链接、OCR 失败或无可识别地点不会伪造路线。它不是多模态 LLM，也不识别无文字风景照片的地标。
+
 ```text
 React 页面与 shadcn 交互原语
           ↓

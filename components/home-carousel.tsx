@@ -20,7 +20,7 @@ export function HomeCarousel({
   variant = 'default',
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   children: ReactNode;
   actions?: ReactNode;
   variant?: 'default' | 'social';
@@ -73,7 +73,7 @@ export function HomeCarousel({
       <div className="section-heading carousel-heading">
         <div>
           <h2>{title}</h2>
-          <p>{subtitle}</p>
+          {subtitle && <p>{subtitle}</p>}
         </div>
         <div className="carousel-actions">
           {actions}

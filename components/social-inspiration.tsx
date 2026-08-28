@@ -10,6 +10,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { HomeCarousel } from '@/components/home-carousel';
+import { InspirationPlanner } from '@/components/inspiration-planner';
+import type { PlanningContext } from '@/lib/planning-input';
 import { RouteMap } from '@/components/route-map';
 import { RecommendationScore } from '@/components/recommendation-score';
 import {
@@ -44,7 +46,11 @@ export function SocialInspiration({
   savedPostIds,
   onChangeSavedPosts,
 }: {
-  onCustomize: (ids: string[], sourceIds: string[]) => void;
+  onCustomize: (
+    ids: string[],
+    sourceIds: string[],
+    context?: PlanningContext,
+  ) => void;
   savedPostIds: string[];
   onChangeSavedPosts: (ids: string[]) => void;
 }) {
@@ -159,11 +165,8 @@ export function SocialInspiration({
   }
   return (
     <>
-      <HomeCarousel
-        variant="social"
-        title="热门推荐，把喜欢变成下一程"
-        subtitle={`六类主题 · ${popular.length} 条旅行灵感 · 视频、帖子与热度均为 Mock`}
-      >
+      <InspirationPlanner onCustomize={onCustomize} />
+      <HomeCarousel variant="social" title="热门推荐，把喜欢变成下一程">
         {popular.map((p) => (
           <article
             key={p.id}

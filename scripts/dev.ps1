@@ -11,5 +11,7 @@ if (-not $nodeCommand) {
 $devCommand = Join-Path $projectDir 'node_modules\.bin\vinext.cmd'
 if (-not (Test-Path -LiteralPath $devCommand)) { throw '尚未安装项目依赖，请运行 pnpm install。' }
 Set-Location -LiteralPath $projectDir
+& node scripts/prepare-ocr.mjs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & $devCommand dev
 exit $LASTEXITCODE

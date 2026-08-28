@@ -55,6 +55,7 @@ import {
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { RouteMap } from '@/components/route-map';
+import type { PlanningContext } from '@/lib/planning-input';
 import { PlaceDetail } from '@/components/place-detail';
 import { TripWizard } from '@/components/trip-wizard';
 import { HomeCarousel } from '@/components/home-carousel';
@@ -139,6 +140,9 @@ export default function TravelApp() {
     [imported, setImported] = useState<string[]>([]),
     [importedSourceIds, setImportedSourceIds] = useState<string[]>([]),
     [creationTheme, setCreationTheme] = useState<Theme | undefined>(),
+    [creationContext, setCreationContext] = useState<
+      PlanningContext | undefined
+    >(),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [toast, setToast] = useState(''),
@@ -230,10 +234,16 @@ export default function TravelApp() {
     )
       setTripTab('行程');
   }
-  function open(which: Modal, sources: string[] = [], theme?: Theme) {
+  function open(
+    which: Modal,
+    sources: string[] = [],
+    theme?: Theme,
+    context?: PlanningContext,
+  ) {
     if (which === 'create') {
       setImportedSourceIds(sources);
       setCreationTheme(theme);
+      setCreationContext(context);
     }
     setError('');
     setModal(which);
@@ -321,6 +331,7 @@ export default function TravelApp() {
     setImported([]);
     setImportedSourceIds([]);
     setCreationTheme(undefined);
+    setCreationContext(undefined);
     setModal(null);
     setTripTab('行程');
     go('trip');
@@ -663,9 +674,9 @@ export default function TravelApp() {
                 onChangeSavedPosts={(ids) =>
                   setData((d) => ({ ...d, savedPostIds: ids }))
                 }
-                onCustomize={(ids, sourceIds) => {
+                onCustomize={(ids, sourceIds, context) => {
                   setImported(ids);
-                  open('create', sourceIds);
+                  open('create', sourceIds, undefined, context);
                 }}
               />
               <HomeCarousel
@@ -1902,6 +1913,7 @@ export default function TravelApp() {
                 key={creationTheme ?? 'custom'}
                 imported={imported}
                 initialTheme={creationTheme}
+                initialPlan={creationContext}
                 onCreate={(t) =>
                   createTrip(attachTripSources(t, importedSourceIds))
                 }
