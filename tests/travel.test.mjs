@@ -17,6 +17,11 @@ import {
   replan,
   organizeSocialPosts,
   recommendSocialPlaces,
+  recommendationProfiles,
+  placeAttributes,
+  attachTripSources,
+  socialPosts,
+  socialStories,
 } from '../lib/travel.ts';
 
 test('social extraction merges overlapping posts while retaining ordered source evidence', () => {
@@ -121,7 +126,7 @@ test('invalid persisted dates or participants are rejected', () => {
   assert.equal(restore(JSON.stringify(other)), null);
 });
 
-test('eight weighted score dimensions produce the expected rounded value', () => {
+test('category recommendation combines eight travel factors with place-specific cultural traits', () => {
   assert.equal(
     weights.reduce((a, b) => a + b, 0),
     100,
@@ -129,12 +134,89 @@ test('eight weighted score dimensions produce the expected rounded value', () =>
   for (const p of places) {
     const result = score(p);
     assert.equal(
-      result.total,
-      Math.round(p.factors.reduce((s, v, i) => s + v * weights[i], 0) / 100),
+      result.profile.weights.reduce((sum, value) => sum + value, 0),
+      100,
     );
+    const context =
+      result.factors.reduce((s, v, i) => s + v * result.profile.weights[i], 0) /
+      100;
+    const specialty =
+      placeAttributes[p.id].values.reduce(
+        (s, v, i) => s + v * result.profile.specialtyWeights[i],
+        0,
+      ) / 100;
+    assert.equal(result.total, Math.round(context * 0.7 + specialty * 0.3));
     assert.ok(result.total >= 0 && result.total <= 100);
   }
   assert.ok(score(places[0], 'rain').total < score(places[0]).total);
+  assert.equal(score(places.find((p) => p.id === 'museum')).total, 89);
+  assert.equal(score(places.find((p) => p.id === 'qingyun')).total, 86);
+  assert.ok(
+    recommendationProfiles['自然景观'].weights[0] >
+      recommendationProfiles['美食体验'].weights[0],
+  );
+});
+
+test('closure and weather-sensitive activities cannot be recommended by unrelated high factors', () => {
+  for (const p of places) {
+    const closed = score(p, 'closed');
+    assert.equal(closed.total, 0);
+    assert.equal(closed.label, '暂缓选择');
+    assert.ok(closed.warnings.length);
+  }
+  const water = places.find((p) => p.id === 'shuichun');
+  assert.ok(score(water, 'rain').total <= 35);
+  const waterfall = places.find((p) => p.id === 'huangguoshu');
+  assert.ok(score(waterfall, 'rain').total <= 60);
+  const indoor = places.find((p) => p.id === 'museum');
+  assert.equal(score(indoor, 'rain').total, score(indoor).total);
+});
+
+test('preference contribution changes scores without rewriting place fixtures', () => {
+  const food = places.find((p) => p.id === 'qingyun');
+  const before = [...food.factors];
+  const matched = score(food, 'normal', ['美食体验']);
+  const unmatched = score(food, 'normal', ['自然景观']);
+  assert.ok(matched.total > score(food).total);
+  assert.ok(score(food).total > unmatched.total);
+  assert.deepEqual(food.factors, before);
+});
+
+test('saved source materials migrate without losing older trips and survive persistence', () => {
+  const old = initialData();
+  delete old.savedPostIds;
+  const migrated = restore(JSON.stringify(old));
+  assert.deepEqual(migrated.savedPostIds, []);
+  assert.deepEqual(migrated.trips, old.trips);
+  migrated.savedPostIds = ['dy-guizhou'];
+  migrated.trips[0] = attachTripSources(migrated.trips[0], [
+    'dy-guizhou',
+    'xhs-guiyang',
+    'dy-guizhou',
+    'unknown',
+  ]);
+  const roundtrip = restore(JSON.stringify(migrated));
+  assert.deepEqual(roundtrip.savedPostIds, ['dy-guizhou']);
+  assert.deepEqual(roundtrip.trips[0].sourcePostIds, [
+    'dy-guizhou',
+    'xhs-guiyang',
+  ]);
+  assert.equal(old.trips[0].sourcePostIds, undefined);
+  migrated.savedPostIds = ['unknown'];
+  assert.equal(restore(JSON.stringify(migrated)), null);
+});
+
+test('every source record has full content and all referenced places can be scored', () => {
+  for (const post of socialPosts) {
+    assert.ok(socialStories[post.id].sections.length >= 2);
+    assert.ok(socialStories[post.id].tips.length > 0);
+    for (const mention of post.mentions)
+      assert.ok(
+        Number.isFinite(
+          score(places.find((p) => p.id === mention.placeId)).total,
+        ),
+      );
+  }
 });
 test('date arithmetic crosses month and year boundaries without UTC shifts', () => {
   assert.equal(dateAfter('2026-08-31', 1), '2026-09-01');

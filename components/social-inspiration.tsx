@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { HomeCarousel } from '@/components/home-carousel';
 import { RouteMap } from '@/components/route-map';
+import { RecommendationScore } from '@/components/recommendation-score';
 import {
   ArrowRight,
   ArrowUp,
@@ -32,16 +33,21 @@ import {
   places,
   placeById,
   themes,
+  score,
   type Theme,
 } from '@/lib/travel';
 
 export function SocialInspiration({
   onCustomize,
+  savedPostIds,
+  onChangeSavedPosts,
 }: {
-  onCustomize: (ids: string[]) => void;
+  onCustomize: (ids: string[], sourceIds: string[]) => void;
+  savedPostIds: string[];
+  onChangeSavedPosts: (ids: string[]) => void;
 }) {
   const [platform, setPlatform] = useState('全部');
-  const [chosen, setChosen] = useState<string[]>([]);
+  const chosen = savedPostIds;
   const [panel, setPanel] = useState<'post' | 'route' | null>(null);
   const [postId, setPostId] = useState(socialPosts[0].id);
   const [result, setResult] = useState<ReturnType<
@@ -55,7 +61,30 @@ export function SocialInspiration({
   const [query, setQuery] = useState('');
   const [selectedStop, setSelectedStop] = useState<string | null>(null);
   const request = useRef(0);
-  const transfer = useRef<string[] | null>(null);
+  const transfer = useRef<{ ids: string[]; sourceIds: string[] } | null>(null);
+  useEffect(() => {
+    let active = true;
+    const url = new URL(window.location.href);
+    const id = url.searchParams.get('plan');
+    if (id && socialPosts.some((p) => p.id === id)) {
+      queueMicrotask(() => {
+        if (!active) return;
+        const next = organizeSocialPosts([id]);
+        setResult(next);
+        setRoute(next.stops.map((s) => s.placeId));
+        setPanel('route');
+        url.searchParams.delete('plan');
+        window.history.replaceState(
+          null,
+          '',
+          url.pathname + url.search + url.hash,
+        );
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, []);
   useEffect(
     () => () => {
       request.current++;
@@ -78,8 +107,8 @@ export function SocialInspiration({
     : [];
   const regions = [...new Set(route.map((id) => placeById(id).region))];
   function toggle(id: string) {
-    setChosen((ids) =>
-      ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id],
+    onChangeSavedPosts(
+      chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id],
     );
   }
   function close() {
@@ -189,15 +218,13 @@ export function SocialInspiration({
                   <span key={t}>#{t}</span>
                 ))}
               </div>
-              <button
-                className="social-title"
-                onClick={() => {
-                  setPostId(p.id);
-                  setPanel('post');
-                }}
-              >
+              <a className="social-title" href={'/inspiration/' + p.id}>
                 <h3>{p.title}</h3>
-              </button>
+              </a>
+              <a className="social-read-link" href={'/inspiration/' + p.id}>
+                {p.kind === 'video' ? '打开视频内容页' : '阅读完整笔记'}{' '}
+                <ArrowRight size={13} />
+              </a>
               <div className="social-author">
                 <span>
                   <i>{p.author.slice(0, 1)}</i>
@@ -214,7 +241,7 @@ export function SocialInspiration({
                     checked={chosen.includes(p.id)}
                     onChange={() => toggle(p.id)}
                   />
-                  <span>加入灵感篮</span>
+                  <span>收藏为素材</span>
                 </label>
                 <button
                   className="text-btn"
@@ -240,14 +267,14 @@ export function SocialInspiration({
             </b>
             <p>
               {chosen.length
-                ? '支持跨平台多选，重复地点自动合并。'
+                ? '已保存在本机素材库，可随时合并整理。'
                 : '勾选视频或笔记，黔驴帮你提取地点与路线。'}
             </p>
           </div>
         </div>
         <div className="basket-actions">
           {chosen.length > 0 && (
-            <button className="text-btn" onClick={() => setChosen([])}>
+            <button className="text-btn" onClick={() => onChangeSavedPosts([])}>
               清空
             </button>
           )}
@@ -269,9 +296,9 @@ export function SocialInspiration({
         }}
         onOpenChangeComplete={(open) => {
           if (!open && transfer.current) {
-            const ids = transfer.current;
+            const { ids, sourceIds } = transfer.current;
             transfer.current = null;
-            onCustomize(ids);
+            onCustomize(ids, sourceIds);
           }
         }}
       >
@@ -330,6 +357,9 @@ export function SocialInspiration({
                   </div>
                 ))}
                 <div className="post-footer">
+                  <a className="outline-btn" href={'/inspiration/' + post.id}>
+                    阅读全文与推荐依据 <ArrowRight size={16} />
+                  </a>
                   <Button
                     className="primary-btn"
                     onClick={() => void organize([post.id])}
@@ -463,6 +493,10 @@ export function SocialInspiration({
                                         你添加的地点
                                       </small>
                                     )}
+                                    <RecommendationScore
+                                      place={p}
+                                      preferences={preferences}
+                                    />
                                   </div>
                                   <div className="draft-controls">
                                     <Button
@@ -533,7 +567,9 @@ export function SocialInspiration({
                     </div>
                     <div className="social-recommendations">
                       <h3>再加一点，你喜欢的贵州</h3>
-                      <p>偏好只筛选下面的补充推荐，不会替你删除已选地点。</p>
+                      <p>
+                        偏好会更新草稿中的推荐指数，并筛选补充地点；不会替你删除已选地点。
+                      </p>
                       <div className="preference-chips">
                         {themes.map((t) => (
                           <button
@@ -584,7 +620,11 @@ export function SocialInspiration({
                               <button key={p.id} onClick={() => add(p.id)}>
                                 <span>
                                   <b>{p.name}</b>
-                                  <small>{p.region} · 手动补充</small>
+                                  <small>
+                                    {p.region} · 推荐指数{' '}
+                                    {score(p, 'normal', preferences).total} ·
+                                    Mock
+                                  </small>
                                 </span>
                                 <Plus size={18} />
                               </button>
@@ -603,7 +643,10 @@ export function SocialInspiration({
                         className="primary-btn"
                         disabled={!route.length}
                         onClick={() => {
-                          transfer.current = [...route];
+                          transfer.current = {
+                            ids: [...route],
+                            sourceIds: [...result.postIds],
+                          };
                           close();
                         }}
                       >

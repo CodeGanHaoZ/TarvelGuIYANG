@@ -77,6 +77,9 @@ import {
   money,
   dateLabel,
   uid,
+  storageKey,
+  attachTripSources,
+  socialPosts,
   type AppData,
   type Trip,
   type TripItem,
@@ -95,7 +98,6 @@ type Modal =
   | 'assistant'
   | 'export'
   | null;
-const storageKey = 'qianlv-demo-v1';
 const categoryIcons = [Utensils, TreePine, Footprints, Landmark, Route, Flag];
 const pageLabels: Record<Page, string> = {
   home: '旅行灵感',
@@ -125,6 +127,7 @@ export default function TravelApp() {
     [filter, setFilter] = useState('全部'),
     [guide, setGuide] = useState<string[]>([]),
     [imported, setImported] = useState<string[]>([]),
+    [importedSourceIds, setImportedSourceIds] = useState<string[]>([]),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [toast, setToast] = useState(''),
@@ -216,7 +219,8 @@ export default function TravelApp() {
     )
       setTripTab('行程');
   }
-  function open(which: Modal) {
+  function open(which: Modal, sources: string[] = []) {
+    if (which === 'create') setImportedSourceIds(sources);
     setError('');
     setModal(which);
   }
@@ -301,6 +305,7 @@ export default function TravelApp() {
     setSelected(null);
     setLastTrip(null);
     setImported([]);
+    setImportedSourceIds([]);
     setModal(null);
     setTripTab('行程');
     go('trip');
@@ -388,12 +393,21 @@ export default function TravelApp() {
             timeline(d.items)
               .map(
                 (t) =>
-                  `- ${clock(t.start)} ${t.place.name}：停留 ${t.item.duration} 分钟；参考 ¥${t.place.price}；今日模拟指数 ${score(t.place).total}。${t.warning ? '⚠ 超出模拟营业时间。' : ''}\n  ${t.place.tip}`,
+                  `- ${clock(t.start)} ${t.place.name}：停留 ${t.item.duration} 分钟；参考 ¥${t.place.price}；模拟推荐指数 ${score(t.place, 'normal', trip.preferences).total}。${t.warning ? '⚠ 超出模拟营业时间。' : ''}\n  ${t.place.tip}`,
               )
               .join('\n'),
         )
         .join('\n\n') +
-      `\n\n## 我的旅行笔记\n\n${trip.notes}\n`;
+      `\n\n## 我的旅行笔记\n\n${trip.notes}\n` +
+      (trip.sourcePostIds?.length
+        ? '\n## 规划素材来源\n\n' +
+          trip.sourcePostIds
+            .map(
+              (id) =>
+                `- ${socialPosts.find((p) => p.id === id)?.title}（Mock）`,
+            )
+            .join('\n')
+        : '');
     downloadFile(trip.title + '.md', text, 'text/markdown;charset=utf-8');
     notify('已导出可分享的 Markdown 攻略。');
   }
@@ -424,7 +438,8 @@ export default function TravelApp() {
             )}
             <span className="image-tag">{p.category}</span>
             <span className="score-tag">
-              <b>{score(p).total}</b> 今日指数 · 模拟
+              <b>{score(p, 'normal', trip.preferences).total}</b> 推荐指数 ·
+              Mock
             </span>
           </div>
           <div className="destination-info">
@@ -656,9 +671,13 @@ export default function TravelApp() {
                 </form>
               </section>
               <SocialInspiration
-                onCustomize={(ids) => {
+                savedPostIds={data.savedPostIds}
+                onChangeSavedPosts={(ids) =>
+                  setData((d) => ({ ...d, savedPostIds: ids }))
+                }
+                onCustomize={(ids, sourceIds) => {
                   setImported(ids);
-                  open('create');
+                  open('create', sourceIds);
                 }}
               />
               <HomeCarousel
@@ -880,7 +899,11 @@ export default function TravelApp() {
                                       {p.category}
                                     </span>
                                     <span className="score-inline">
-                                      {score(p).total} <small>今日指数</small>
+                                      {
+                                        score(p, 'normal', trip.preferences)
+                                          .total
+                                      }{' '}
+                                      <small>推荐指数</small>
                                     </span>
                                   </span>
                                 </div>
@@ -1013,6 +1036,7 @@ export default function TravelApp() {
                         saved={data.savedPlaces.includes(selectedItem.placeId)}
                         onSave={toggleSave}
                         onAdd={addPlace}
+                        preferences={trip.preferences}
                         compact
                       />
                     ) : (
@@ -1026,6 +1050,27 @@ export default function TravelApp() {
               )}
               {tripTab === '概览' && (
                 <section className="trip-content">
+                  {!!trip.sourcePostIds?.length && (
+                    <div className="trip-source-library">
+                      <h3>这趟旅行的灵感来源</h3>
+                      <p>原内容始终保留，你的行程修改不会改变它。</p>
+                      {trip.sourcePostIds.map((id) => {
+                        const p = socialPosts.find((post) => post.id === id);
+                        return (
+                          p && (
+                            <a key={id} href={'/inspiration/' + id}>
+                              <NotebookPen size={16} />
+                              <span>
+                                {p.title}
+                                <small>{p.platform} · 可重新定制</small>
+                              </span>
+                              <ArrowUpRight size={16} />
+                            </a>
+                          )
+                        );
+                      })}
+                    </div>
+                  )}
                   <div className="overview-hero">
                     <div>
                       <span className="eyebrow">A LITTLE ESCAPE</span>
@@ -1604,6 +1649,59 @@ export default function TravelApp() {
                 ))}
               </div>
               <div className="section-heading">
+                <h2>规划素材</h2>
+              </div>
+              <div className="my-trips material-library">
+                {data.savedPostIds.map((id) => {
+                  const p = socialPosts.find((post) => post.id === id)!;
+                  return (
+                    <article key={id}>
+                      <a href={'/inspiration/' + id}>
+                        <NotebookPen size={20} />
+                        <span>
+                          <b>{p.title}</b>
+                          <small>
+                            {p.platform} ·{' '}
+                            {p.kind === 'video' ? '视频' : '图文'} · Mock
+                          </small>
+                        </span>
+                        <ArrowUpRight size={16} />
+                      </a>
+                      <button
+                        className="text-btn"
+                        onClick={() => {
+                          const ids = p.mentions.map((m) => m.placeId);
+                          setImported(ids);
+                          open('create', [p.id]);
+                        }}
+                      >
+                        <Sparkles size={15} />
+                        用它定制
+                      </button>
+                      <button
+                        className="icon-btn"
+                        aria-label={'取消收藏素材' + p.title}
+                        onClick={() =>
+                          setData((d) => ({
+                            ...d,
+                            savedPostIds: d.savedPostIds.filter(
+                              (x) => x !== id,
+                            ),
+                          }))
+                        }
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+              {!data.savedPostIds.length && (
+                <p className="panel-sub">
+                  首页收藏视频或笔记后，会保存在这里，随时用于后续规划。
+                </p>
+              )}
+              <div className="section-heading">
                 <h2>收藏的地点</h2>
               </div>
               <div className="destination-grid">
@@ -1740,7 +1838,12 @@ export default function TravelApp() {
               AI 黔驴交互演示，数据保存在当前浏览器。
             </DialogDescription>
             {modal === 'create' && (
-              <TripWizard imported={imported} onCreate={createTrip} />
+              <TripWizard
+                imported={imported}
+                onCreate={(t) =>
+                  createTrip(attachTripSources(t, importedSourceIds))
+                }
+              />
             )}
             {modal === 'detail' && (
               <PlaceDetail
@@ -1749,6 +1852,7 @@ export default function TravelApp() {
                 onAdd={addPlace}
                 onSave={toggleSave}
                 saved={data.savedPlaces.includes(detailId)}
+                preferences={trip.preferences}
               />
             )}
             {modal === 'import' && (
@@ -1898,7 +2002,8 @@ export default function TravelApp() {
                       >
                         <b>{p.name}</b>
                         <small>
-                          {p.region} · {p.category} · {p.duration} 分钟
+                          {p.region} · {p.category} · 推荐指数{' '}
+                          {score(p, 'normal', trip.preferences).total} · Mock
                         </small>
                       </button>
                       <button

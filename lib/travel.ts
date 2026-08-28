@@ -48,6 +48,7 @@ export type Trip = {
   pace: string;
   days: TripDay[];
   notes: string;
+  sourcePostIds?: string[];
 };
 export type Expense = {
   id: string;
@@ -71,6 +72,7 @@ export type AppData = {
   trips: Trip[];
   activeTripId: string;
   savedPlaces: string[];
+  savedPostIds: string[];
   expenses: Expense[];
   feed: SharedTrip[];
   theme: string;
@@ -330,14 +332,199 @@ export const placeById = (id: string): Place =>
 export const uid = () =>
   globalThis.crypto?.randomUUID?.() ??
   `id-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-export function score(p: Place, scenario = 'normal') {
+export const recommendationProfiles: Record<
+  Theme,
+  {
+    weights: number[];
+    dimensions: string[];
+    specialtyWeights: number[];
+    description: string;
+  }
+> = {
+  自然景观: {
+    weights: [25, 15, 15, 10, 10, 15, 5, 5],
+    dimensions: ['景观丰富度', '季节体验', '步道友好度'],
+    specialtyWeights: [40, 35, 25],
+    description: '优先看天气、季节与景观体验，兼顾步道和停留条件。',
+  },
+  美食体验: {
+    weights: [5, 15, 15, 10, 25, 5, 5, 20],
+    dimensions: ['地方风味', '价格友好度', '饮食适配'],
+    specialtyWeights: [45, 25, 30],
+    description:
+      '优先看地方风味与个人口味，天气占比较低。饮食过敏仍需向商家核验。',
+  },
+  身体力行: {
+    weights: [30, 10, 20, 10, 10, 10, 5, 5],
+    dimensions: ['参与体验', '体力友好度', '装备便利'],
+    specialtyWeights: [35, 40, 25],
+    description: '优先看天气、可开展条件和体力要求，不能用高热度替代运营核验。',
+  },
+  民族文化: {
+    weights: [5, 10, 15, 10, 20, 10, 15, 15],
+    dimensions: ['文化内容', '互动参与', '讲解条件'],
+    specialtyWeights: [45, 30, 25],
+    description: '优先看文化内容、讲解和互动参与，尊重居民与传承人的意愿。',
+  },
+  经典路线: {
+    weights: [15, 15, 15, 15, 15, 10, 5, 10],
+    dimensions: ['地标价值', '路线串联', '停留弹性'],
+    specialtyWeights: [40, 35, 25],
+    description: '优先看地标特色、交通串联与时间弹性，适合纳入城市路线。',
+  },
+  红色旅游: {
+    weights: [5, 10, 20, 10, 20, 5, 15, 15],
+    dimensions: ['史料展示', '学习价值', '讲解条件'],
+    specialtyWeights: [40, 35, 25],
+    description: '优先看史料展示、学习内容、开放预约与讲解条件。',
+  },
+};
+export const placeAttributes: Record<
+  string,
+  {
+    nature: string;
+    values: number[];
+    effort: string;
+    weatherSensitive?: boolean;
+  }
+> = {
+  qianling: {
+    nature: '城市森林公园',
+    values: [89, 88, 82],
+    effort: '有坡道 · 适中步行',
+  },
+  museum: { nature: '室内历史展陈', values: [96, 72, 92], effort: '室内慢行' },
+  jiaxiu: { nature: '城市历史地标', values: [92, 95, 96], effort: '短程漫步' },
+  qingyun: {
+    nature: '开放式美食街区',
+    values: [94, 85, 68],
+    effort: '城市步行',
+  },
+  qingyan: {
+    nature: '历史古镇',
+    values: [91, 82, 76],
+    effort: '石板路 · 适中步行',
+  },
+  batik: {
+    nature: '室内非遗手作 · 虚构工坊',
+    values: [92, 98, 88],
+    effort: '坐姿手作',
+  },
+  huangguoshu: {
+    nature: '瀑布山水景区',
+    values: [98, 94, 70],
+    effort: '台阶较多',
+    weatherSensitive: true,
+  },
+  tianxing: {
+    nature: '喀斯特水石步道',
+    values: [93, 90, 65],
+    effort: '台阶较多',
+    weatherSensitive: true,
+  },
+  tunbao: {
+    nature: '历史聚落与民俗',
+    values: [94, 79, 78],
+    effort: '村落步行',
+  },
+  xijiang: {
+    nature: '居民生活型苗寨',
+    values: [96, 86, 79],
+    effort: '坡道与接驳',
+  },
+  silver: {
+    nature: '室内银饰手作 · 虚构工坊',
+    values: [94, 96, 87],
+    effort: '手作操作',
+  },
+  sourfish: {
+    nature: '地方餐饮 · 虚构供给',
+    values: [96, 78, 65],
+    effort: '室内用餐',
+  },
+  xiaoqikong: {
+    nature: '水系森林景区',
+    values: [98, 94, 76],
+    effort: '较长步道与接驳',
+    weatherSensitive: true,
+  },
+  shuichun: {
+    nature: '水上户外体验 · 待核验',
+    values: [92, 52, 60],
+    effort: '体力要求较高',
+    weatherSensitive: true,
+  },
+  zunyi: {
+    nature: '红色历史纪念场馆',
+    values: [97, 96, 90],
+    effort: '室内慢行',
+  },
+};
+export function score(
+  p: Place,
+  scenario = 'normal',
+  preferences: Theme[] = [],
+) {
+  const profile = recommendationProfiles[p.category];
+  const attributes = placeAttributes[p.id];
   const factors = [...p.factors];
+  factors[7] = preferences.length
+    ? preferences.includes(p.category)
+      ? 98
+      : 45
+    : 80;
   if (scenario === 'rain' && !p.indoor) factors[0] = 30;
   if (scenario === 'crowd') factors[1] = 35;
   if (scenario === 'closed') factors[2] = 0;
+  const contextTotal =
+    factors.reduce(
+      (s, n, i) => s + Math.max(0, Math.min(100, n)) * profile.weights[i],
+      0,
+    ) / 100;
+  const categoryTotal =
+    attributes.values.reduce(
+      (s, n, i) => s + n * profile.specialtyWeights[i],
+      0,
+    ) / 100;
+  const rawTotal = contextTotal * 0.7 + categoryTotal * 0.3;
+  const warnings: string[] = [];
+  let total = Math.round(rawTotal);
+  if (factors[2] === 0) {
+    total = 0;
+    warnings.push('模拟闭园：不推荐安排，其他高分不能抵消未开放。');
+  } else if (
+    scenario === 'rain' &&
+    p.category === '身体力行' &&
+    attributes.weatherSensitive
+  ) {
+    total = Math.min(total, 35);
+    warnings.push('模拟降雨：水上户外项目暂缓，需核验运营方与天气条件。');
+  } else if (scenario === 'rain' && attributes.weatherSensitive) {
+    total = Math.min(total, 60);
+    warnings.push('模拟降雨：水系景区降级推荐，步道与开放情况需核验。');
+  }
   return {
     factors,
-    total: Math.round(factors.reduce((s, n, i) => s + n * weights[i], 0) / 100),
+    total,
+    contextTotal,
+    categoryTotal,
+    rawTotal,
+    profile,
+    attributes,
+    warnings,
+    label:
+      total >= 85
+        ? '优先考虑'
+        : total >= 70
+          ? '值得考虑'
+          : total >= 50
+            ? '需权衡'
+            : '暂缓选择',
+    preferenceNote: preferences.length
+      ? preferences.includes(p.category)
+        ? '符合当前主题偏好'
+        : '非当前优先主题'
+      : '未设置偏好，按中性 80 分计算',
   };
 }
 export const money = (n: number) =>
@@ -478,6 +665,7 @@ export function initialData(): AppData {
     trips: [trip],
     activeTripId: trip.id,
     savedPlaces: ['xiaoqikong'],
+    savedPostIds: [],
     expenses: [
       {
         id: uid(),
@@ -830,6 +1018,134 @@ export function organizeSocialPosts(postIds: string[]) {
     regions: [...new Set(stops.map((s) => placeById(s.placeId).region))],
   };
 }
+export const socialStories: Record<
+  string,
+  {
+    readTime: string;
+    sections: { title: string; text: string }[];
+    tips: string[];
+  }
+> = {
+  'dy-guizhou': {
+    readTime: '9 秒视频 · 2 分钟阅读',
+    sections: [
+      {
+        title: '三种心动，不必一天赶完',
+        text: '这一段视频把山水、苗寨与城市放在一起，表达的是旅行的节奏，不是导航顺序。小七孔适合慢慢看水，西江留给村落与夜色，甲秀楼则是城市散步的一站。跨区域移动需要另外预留时间。',
+      },
+      {
+        title: '把镜头里的地点变成候选清单',
+        text: '点击下方地点可以展开推荐依据。先保留最心动的两三处，再用 AI 整理建立草稿。它会按样例分镜提取地点，重复出现的内容合并，同时保留原文和时间码。',
+      },
+      {
+        title: '你的旅行，可以与视频不同',
+        text: '喜欢自然就多留半天给山水；更爱文化可以补充展馆或手作。日期、总预算和同行节奏都由你决定，视频只是灵感，不要求照单全收。',
+      },
+    ],
+    tips: [
+      '跨区域交通需另行核验并分天安排。',
+      '拍摄居民与文化活动前征得同意。',
+      '收藏此内容，日后可以从素材库再次规划。',
+    ],
+  },
+  'xhs-guiyang': {
+    readTime: '3 分钟阅读',
+    sections: [
+      {
+        title: '01｜一段河边的留白',
+        text: '把甲秀楼作为城市散步的起点，给建筑、河面和街边日常留一些时间。这里不必排满打卡任务，拍完照片，也可以沿河慢慢走。文案是虚构笔记，开放情况以实际核验为准。',
+      },
+      {
+        title: '02｜把口味也写进攻略',
+        text: '青云路美食街可以作为吃饭的候选，不需要把每家都尝遍。先决定辣度、折耳根和食物过敏限制，再选择合适的小吃。演示中的“饮食适配”分数不是对商家卫生或过敏原的认证。',
+      },
+      {
+        title: '03｜想慢下来，就加一点手作',
+        text: '把蜡染体验作为可选项，而不是必须完成的第三站。这里的工坊为虚构供给，真实主理人、地址、场次和价格都待核验。你可以在草稿中删去它，换成室内展馆或自由活动。',
+      },
+    ],
+    tips: [
+      '这是地点组合建议，非真实营业或预约保证。',
+      '预算先分配餐饮与体验，再补交通住宿。',
+      '可以只保留一个地点，重新搭配自己的路线。',
+    ],
+  },
+  'dy-waterfall': {
+    readTime: '6 秒视频 · 2 分钟阅读',
+    sections: [
+      {
+        title: '两段水声，两次停留',
+        text: '黄果树的瀑布与小七孔的水色是两种不同的自然体验。两地分属不同区域，这段合成视频不代表它们就在彼此旁边，更不是当日步行路线。',
+      },
+      {
+        title: '自然景观，要看当天条件',
+        text: '水系景区的天气与步道状况比视频里的观感更重要。推荐指数使用自然景观模型，天气、季节和步道体验会参与计算。模拟降雨时会下调建议，真实出行仍需查看景区公告。',
+      },
+      {
+        title: '先选最想去的一处',
+        text: '短假期可以只保留一个区域，再添加附近的人文地点。长假期可保留两处，并在创建旅行时增加天数。调整不会改变原视频内容，生成的是你的独立行程。',
+      },
+    ],
+    tips: [
+      '雨具与防滑装备按实际情况准备。',
+      '不要把演示评分当作安全许可。',
+      '留出接驳和休息时间，避免按视频节奏赶路。',
+    ],
+  },
+  'xhs-miao': {
+    readTime: '3 分钟阅读',
+    sections: [
+      {
+        title: '先把苗寨当成一处生活空间',
+        text: '西江千户苗寨不只是背景和夜景，也是居民的家园。散步时留意公共空间与私人院落的边界，人物、服饰与仪式的拍摄都应先询问。',
+      },
+      {
+        title: '手艺的价值，在过程里',
+        text: '银饰体验可以让旅行多一段参与感。样例关注文化内容、互动参与和讲解条件，不把“贵”或“热门”等同于文化价值。此处工坊为虚构示例，不提供真实预约。',
+      },
+      {
+        title: '一餐与一段空闲，都可以留下',
+        text: '酸汤鱼体验是餐饮候选，先确认口味与过敏原。若当天体验较多，可以删掉一项，保留一段自由时间。不同同行人的兴趣可以在下一步的主题与节奏中重新选择。',
+      },
+    ],
+    tips: [
+      '尊重居民作息与私人空间。',
+      '工坊、餐厅和价格都是 Mock。',
+      '文化体验评分不代表对群体或文化优劣的评价。',
+    ],
+  },
+  'xhs-anshun': {
+    readTime: '3 分钟阅读',
+    sections: [
+      {
+        title: '第一段：给自然足够的时间',
+        text: '黄果树与天星桥可以成为安顺路线的自然景观候选。是否安排在同一天，要结合体力、接驳和实际开放情况；演示不会替你判断真实道路是否可通行。',
+      },
+      {
+        title: '第二段：从山水转向故事',
+        text: '天龙屯堡适合作为另一段文化探索。与自然景区不同，它的模型更重视文化内容、互动与讲解条件。地戏场次只是待核验信息，不能依据样例作出行程承诺。',
+      },
+      {
+        title: '把“完整攻略”变成“适合我的攻略”',
+        text: '想少走路，可以从草稿中移除一段步道；喜欢历史，可以多留时间给文化地点。收藏这篇笔记后，后续可以重复使用，不必一次把所有决定做完。',
+      },
+    ],
+    tips: [
+      '可先保留三处地点，再按预算和天数删减。',
+      '开放和活动排期需要实际确认。',
+      '不同品类的指数均为个人选择辅助，不是绝对排名。',
+    ],
+  },
+};
+export const storageKey = 'qianlv-demo-v1';
+export function attachTripSources(trip: Trip, postIds: string[]): Trip {
+  return {
+    ...trip,
+    sourcePostIds: [...new Set(postIds)].filter((id) =>
+      socialPosts.some((p) => p.id === id),
+    ),
+  };
+}
 export function recommendSocialPlaces(
   routeIds: string[],
   preferences: Theme[] = [],
@@ -843,11 +1159,15 @@ export function recommendSocialPlaces(
         regions.has(p.region) &&
         (!preferences.length || preferences.includes(p.category)),
     )
-    .sort((a, b) => score(b).total - score(a).total)
+    .sort(
+      (a, b) =>
+        score(b, 'normal', preferences).total -
+        score(a, 'normal', preferences).total,
+    )
     .slice(0, 4)
     .map((p) => ({
       placeId: p.id,
-      reason: `${p.region}同区域补充 · ${preferences.length ? '符合所选偏好' : p.category} · 模拟推荐`,
+      reason: `${p.region}同区域 · ${placeAttributes[p.id].nature} · 模拟推荐指数 ${score(p, 'normal', preferences).total}`,
     }));
 }
 export async function parseGuide(input: string): Promise<string[]> {
@@ -922,6 +1242,7 @@ export function replan(
 export function restore(raw: string): AppData | null {
   try {
     const d = JSON.parse(raw) as AppData;
+    if (d.savedPostIds === undefined) d.savedPostIds = [];
     if (
       d.version !== 1 ||
       !Array.isArray(d.trips) ||
@@ -930,6 +1251,8 @@ export function restore(raw: string): AppData | null {
       !Array.isArray(d.feed) ||
       !Array.isArray(d.expenses) ||
       !Array.isArray(d.savedPlaces) ||
+      !Array.isArray(d.savedPostIds) ||
+      d.savedPostIds.some((id) => !socialPosts.some((p) => p.id === id)) ||
       typeof d.profile !== 'string' ||
       !['coral', 'ocean', 'forest', 'lavender', 'mono'].includes(d.theme) ||
       !['line', 'solid', 'emoji'].includes(d.iconSet) ||
@@ -954,7 +1277,12 @@ export function restore(raw: string): AppData | null {
         typeof t.start !== 'string' ||
         typeof t.destination !== 'string' ||
         !t.days?.length ||
-        typeof t.notes !== 'string'
+        typeof t.notes !== 'string' ||
+        (t.sourcePostIds !== undefined &&
+          (!Array.isArray(t.sourcePostIds) ||
+            t.sourcePostIds.some(
+              (id) => !socialPosts.some((p) => p.id === id),
+            )))
       )
         return null;
       for (const day of t.days) {

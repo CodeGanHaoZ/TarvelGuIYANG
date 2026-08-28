@@ -4,8 +4,8 @@ import { useState } from 'react';
 import {
   type Place,
   score,
-  weights,
   factorNames,
+  type Theme,
   money,
   places,
 } from '@/lib/travel';
@@ -22,21 +22,25 @@ import {
   Mountain,
 } from '@/components/travel-icons';
 import { Button } from '@/components/ui/button';
+import { RecommendationScore } from '@/components/recommendation-score';
 export function PlaceDetail({
   place,
   onAdd,
   onSave,
   saved,
   compact = false,
+  preferences = [],
 }: {
   place: Place;
   onAdd: (id: string) => void;
   onSave: (id: string) => void;
   saved: boolean;
   compact?: boolean;
+  preferences?: Theme[];
 }) {
   const [tab, setTab] = useState('推荐');
-  const s = score(place);
+  const [scenario, setScenario] = useState('normal');
+  const s = score(place, scenario, preferences);
   return (
     <div className={'place-detail ' + (compact ? 'compact' : '')}>
       <div className="detail-title-row">
@@ -63,15 +67,14 @@ export function PlaceDetail({
       <div className="score-panel">
         <div>
           <div className="score-caption">
-            今日游玩指数 <span>模拟</span>
+            品类推荐指数 <span>Mock</span>
           </div>
           <strong>
             {s.total}
             <small>/100</small>
           </strong>
           <p>
-            {s.total >= 90 ? '非常推荐' : '值得一去'} ·{' '}
-            {place.indoor ? '室内体验' : '户外探索'}
+            {s.label} · {s.attributes.nature}
           </p>
         </div>
         <div className="score-overview">
@@ -86,6 +89,21 @@ export function PlaceDetail({
           ))}
         </div>
       </div>
+      <label className="score-scenario">
+        模拟情景
+        <select value={scenario} onChange={(e) => setScenario(e.target.value)}>
+          <option value="normal">常规场景</option>
+          <option value="rain">降雨</option>
+          <option value="crowd">拥挤</option>
+          <option value="closed">闭园 / 不营业</option>
+        </select>
+        <span>仅调整当前评分预览</span>
+      </label>
+      {s.warnings.map((w) => (
+        <p className="score-warning" key={w}>
+          {w}
+        </p>
+      ))}
       <div className="ai-tip">
         <Sparkles size={17} />
         <div>
@@ -136,7 +154,8 @@ export function PlaceDetail({
                   <span>
                     {p.name}
                     <small>
-                      {p.category} · {p.duration} 分钟
+                      {p.category} · 推荐指数{' '}
+                      {score(p, 'normal', preferences).total} · Mock
                     </small>
                   </span>
                   <Plus size={17} />
@@ -147,22 +166,12 @@ export function PlaceDetail({
       )}
       {tab === '评分依据' && (
         <div className="detail-tab-body">
-          <p>
-            按 PRD
-            八项权重计算，五项出行维度展开显示。以下所有数值来自本地样例，不是实时判断。
-          </p>
-          <div className="factor-list">
-            {factorNames.map((name, i) => (
-              <div key={name}>
-                <span>
-                  {name}
-                  <small>权重 {weights[i]}%</small>
-                </span>
-                <progress max={100} value={s.factors[i]} />
-                <b>{s.factors[i]}</b>
-              </div>
-            ))}
-          </div>
+          <RecommendationScore
+            place={place}
+            preferences={preferences}
+            scenario={scenario}
+            expanded
+          />
         </div>
       )}
       {tab === '出行信息' && (
