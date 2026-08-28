@@ -84,6 +84,7 @@ import {
   type Trip,
   type TripItem,
   type SharedTrip,
+  type Theme,
 } from '@/lib/travel';
 type Page = 'home' | 'trip' | 'discover' | 'profile';
 type Modal =
@@ -99,6 +100,14 @@ type Modal =
   | 'export'
   | null;
 const categoryIcons = [Utensils, TreePine, Footprints, Landmark, Route, Flag];
+const themeImages: Record<Theme, string> = {
+  美食体验: '/images/theme-food.jpg',
+  自然景观: '/images/xiaoqikong.jpg',
+  身体力行: '/images/theme-hiking.jpg',
+  民族文化: '/images/xijiang.jpg',
+  经典路线: '/images/huangguoshu.jpg',
+  红色旅游: '/images/theme-history.jpg',
+};
 const pageLabels: Record<Page, string> = {
   home: '旅行灵感',
   trip: '我的行程',
@@ -643,33 +652,6 @@ export default function TravelApp() {
                   </span>
                 </button>
               </section>
-              <section className="import-strip">
-                <span className="feature-icon">
-                  <Link2 />
-                </span>
-                <div>
-                  <h3>刷到的贵州，现在就出发</h3>
-                  <p>粘贴小红书 / 抖音链接，识别地点并生成攻略</p>
-                </div>
-                <form
-                  className="import-input"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    open('import');
-                    void parse();
-                  }}
-                >
-                  <Input
-                    value={link}
-                    onChange={(e) => setLink(e.target.value)}
-                    placeholder="粘贴链接，或输入想去的地点…"
-                    aria-label="首页攻略链接"
-                  />
-                  <Button type="submit" className="dark-btn">
-                    生成攻略 <ArrowRight />
-                  </Button>
-                </form>
-              </section>
               <SocialInspiration
                 savedPostIds={data.savedPostIds}
                 onChangeSavedPosts={(ids) =>
@@ -705,30 +687,40 @@ export default function TravelApp() {
                   'zunyi',
                 ].map(card)}
               </HomeCarousel>
-              <HomeCarousel
-                compact
-                title="六种方式，遇见贵州"
-                subtitle="从山河到烟火，每一种喜欢都值得出发。"
+              <section
+                className="theme-discovery"
+                aria-labelledby="theme-discovery-title"
               >
-                {themes.map((t, i) => {
-                  const C = categoryIcons[i];
-                  return (
-                    <button
-                      className="theme-carousel-card"
-                      key={t}
-                      onClick={() => {
-                        go('discover');
-                        setFilter(t);
-                        setTripTab('探索');
-                      }}
-                    >
-                      <C size={24} />
-                      <b>{t}</b>
-                      <ArrowUpRight size={14} />
-                    </button>
-                  );
-                })}
-              </HomeCarousel>
+                <div className="section-heading">
+                  <div>
+                    <h2 id="theme-discovery-title">六种方式，遇见贵州</h2>
+                    <p>从山河到烟火，每一种喜欢都值得出发。</p>
+                  </div>
+                </div>
+                <div className="theme-image-grid">
+                  {themes.map((t, i) => {
+                    const C = categoryIcons[i];
+                    return (
+                      <button
+                        className="theme-image-card"
+                        key={t}
+                        onClick={() => {
+                          go('discover');
+                          setFilter(t);
+                          setTripTab('探索');
+                        }}
+                      >
+                        <img src={themeImages[t]} alt="" loading="lazy" />
+                        <span className="theme-image-label">
+                          <C size={24} />
+                          <b>{t}</b>
+                        </span>
+                        <ArrowUpRight size={16} aria-hidden="true" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
               <DataFootnote />
             </main>
           )}
@@ -1777,6 +1769,30 @@ export default function TravelApp() {
                     rel="noreferrer"
                   >
                     黄果树
+                  </a>{' '}
+                  ·{' '}
+                  <a
+                    href="https://hk.trip.com/restaurant/china/kaili/detail/silianhongtangsiwawa-30810956/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    丝娃娃美食
+                  </a>{' '}
+                  ·{' '}
+                  <a
+                    href="https://k.sina.cn/article_1786653501_p6a7e2b3d02700bzzr.html"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    梵净山登山步道（程阅川）
+                  </a>{' '}
+                  ·{' '}
+                  <a
+                    href="https://gs.ctrip.com/html5/you/sight/zunyi204/17661.html"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    遵义会议旧址
                   </a>
                 </details>
               </div>

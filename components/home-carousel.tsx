@@ -17,13 +17,13 @@ export function HomeCarousel({
   subtitle,
   children,
   actions,
-  compact = false,
+  variant = 'default',
 }: {
   title: string;
   subtitle: string;
   children: ReactNode;
   actions?: ReactNode;
-  compact?: boolean;
+  variant?: 'default' | 'social';
 }) {
   const id = useId();
   const track = useRef<HTMLDivElement>(null);
@@ -64,7 +64,9 @@ export function HomeCarousel({
   }
   return (
     <section
-      className={'home-carousel' + (compact ? ' compact-carousel' : '')}
+      className={
+        'home-carousel' + (variant === 'social' ? ' social-feed-carousel' : '')
+      }
       aria-label={title}
       aria-roledescription="轮播区"
     >
@@ -133,10 +135,7 @@ export function HomeCarousel({
         ))}
       </div>
       <p className="carousel-hint">
-        左右滑动，发现更多{' '}
-        <span>
-          {slides.length} 个{compact ? '主题' : '灵感'}
-        </span>
+        左右滑动，发现更多 <span>{slides.length} 个灵感</span>
       </p>
     </section>
   );

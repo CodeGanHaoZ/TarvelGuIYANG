@@ -46,7 +46,6 @@ export function SocialInspiration({
   savedPostIds: string[];
   onChangeSavedPosts: (ids: string[]) => void;
 }) {
-  const [platform, setPlatform] = useState('全部');
   const chosen = savedPostIds;
   const [panel, setPanel] = useState<'post' | 'route' | null>(null);
   const [postId, setPostId] = useState(socialPosts[0].id);
@@ -92,9 +91,6 @@ export function SocialInspiration({
     [],
   );
   const post = socialPosts.find((p) => p.id === postId)!;
-  const shown = socialPosts.filter(
-    (p) => platform === '全部' || p.platform === platform,
-  );
   const recommended = recommendSocialPlaces(route, preferences);
   const matches = query.trim()
     ? places
@@ -158,23 +154,11 @@ export function SocialInspiration({
   return (
     <>
       <HomeCarousel
+        variant="social"
         title="把刷到的心动，变成你的路线"
-        subtitle="抖音视频 · 小红书笔记 · 内容与账号均为 Mock"
-        actions={
-          <div className="social-filters" aria-label="筛选内容平台">
-            {['全部', '抖音', '小红书'].map((p) => (
-              <button
-                key={p}
-                aria-pressed={platform === p}
-                onClick={() => setPlatform(p)}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        }
+        subtitle="旅行视频与笔记 · 内容与账号均为 Mock 演示样例"
       >
-        {shown.map((p) => (
+        {socialPosts.map((p) => (
           <article
             key={p.id}
             className={
@@ -190,64 +174,46 @@ export function SocialInspiration({
               }}
             >
               <img src={p.cover} alt={p.title} loading="lazy" />
-              <span
-                className={
-                  'platform-tag ' +
-                  (p.platform === '抖音' ? 'douyin' : 'xiaohongshu')
-                }
-              >
-                {p.platform}
-              </span>
-              <span className="social-mock">Mock</span>
-              {p.kind === 'video' ? (
+              {p.kind === 'video' && (
                 <>
                   <span className="play-bubble">
-                    <Play size={24} />
+                    <Play size={20} />
                   </span>
-                  <span className="media-type">演示短片 · {p.duration}</span>
+                  <span className="media-type">{p.duration}</span>
                 </>
-              ) : (
-                <span className="media-type">
-                  <NotebookPen size={14} /> 图文笔记
-                </span>
               )}
             </button>
             <div className="social-copy">
-              <div className="social-tags">
-                {p.tags.map((t) => (
-                  <span key={t}>#{t}</span>
-                ))}
-              </div>
               <a className="social-title" href={'/inspiration/' + p.id}>
                 <h3>{p.title}</h3>
               </a>
-              <a className="social-read-link" href={'/inspiration/' + p.id}>
-                {p.kind === 'video' ? '打开视频内容页' : '阅读完整笔记'}{' '}
-                <ArrowRight size={13} />
-              </a>
               <div className="social-author">
-                <span>
-                  <i>{p.author.slice(0, 1)}</i>
-                  {p.author}
+                <span className="social-author-name">
+                  <i aria-hidden="true">{p.author.slice(0, 1)}</i>
+                  <span>{p.author}</span>
                 </span>
-                <span>
-                  <Heart size={13} /> {p.likes}
+                <span
+                  className="social-likes"
+                  aria-label={`${p.likes} 次喜欢，演示数据`}
+                >
+                  <Heart size={12} /> {p.likes}
                 </span>
               </div>
               <div className="social-card-actions">
                 <label>
                   <input
                     type="checkbox"
+                    aria-label={`收藏为规划素材：${p.title}`}
                     checked={chosen.includes(p.id)}
                     onChange={() => toggle(p.id)}
                   />
                   <span>收藏为素材</span>
                 </label>
                 <button
-                  className="text-btn"
+                  className="social-plan-button"
                   onClick={() => void organize([p.id])}
                 >
-                  <Sparkles size={15} /> AI 整理
+                  成为我的出行规划
                 </button>
               </div>
             </div>
@@ -342,7 +308,6 @@ export function SocialInspiration({
               </div>
               <div className="post-article">
                 <span className="eyebrow">
-                  {post.platform} ·{' '}
                   {post.kind === 'video' ? '视频分镜' : '图文笔记'} · MOCK
                 </span>
                 <h2>{post.title}</h2>
@@ -364,7 +329,7 @@ export function SocialInspiration({
                     className="primary-btn"
                     onClick={() => void organize([post.id])}
                   >
-                    <Sparkles /> AI 整理这篇
+                    <Sparkles /> 成为我的出行规划
                   </Button>
                   <Button
                     variant="outline"

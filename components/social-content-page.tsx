@@ -104,7 +104,7 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
       <main>
         <div className="story-heading">
           <div className="eyebrow">
-            {post.platform} · {post.kind === 'video' ? '演示视频' : '图文笔记'}
+            {post.kind === 'video' ? '演示视频' : '图文笔记'}
           </div>
           <h1>{post.title}</h1>
           <p>
@@ -238,7 +238,7 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
               className="primary-btn"
               href={'/?plan=' + encodeURIComponent(post.id)}
             >
-              <Sparkles size={17} /> 用这篇规划 <ArrowRight size={17} />
+              <Sparkles size={17} /> 成为我的出行规划 <ArrowRight size={17} />
             </a>
             <Button className="outline-btn" onClick={save} disabled={!ready}>
               {saved ? <Check /> : <Bookmark />}
