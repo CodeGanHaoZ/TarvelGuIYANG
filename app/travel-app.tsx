@@ -58,6 +58,10 @@ import { RouteMap } from '@/components/route-map';
 import type { PlanningContext } from '@/lib/planning-input';
 import { PlaceDetail } from '@/components/place-detail';
 import { TripWizard } from '@/components/trip-wizard';
+import { ItineraryLibrary } from '@/components/itinerary-library';
+import { TransportPlanner } from '@/components/transport-planner';
+import { DayBrief } from '@/components/day-brief';
+import { selectTransport, amapRouteUrl } from '@/lib/transport';
 import { HomeCarousel } from '@/components/home-carousel';
 import { SocialInspiration } from '@/components/social-inspiration';
 import {
@@ -71,6 +75,8 @@ import {
   makeItem,
   metrics,
   timeline,
+  previousDayConnection,
+  copyTripWithNewIds,
   clock,
   optimize,
   splitExpenses,
@@ -100,6 +106,8 @@ type Modal =
   | 'publish'
   | 'assistant'
   | 'export'
+  | 'presets'
+  | 'transport'
   | null;
 const categoryIcons = [TreePine, Utensils, Landmark, Route, Footprints, Flag];
 const themeImages: Record<Theme, string> = {
@@ -158,13 +166,18 @@ export default function TravelApp() {
     [assistantInput, setAssistantInput] = useState(''),
     [answer, setAnswer] = useState(''),
     [dragId, setDragId] = useState<string | null>(null);
+  const [transportTo, setTransportTo] = useState<string | undefined>();
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trip =
     data.trips.find((t) => t.id === data.activeTripId) || data.trips[0];
   const day = trip.days[Math.min(dayIndex, trip.days.length - 1)];
   const selectedItem = day.items.find((i) => i.id === selected) || day.items[0];
-  const dayMetrics = metrics(day.items);
-  const scheduled = timeline(day.items);
+  const previous = previousDayConnection(trip, dayIndex);
+  const dayMetrics = metrics(day.items, previous);
+  const scheduled = timeline(day.items, previous);
+  const optimizedItems =
+    modal === 'optimize' ? optimize(day.items, previous) : day.items;
+  const optimizedMetrics = metrics(optimizedItems, previous);
   const expenses = data.expenses.filter((e) => e.tripId === trip.id);
   const settlement = splitExpenses(expenses, trip.people);
   const filteredPlaces = places.filter(
@@ -261,6 +274,10 @@ export default function TravelApp() {
       days: trip.days.map((d) => (d.id === day.id ? { ...d, items } : d)),
     });
   }
+  function showTransport(toId?: string) {
+    setTransportTo(toId);
+    open('transport');
+  }
   function addPlace(id: string) {
     if (day.items.some((i) => i.placeId === id)) {
       notify('这个地点已在当天行程里。');
@@ -346,15 +363,9 @@ export default function TravelApp() {
     go('trip');
   }
   function copyShared(post: SharedTrip) {
-    const t = structuredClone(post.trip);
-    t.id = uid();
+    const t = copyTripWithNewIds(post.trip);
     t.title = post.title + ' · 我的副本';
     t.people = ['我'];
-    t.days = t.days.map((d) => ({
-      ...d,
-      id: uid(),
-      items: d.items.map((i) => ({ ...i, id: uid() })),
-    }));
     createTrip(t);
   }
   async function enableOffline() {
@@ -414,13 +425,21 @@ export default function TravelApp() {
       `# ${trip.title}\n\n> AI 黔驴演示攻略。评分、交通、价格均为 Mock，出发前请核验。\n\n日期：${trip.start} 起\n同行：${trip.people.join('、')}\n总预算：¥${trip.budget}\n\n` +
       trip.days
         .map(
-          (d) =>
+          (d, dayNumber) =>
             `## ${dateLabel(d.date)} · ${d.title}\n\n` +
-            timeline(d.items)
-              .map(
-                (t) =>
-                  `- ${clock(t.start)} ${t.place.name}：停留 ${t.item.duration} 分钟；参考 ¥${t.place.price}；模拟推荐指数 ${score(t.place, 'normal', trip.preferences).total}。${t.warning ? '⚠ 超出模拟营业时间。' : ''}\n  ${t.place.tip}`,
-              )
+            (d.guide
+              ? `${d.guide.summary}\n\n用餐：${d.guide.meals}\n住宿：${d.guide.stay}\n准备：${d.guide.preparation.join('；')}\n\n`
+              : '') +
+            timeline(d.items, previousDayConnection(trip, dayNumber))
+              .map((t, index) => {
+                const from =
+                  d.items[index - 1] ?? previousDayConnection(trip, dayNumber);
+                const transport =
+                  t.transit && from
+                    ? `交通：${t.transit.mode}，约${t.transit.minutes}分钟 / ${t.transit.km} km（Mock）。${t.transit.option.summary}\n${t.transit.option.steps.map((s) => `  - ${s.title}：${s.detail}（约${s.minutes}分钟）`).join('\n')}\n[去高德查询](${amapRouteUrl(placeById(from.placeId), t.place, t.transit.option.id)})\n\n`
+                    : '';
+                return `${transport}- ${clock(t.start)}—${clock(t.end)} ${t.place.name}：停留 ${t.item.duration} 分钟；参考 ¥${t.place.price}/人；模拟推荐指数 ${score(t.place, 'normal', trip.preferences).total}。${t.warning ? '⚠ 超出模拟营业时间。' : ''}\n  ${t.item.plan?.activity ?? t.place.description}\n  ${[t.place.tip, ...(t.item.plan?.tips ?? [])].join(' ')}`;
+              })
               .join('\n'),
         )
         .join('\n\n') +
@@ -650,6 +669,13 @@ export default function TravelApp() {
                     >
                       查看我的行程 <ArrowRight />
                     </Button>
+                    <Button
+                      variant="ghost"
+                      className="text-btn"
+                      onClick={() => open('presets')}
+                    >
+                      <CalendarDays size={17} /> 详细三日样例
+                    </Button>
                   </div>
                   <div className="hero-foot">
                     地图规划　·　今日游玩指数　·　在地文化体验
@@ -765,6 +791,12 @@ export default function TravelApp() {
                   </div>
                 </div>
                 <div className="trip-actions">
+                  <Button
+                    className="outline-btn"
+                    onClick={() => open('presets')}
+                  >
+                    <CalendarDays size={16} /> 三日样例
+                  </Button>
                   <button
                     className="outline-btn"
                     onClick={() => open('export')}
@@ -848,6 +880,34 @@ export default function TravelApp() {
                       </span>
                       <small>模拟估算</small>
                     </div>
+                    <div className="day-route-tools">
+                      <button
+                        className="outline-btn"
+                        disabled={day.items.length < 2 && !previous}
+                        onClick={() => showTransport()}
+                      >
+                        <Route size={16} /> 交通方案与线路查询{' '}
+                        <ArrowUpRight size={15} />
+                      </button>
+                      <button
+                        className="text-btn"
+                        onClick={() => open('presets')}
+                      >
+                        <Sparkles size={15} /> 换一份三日灵感
+                      </button>
+                    </div>
+                    <DayBrief
+                      day={day}
+                      previous={previous}
+                      people={trip.people.length}
+                    />
+                    {previous && (
+                      <p className="cross-day-note">
+                        跨城接续已计入：上日尾站「
+                        {placeById(previous.placeId).name}」→
+                        今日首站。以08:30出发估算；住宿绕行、进站与实际班次仍需核验。
+                      </p>
+                    )}
                     <button
                       className="weather-banner"
                       onClick={() => open('weather')}
@@ -870,7 +930,15 @@ export default function TravelApp() {
                     <div className="timeline-list">
                       {scheduled.map(
                         (
-                          { item, place: p, start, end, transit, warning },
+                          {
+                            item,
+                            place: p,
+                            start,
+                            end,
+                            transit,
+                            warning,
+                            wait,
+                          },
                           i,
                         ) => (
                           <div
@@ -884,11 +952,24 @@ export default function TravelApp() {
                             onDrop={() => onDrop(item.id)}
                           >
                             {transit && (
-                              <div className="transit">
+                              <button
+                                className="transit"
+                                onClick={() => showTransport(item.id)}
+                                aria-label={`查询到${p.name}的交通方案`}
+                              >
                                 <Route size={13} />
                                 {transit.mode} · {transit.minutes} 分钟 ·{' '}
                                 {transit.km} km <span>估算</span>
-                              </div>
+                                <strong>
+                                  查看方案 <ChevronRight size={12} />
+                                </strong>
+                              </button>
+                            )}
+                            {wait >= 20 && (
+                              <p className="schedule-rest">
+                                <Clock size={12} /> 预留 {wait} 分钟休息 / 用餐
+                                / 等待开放，可自行安排
+                              </p>
                             )}
                             <div
                               className={
@@ -906,7 +987,7 @@ export default function TravelApp() {
                                     {clock(start)} — {clock(end)}
                                   </span>
                                   <h3>{p.name}</h3>
-                                  <p>{p.description}</p>
+                                  <p>{item.plan?.activity ?? p.description}</p>
                                   <span className="stop-tags">
                                     <span className="mini-tag">
                                       {p.category}
@@ -929,6 +1010,49 @@ export default function TravelApp() {
                                   </div>
                                 )}
                               </button>
+                              <details className="stop-practical">
+                                <summary>游玩提示与时间安排</summary>
+                                <p>{p.tip}</p>
+                                {item.plan?.tips.map((tip) => (
+                                  <p key={tip}>{tip}</p>
+                                ))}
+                                <p>
+                                  模拟开放 {p.hours[0]}:00—{p.hours[1]}:00 ·
+                                  参考费用 ¥{money(p.price)}/人 · 出发前核验
+                                </p>
+                                {item.plan && (
+                                  <label>
+                                    不早于此时间开始{' '}
+                                    <input
+                                      type="time"
+                                      aria-label={p.name + '建议开始时间'}
+                                      value={clock(item.plan.earliestStart)}
+                                      onChange={(e) => {
+                                        if (
+                                          !/^\d{2}:\d{2}$/.test(e.target.value)
+                                        )
+                                          return;
+                                        const [h, m] = e.target.value
+                                          .split(':')
+                                          .map(Number);
+                                        updateItems(
+                                          day.items.map((x) =>
+                                            x.id === item.id && x.plan
+                                              ? {
+                                                  ...x,
+                                                  plan: {
+                                                    ...x.plan,
+                                                    earliestStart: h * 60 + m,
+                                                  },
+                                                }
+                                              : x,
+                                          ),
+                                        );
+                                      }}
+                                    />
+                                  </label>
+                                )}
+                              </details>
                               <div className="stop-toolbar">
                                 <GripVertical size={15} />
                                 <label>
@@ -952,13 +1076,26 @@ export default function TravelApp() {
                                     }
                                   >
                                     {[
-                                      30, 45, 60, 75, 90, 100, 120, 150, 180,
-                                      240,
-                                    ].map((v) => (
-                                      <option value={v} key={v}>
-                                        {v} 分钟
-                                      </option>
-                                    ))}
+                                      ...new Set([
+                                        30,
+                                        45,
+                                        60,
+                                        75,
+                                        90,
+                                        100,
+                                        120,
+                                        150,
+                                        180,
+                                        240,
+                                        item.duration,
+                                      ]),
+                                    ]
+                                      .sort((a, b) => a - b)
+                                      .map((v) => (
+                                        <option value={v} key={v}>
+                                          {v} 分钟
+                                        </option>
+                                      ))}
                                   </select>
                                 </label>
                                 <button
@@ -1009,10 +1146,19 @@ export default function TravelApp() {
                       )}
                     </div>
                     {!day.items.length && (
-                      <Empty
-                        title="把第一处心动，放进行程"
-                        text="今天还没有地点，可以手动添加，或从攻略中导入。"
-                      />
+                      <div className="empty-itinerary">
+                        <Empty
+                          title="从一份完整三日计划开始"
+                          text="贵阳慢游、荔波山水、黔东南村寨，已安排每天的游览、用餐和交通参考。也可继续手动添加地点。"
+                        />
+                        <Button
+                          className="primary-btn"
+                          onClick={() => open('presets')}
+                        >
+                          <Sparkles size={18} /> 选择详细三日行程{' '}
+                          <ArrowRight size={17} />
+                        </Button>
+                      </div>
                     )}
                     <button
                       className="add-place-btn"
@@ -1032,6 +1178,7 @@ export default function TravelApp() {
                   <aside className="map-pane">
                     <RouteMap
                       items={day.items}
+                      previous={previous}
                       selected={selectedItem?.id || null}
                       dayIndex={dayIndex}
                       onSelect={(id) => {
@@ -1886,7 +2033,11 @@ export default function TravelApp() {
         >
           <DialogContent
             className={
-              'travel-dialog ' + (modal === 'create' ? 'wizard-dialog' : '')
+              'travel-dialog ' +
+              (modal === 'create' ? 'wizard-dialog' : '') +
+              (modal === 'transport' || modal === 'presets'
+                ? ' route-dialog'
+                : '')
             }
           >
             <DialogTitle className="sr-only">
@@ -1902,12 +2053,43 @@ export default function TravelApp() {
                   publish: '发布行程约伴',
                   assistant: '黔驴旅行助手',
                   export: '导出旅行',
+                  presets: '选择详细三日行程',
+                  transport: '交通方案与线路查询',
                 } as Record<string, string>
               )[modal || ''] || '旅行工具'}
             </DialogTitle>
             <DialogDescription className="sr-only">
               AI 黔驴交互演示，数据保存在当前浏览器。
             </DialogDescription>
+            {modal === 'presets' && (
+              <ItineraryLibrary
+                trip={trip}
+                onCreate={createTrip}
+                onFill={(next) => {
+                  updateTrip(next);
+                  setDayIndex(0);
+                  setSelected(null);
+                  setModal(null);
+                  setTripTab('行程');
+                  go('trip');
+                  notify('已填入详细三日样例，原日期与笔记保留，可撤销。');
+                }}
+              />
+            )}
+            {modal === 'transport' && (
+              <TransportPlanner
+                key={day.id + (transportTo ?? '')}
+                day={day}
+                previous={previous}
+                people={trip.people.length}
+                initialTo={transportTo}
+                onChoose={(toId, from, mode) => {
+                  updateItems(
+                    selectTransport(day.items, toId, from, mode, placeById),
+                  );
+                }}
+              />
+            )}
             {modal === 'create' && (
               <TripWizard
                 key={creationTheme ?? 'custom'}
@@ -2123,19 +2305,19 @@ export default function TravelApp() {
                   <div>
                     <small>优化后</small>
                     <b>
-                      {metrics(optimize(day.items)).minutes}
+                      {optimizedMetrics.minutes}
                       <em>分钟</em>
                     </b>
-                    <span>{metrics(optimize(day.items)).km.toFixed(1)} km</span>
+                    <span>{optimizedMetrics.km.toFixed(1)} km</span>
                   </div>
                 </div>
                 <div className="notice">
-                  {dayMetrics.minutes === metrics(optimize(day.items)).minutes
+                  {dayMetrics.minutes === optimizedMetrics.minutes
                     ? '当前顺序已是此模拟模型下的较优路线，无需调整。'
-                    : `预计减少 ${dayMetrics.minutes - metrics(optimize(day.items)).minutes} 分钟交通。`}
+                    : `预计减少 ${dayMetrics.minutes - optimizedMetrics.minutes} 分钟交通。`}
                 </div>
                 <div className="route-preview">
-                  {optimize(day.items).map((i, n) => (
+                  {optimizedItems.map((i, n) => (
                     <span key={i.id}>
                       <b>{n + 1}</b>
                       {placeById(i.placeId).name}
@@ -2145,7 +2327,7 @@ export default function TravelApp() {
                 <Button
                   className="primary-btn full-width"
                   onClick={() => {
-                    updateItems(optimize(day.items));
+                    updateItems(optimizedItems);
                     setModal(null);
                     notify('已应用模拟优化路线，地图与时间轴同步更新。');
                   }}

@@ -4,6 +4,17 @@ import {
   featuredPosts,
   featuredStories,
 } from './themed-fixtures.ts';
+import {
+  itineraryPlaces,
+  itineraryAttributes,
+  itineraryPresets,
+  type DayGuide,
+} from './itinerary-fixtures.ts';
+import {
+  roadDistance,
+  resolveTransport,
+  type TransportChoice,
+} from './transport.ts';
 
 export type Theme =
   | '舌尖黔味'
@@ -89,12 +100,19 @@ export type Place = {
   /** Different activities at one location remain distinct bookable/plannable candidates. */
   locationId?: string;
 };
-export type TripItem = { id: string; placeId: string; duration: number };
+export type TripItem = {
+  id: string;
+  placeId: string;
+  duration: number;
+  plan?: { earliestStart: number; activity: string; tips: string[] };
+  transport?: TransportChoice;
+};
 export type TripDay = {
   id: string;
   date: string;
   title: string;
   items: TripItem[];
+  guide?: DayGuide;
 };
 export type Trip = {
   id: string;
@@ -388,6 +406,7 @@ export const places: Place[] = [
     tip: '预约、闭馆日与展陈安排待接入官方信息，请提前核实。',
   },
   ...additionalPlaces,
+  ...itineraryPlaces,
 ];
 export const travelRegions = [...new Set(places.map((p) => p.region))];
 export const placeById = (id: string): Place =>
@@ -537,6 +556,7 @@ export const placeAttributes: Record<
   }
 > = {
   ...additionalAttributes,
+  ...itineraryAttributes,
   qianling: {
     nature: '城市森林公园',
     values: [89, 88, 82],
@@ -700,6 +720,83 @@ const templates = [
   ['huangguoshu', 'tianxing'],
   ['xijiang', 'silver', 'sourfish'],
 ];
+export function createPresetTrip(
+  presetId: string,
+  options: { start: string; people: string[]; budget: number },
+): Trip {
+  const preset = itineraryPresets.find((p) => p.id === presetId);
+  if (!preset) throw new Error('未找到这份三日样例。');
+  const days: TripDay[] = preset.days.map((d, index) => ({
+    id: uid(),
+    date: dateAfter(options.start, index),
+    title: d.title,
+    guide: structuredClone(d.guide),
+    items: d.stops.map((s) => ({
+      ...makeItem(s.placeId),
+      duration: s.duration,
+      plan: { earliestStart: s.at, activity: s.activity, tips: [...s.tips] },
+    })),
+  }));
+  const admission = days
+    .flatMap((d) => d.items)
+    .reduce(
+      (sum, i) => sum + placeById(i.placeId).price * options.people.length,
+      0,
+    );
+  return {
+    id: uid(),
+    title: preset.title,
+    destination: preset.destination,
+    start: options.start,
+    people: [...options.people],
+    budget: options.budget,
+    preferences: [],
+    pace: '均衡',
+    days,
+    notes: `三日详细样例：${preset.intro}\n门票、餐饮、开放、住宿和交通金额均为 Mock；没有完成任何预订。每天从首站开始，住宿往返及到达/返程交通另查。\n${admission > options.budget ? '注意：已列地点的模拟费用超出预算，请删减后再出发。' : '当前预算还需覆盖交通、住宿及未列出的自理餐饮。'}`,
+  };
+}
+export function fillEmptyTripWithPreset(trip: Trip, presetId: string): Trip {
+  if (trip.days.length !== 3 || trip.days.some((d) => d.items.length))
+    throw new Error('仅可填入完全空白的三日行程，已有内容不会被覆盖。');
+  const sample = createPresetTrip(presetId, trip);
+  return {
+    ...sample,
+    id: trip.id,
+    sourcePostIds: trip.sourcePostIds,
+    days: sample.days.map((day, i) => ({
+      ...day,
+      id: trip.days[i].id,
+      date: trip.days[i].date,
+    })),
+    notes: [trip.notes, sample.notes].filter(Boolean).join('\n\n'),
+  };
+}
+export function copyTripWithNewIds(trip: Trip): Trip {
+  const copy = structuredClone(trip);
+  const ids = new Map(
+    copy.days.flatMap((day) =>
+      day.items.map((item) => [item.id, uid()] as const),
+    ),
+  );
+  copy.id = uid();
+  copy.days = copy.days.map((day) => ({
+    ...day,
+    id: uid(),
+    items: day.items.map((item) => {
+      const next = { ...item, id: ids.get(item.id)! };
+      if (item.transport && ids.has(item.transport.fromId))
+        next.transport = {
+          ...item.transport,
+          fromId: ids.get(item.transport.fromId)!,
+        };
+      else delete next.transport;
+      return next;
+    }),
+  }));
+  return copy;
+}
+
 export function makeTrip(
   options: {
     destination: string;
@@ -716,6 +813,26 @@ export function makeTrip(
   const region =
     travelRegions.find((r) => destination.includes(r)) ??
     (destination.includes('苗寨') ? '黔东南' : undefined);
+  // Detailed regional defaults, without adding unselected places to imported/theme-only plans.
+  if (
+    options.dayCount === 3 &&
+    !imported.length &&
+    !options.preferences.length &&
+    options.pace === '均衡'
+  ) {
+    const preset = itineraryPresets.find(
+      (p) => p.destination === (region ?? '贵阳'),
+    );
+    if (preset) {
+      const cost = preset.days
+        .flatMap((d) => d.stops)
+        .reduce(
+          (sum, s) => sum + placeById(s.placeId).price * options.people.length,
+          0,
+        );
+      if (cost <= options.budget) return createPresetTrip(preset.id, options);
+    }
+  }
   const pool = places.filter(
     (p) =>
       (!region || p.region === region) &&
@@ -746,6 +863,9 @@ export function makeTrip(
           )
         : [];
       ids = selectDayPlaces(group, options.pace);
+      // Reserve candidates for later days instead of consuming every stop on day one.
+      // When there are fewer places than days, keep the shortage honest; never invent imports.
+      ids = ids.slice(0, Math.max(1, remaining.length - (count - i - 1)));
       remaining = remaining.filter((id) => !ids.includes(id));
     }
     if (!imported.length)
@@ -765,6 +885,22 @@ export function makeTrip(
         ? `${placeById(ids[0]).region} · ${options.preferences.length === 1 ? options.preferences[0] : i === 0 ? '初见山水' : '慢慢相遇'}`
         : '自由探索 · 留一点空白',
       items: ids.map(makeItem),
+      guide: ids.length
+        ? {
+            summary: `按${placeById(ids[0]).region}同区域安排，地点不足时可从三日样例中另建行程，或手动添加。`,
+            meals:
+              '已选餐饮随地点计费；其余三餐请在当天住宿或游览区域安排，费用另计。',
+            stay:
+              i < count - 1
+                ? `建议在${placeById(ids.at(-1)!).region}选择住宿，确认下一日交通后再预订。`
+                : '返程日：预留取行李、到车站和安检时间，班次需自行核实。',
+            stayCost: i < count - 1 ? [180, 320] : [0, 0],
+            preparation: [
+              '交通与开放时段为估算，出发前打开地图核对。',
+              ...planningWarnings(ids),
+            ],
+          }
+        : undefined,
     };
   });
   return {
@@ -780,6 +916,9 @@ export function makeTrip(
         : '',
       budgetSkipped
         ? `有 ${budgetSkipped} 个地点因模拟门票/体验费用超出预算未排入。预算未计入交通和住宿，请继续核验。`
+        : '',
+      days.some((d) => !d.items.length)
+        ? '部分日期因候选地点或预算不足留白。未自动添加未选地点；可以补充地点或另建详细三日样例。'
         : '',
     ]
       .filter(Boolean)
@@ -858,27 +997,45 @@ export function initialData(): AppData {
   };
 }
 export function distance(a: Place, b: Place) {
-  const rad = (n: number) => (n * Math.PI) / 180;
-  const dlat = rad(b.lat - a.lat),
-    dlng = rad(b.lng - a.lng);
-  const h =
-    Math.sin(dlat / 2) ** 2 +
-    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dlng / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)) * 1.45;
+  return roadDistance(a, b);
 }
-export function leg(a: Place, b: Place) {
-  const km = distance(a, b);
+export function leg(
+  a: Place,
+  b: Place,
+  choice?: TransportChoice,
+  fromId?: string,
+) {
+  const option = resolveTransport(a, b, choice, fromId);
   return {
-    km: Math.round(km * 10) / 10,
-    minutes: Math.max(5, Math.round((km / (km > 30 ? 55 : 25)) * 60)),
-    mode: km > 30 ? '城际交通' : '市内交通',
+    km: option.km,
+    minutes: option.minutes,
+    mode: option.label,
+    option,
   };
 }
-export function metrics(items: TripItem[]) {
+export function previousDayConnection(
+  trip: Trip,
+  dayIndex: number,
+): TripItem | undefined {
+  const from = trip.days[dayIndex - 1]?.items.at(-1),
+    to = trip.days[dayIndex]?.items[0];
+  return from &&
+    to &&
+    placeById(from.placeId).region !== placeById(to.placeId).region
+    ? from
+    : undefined;
+}
+export function metrics(items: TripItem[], previous?: TripItem) {
   return items.reduce(
     (out, item, i) => {
-      if (i) {
-        const l = leg(placeById(items[i - 1].placeId), placeById(item.placeId));
+      const from = items[i - 1] ?? previous;
+      if (from) {
+        const l = leg(
+          placeById(from.placeId),
+          placeById(item.placeId),
+          item.transport,
+          from.id,
+        );
         out.km += l.km;
         out.minutes += l.minutes;
       }
@@ -887,13 +1044,17 @@ export function metrics(items: TripItem[]) {
     { km: 0, minutes: 0 },
   );
 }
-export function timeline(items: TripItem[]) {
+export function timeline(items: TripItem[], previous?: TripItem) {
   let time = 8 * 60 + 30;
   return items.map((item, i) => {
     const p = placeById(item.placeId);
-    const transit = i ? leg(placeById(items[i - 1].placeId), p) : null;
+    const from = items[i - 1] ?? previous;
+    const transit = from
+      ? leg(placeById(from.placeId), p, item.transport, from.id)
+      : null;
     if (transit) time += transit.minutes;
-    time = Math.max(time, p.hours[0] * 60);
+    const arrival = time;
+    time = Math.max(time, p.hours[0] * 60, item.plan?.earliestStart ?? 0);
     const start = time;
     time += item.duration;
     return {
@@ -902,19 +1063,20 @@ export function timeline(items: TripItem[]) {
       start,
       end: time,
       transit,
+      wait: start - arrival,
       warning: time > p.hours[1] * 60,
     };
   });
 }
 export const clock = (m: number) =>
   `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}${m >= 1440 ? ' (+1天)' : ''}`;
-export function optimize(items: TripItem[]): TripItem[] {
+export function optimize(items: TripItem[], previous?: TripItem): TripItem[] {
   if (items.length < 3) return [...items];
   let best = [...items];
-  let bestCost = metrics(best).minutes;
+  let bestCost = metrics(best, previous).minutes;
   const visit = (prefix: TripItem[], rest: TripItem[]) => {
     if (!rest.length) {
-      const cost = metrics(prefix).minutes;
+      const cost = metrics(prefix, previous).minutes;
       if (cost < bestCost) {
         best = prefix;
         bestCost = cost;
@@ -940,7 +1102,7 @@ export function optimize(items: TripItem[]): TripItem[] {
       );
       route.push(rest.shift()!);
     }
-    if (metrics(route).minutes < bestCost) best = route;
+    if (metrics(route, previous).minutes < bestCost) best = route;
   }
   return best;
 }
@@ -1441,6 +1603,22 @@ export function restore(raw: string): AppData | null {
       if (t.preferences.some((p) => !themes.includes(p))) return null;
       for (const day of t.days) {
         if (
+          day.guide !== undefined &&
+          (!day.guide ||
+            typeof day.guide.summary !== 'string' ||
+            typeof day.guide.meals !== 'string' ||
+            typeof day.guide.stay !== 'string' ||
+            !Array.isArray(day.guide.stayCost) ||
+            day.guide.stayCost.length !== 2 ||
+            day.guide.stayCost.some(
+              (value) => !Number.isFinite(value) || value < 0,
+            ) ||
+            day.guide.stayCost[1] < day.guide.stayCost[0] ||
+            !Array.isArray(day.guide.preparation) ||
+            day.guide.preparation.some((value) => typeof value !== 'string'))
+        )
+          return null;
+        if (
           !/^\d{4}-\d{2}-\d{2}$/.test(day.date) ||
           Number.isNaN(new Date(day.date + 'T12:00:00').getTime()) ||
           !Array.isArray(day.items) ||
@@ -1448,7 +1626,21 @@ export function restore(raw: string): AppData | null {
             (i) =>
               !places.some((p) => p.id === i.placeId) ||
               !Number.isFinite(i.duration) ||
-              i.duration < 15,
+              i.duration < 15 ||
+              (i.plan !== undefined &&
+                (!i.plan ||
+                  !Number.isInteger(i.plan.earliestStart) ||
+                  i.plan.earliestStart < 0 ||
+                  i.plan.earliestStart > 1439 ||
+                  typeof i.plan.activity !== 'string' ||
+                  !Array.isArray(i.plan.tips) ||
+                  i.plan.tips.some((tip) => typeof tip !== 'string'))) ||
+              (i.transport !== undefined &&
+                (!i.transport ||
+                  typeof i.transport.fromId !== 'string' ||
+                  !['walk', 'transit', 'drive', 'rail'].includes(
+                    i.transport.mode,
+                  ))),
           )
         )
           return null;

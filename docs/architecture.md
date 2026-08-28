@@ -2,6 +2,10 @@
 
 ## 数据模型
 
+详细样例位于 `lib/itinerary-fixtures.ts`；`TripDay.guide` 保存当天摘要、用餐、住宿和准备，`TripItem.plan` 保存可修改的最早开始时间与游玩说明。`TripItem.transport` 以 `fromId + mode` 绑定相邻路段，调序后旧选择不适用于新前驱。可选字段保持旧 v1 数据可恢复，恢复时验证结构；不自动替换用户已有空白日或非空日。
+
+`lib/transport.ts` 为纯估算/链接模块，不发起网络请求。`metrics` 与 `timeline` 共用 `resolveTransport`；地图摘要和导出也使用同一计算。跨城日由 `previousDayConnection` 显式传入上日尾站，避免“瞬移”。`TransportPlanner` 提供模式筛选、排序、逐段说明、官方资料、高德与12306外链；未知公交禁用应用，估算不记入实际账本。见 `TRANSPORT_SOURCES.md`。
+
 `AppData → trips[] → Trip.days[] → TripDay.items[]`。TripItem 只引用稳定 placeId，顺序直接取数组次序。地点统一放在 `places` 中，通过 category 区分景点、餐厅、体验等。
 
 - Trip：目的地、日期、同行人、预算、偏好、节奏、笔记。

@@ -16,12 +16,14 @@ export function RouteMap({
   onSelect,
   dayIndex,
   label,
+  previous,
 }: {
   items: TripItem[];
   selected: string | null;
   onSelect: (id: string) => void;
   dayIndex: number;
   label?: string;
+  previous?: TripItem;
 }) {
   const [zoom, setZoom] = useState(1),
     [labels, setLabels] = useState(true),
@@ -40,7 +42,7 @@ export function RouteMap({
     x: 90 + ((p.lng - minLng) / width) * 410,
     y: 110 + ((maxLat - p.lat) / height) * 320,
   }));
-  const summary = metrics(items);
+  const summary = metrics(items, previous);
   const colors = ['#dc7357', '#3f9387', '#79629f', '#b68e39'];
   const color = colors[dayIndex % colors.length];
   return (
@@ -240,7 +242,9 @@ export function RouteMap({
         </span>
       </div>
       <div className="map-attribution">
-        点位坐标与道路为演示近似 · 交通为模型估算
+        {previous
+          ? '汇总含跨城接续，连线仅示意当日地点 · 非导航'
+          : '点位坐标与道路为演示近似 · 交通为模型估算'}
       </div>
     </div>
   );
