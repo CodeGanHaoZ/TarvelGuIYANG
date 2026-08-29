@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import {
   organizePlanningMaterial,
   emptyPlanningDraft,
@@ -676,16 +676,16 @@ test('detailed plans and mode selections survive persistence; corrupt optional f
 });
 
 const plannerOrigin = 'http://localhost:3000';
-test('planning chat merges text, exact demo links and screenshot OCR with source evidence', () => {
+test('planning chat merges text, exact public-video links and screenshot OCR with source evidence', () => {
   const result = organizePlanningMaterial({
     origin: plannerOrigin,
-    text: '甲秀楼、黄果树，3天慢游，2个人，预算1500元\nhttps://www.xiaohongshu.com/explore/xhs-guiyang',
+    text: '甲秀楼、黄果树，3天慢游，2个人，预算1500元\nhttps://www.bilibili.com/video/BV1oVLQzbEJg/',
     images: [{ name: '攻略.png', text: '甲 秀 楼\n荔波小\n七孔' }],
   });
   const ids = result.stops.map((stop) => stop.placeId);
   assert.ok(
-    ['jiaxiu', 'qingyun', 'batik', 'huangguoshu', 'xiaoqikong'].every((id) =>
-      ids.includes(id),
+    ['jiaxiu', 'huangguoshu', 'xiaoqikong', 'qianling', 'changwang'].every(
+      (id) => ids.includes(id),
     ),
   );
   assert.equal(new Set(ids).size, ids.length);
@@ -693,7 +693,7 @@ test('planning chat merges text, exact demo links and screenshot OCR with source
     result.stops.find((stop) => stop.placeId === 'jiaxiu').sources.length,
     3,
   );
-  assert.deepEqual(result.postIds, ['xhs-guiyang']);
+  assert.deepEqual(result.postIds, ['hot-food-video']);
   assert.deepEqual(result.constraints, {
     dayCount: 3,
     peopleCount: 2,
@@ -940,7 +940,7 @@ test('theme route defaults can be customized before generation', () => {
   assert.match(changedTheme.notes, /不代表安全许可/);
 });
 
-test('featured feed covers all six themes with a video and article without mixing activity categories', () => {
+test('featured feed combines six sourced multi-theme videos with six themed editorial guides', () => {
   const featured = socialPosts.filter((post) => post.featured);
   assert.equal(featured.length, 12);
   assert.equal(new Set(places.map((place) => place.id)).size, places.length);
@@ -948,54 +948,72 @@ test('featured feed covers all six themes with a video and article without mixin
     new Set(socialPosts.map((post) => post.id)).size,
     socialPosts.length,
   );
-  for (const theme of themes) {
-    const entries = featured.filter((post) => post.theme === theme);
-    assert.deepEqual(entries.map((post) => post.kind).sort(), [
-      'article',
-      'video',
-    ]);
-    for (const post of entries) {
-      assert.ok(post.recommendation);
+  const videos = featured.filter((post) => post.kind === 'video');
+  const articles = featured.filter((post) => post.kind === 'article');
+  assert.equal(videos.length, 6);
+  assert.deepEqual(
+    articles.map((post) => post.theme).sort((a, b) => a.localeCompare(b)),
+    [...themes].sort((a, b) => a.localeCompare(b)),
+  );
+  for (const post of featured) {
+    assert.ok(post.recommendation);
+    if (post.kind === 'article')
       assert.ok(existsSync(new URL(`../public${post.cover}`, import.meta.url)));
-      const draft = organizeSocialPosts([post.id]);
-      assert.ok(draft.stops.length);
-      for (const stop of draft.stops)
-        assert.equal(places.find((p) => p.id === stop.placeId).category, theme);
-      const ids = draft.stops.map((stop) => stop.placeId);
-      const trip = attachTripSources(
-        makeTrip(
-          {
-            destination: '贵州',
-            start: '2026-09-01',
-            dayCount: suggestedTripDays(ids),
-            people: ['我'],
-            budget: 5000,
-            pace: '均衡',
-            preferences: draft.themes,
-          },
-          ids,
+    const draft = organizeSocialPosts([post.id]);
+    assert.ok(draft.stops.length);
+    const ids = draft.stops.map((stop) => stop.placeId);
+    const trip = attachTripSources(
+      makeTrip(
+        {
+          destination: '贵州',
+          start: '2026-09-01',
+          dayCount: suggestedTripDays(ids),
+          people: ['我'],
+          budget: 5000,
+          pace: '均衡',
+          preferences: draft.themes,
+        },
+        ids,
+      ),
+      [post.id],
+    );
+    assert.deepEqual(
+      trip.days.flatMap((day) => day.items.map((item) => item.placeId)).sort(),
+      [...ids].sort(),
+    );
+    assert.deepEqual(trip.sourcePostIds, [post.id]);
+    for (const [dayIndex, day] of trip.days.entries()) {
+      if (!day.items.length) continue;
+      const plan = buildDayPlan(trip, dayIndex);
+      assert.ok(plan.title);
+      assert.ok(plan.summary.low < plan.summary.high);
+      assert.ok(plan.summary.perPerson >= 0);
+      assert.ok(['轻松', '适中', '特种兵'].includes(plan.summary.intensity));
+      assert.equal(plan.events[0].kind, 'hotel');
+      assert.equal(plan.events.at(-1).kind, 'hotel');
+      assert.equal(plan.visits.length, day.items.length);
+      assert.ok(
+        plan.visits.every((visit) => visit.goScore.factors.length === 5),
+      );
+      assert.ok(plan.events.some((event) => event.meal === 'lunch'));
+      assert.ok(plan.events.some((event) => event.meal === 'dinner'));
+    }
+    if (post.kind === 'video') {
+      const source = new URL(post.sourceUrl);
+      const embed = new URL(post.embedUrl);
+      assert.equal(source.hostname, 'www.bilibili.com');
+      assert.equal(embed.hostname, 'player.bilibili.com');
+      const bvid = source.pathname.split('/').filter(Boolean).at(-1);
+      assert.equal(embed.searchParams.get('bvid'), bvid);
+      assert.ok(post.author);
+      assert.match(post.publishedAt, /^20\d{2}-\d{2}-\d{2}$/);
+      const categories = new Set(
+        draft.stops.map(
+          (stop) => places.find((place) => place.id === stop.placeId).category,
         ),
-        [post.id],
       );
-      assert.deepEqual(
-        trip.days
-          .flatMap((day) => day.items.map((item) => item.placeId))
-          .sort(),
-        [...ids].sort(),
-      );
-      assert.deepEqual(trip.sourcePostIds, [post.id]);
-      if (post.kind === 'video') {
-        assert.ok(
-          existsSync(new URL(`../public${post.media}`, import.meta.url)),
-        );
-        const captions = readFileSync(
-          new URL(`../public${post.captions}`, import.meta.url),
-          'utf8',
-        );
-        assert.match(captions, /^WEBVTT/);
-        for (const mention of post.mentions)
-          assert.ok(captions.includes(`00:${mention.at}.000`));
-      }
+      assert.ok(categories.has('舌尖黔味'));
+      assert.ok([...categories].some((category) => category !== '舌尖黔味'));
     }
   }
 });
@@ -1050,7 +1068,7 @@ test('renamed themes migrate existing trips and feed preferences without losing 
   const data = initialData();
   data.trips[0].preferences = ['自然景观', '身体力行', '经典路线'];
   data.feed[0].trip.preferences = ['民族文化', '美食体验', '红色旅游'];
-  data.savedPostIds = ['dy-guizhou', 'xhs-miao'];
+  data.savedPostIds = ['hot-nature-video', 'hot-culture-note'];
   const migrated = restore(JSON.stringify(data));
   assert.deepEqual(migrated.trips[0].preferences, [
     '山水奇观',
@@ -1068,25 +1086,33 @@ test('renamed themes migrate existing trips and feed preferences without losing 
 
 test('social extraction merges overlapping posts while retaining ordered source evidence', () => {
   const result = organizeSocialPosts([
-    'dy-guizhou',
-    'xhs-guiyang',
-    'dy-guizhou',
+    'hot-nature-video',
+    'hot-food-video',
+    'hot-nature-video',
   ]);
-  assert.deepEqual(result.postIds, ['dy-guizhou', 'xhs-guiyang']);
+  assert.deepEqual(result.postIds, ['hot-nature-video', 'hot-food-video']);
   assert.deepEqual(
     result.stops.map((s) => s.placeId),
-    ['xiaoqikong', 'xijiang', 'jiaxiu', 'qingyun', 'batik'],
+    [
+      'xiaoqikong',
+      'huangguoshu',
+      'xijiang',
+      'jiaxiu',
+      'sourfish',
+      'siwawa',
+      'qianling',
+      'changwang',
+    ],
   );
   assert.deepEqual(
     result.stops
       .find((s) => s.placeId === 'jiaxiu')
       .sources.map((s) => s.postId),
-    ['dy-guizhou', 'xhs-guiyang'],
+    ['hot-nature-video', 'hot-food-video'],
   );
-  assert.equal(result.stops[0].sources[0].at, '00:00');
   result.stops[0].sources[0].quote = 'changed locally';
   assert.notEqual(
-    organizeSocialPosts(['dy-guizhou']).stops[0].sources[0].quote,
+    organizeSocialPosts(['hot-nature-video']).stops[0].sources[0].quote,
     'changed locally',
   );
 });
@@ -1106,7 +1132,7 @@ test('social recommendations stay in selected regions, respect preferences and e
 });
 
 test('customized social draft carries edits into a separately editable trip', () => {
-  const draft = organizeSocialPosts(['xhs-guiyang']);
+  const draft = organizeSocialPosts(['hot-food-note']);
   const edited = [
     'museum',
     ...draft.stops.filter((s) => s.placeId === 'qingyun').map((s) => s.placeId),
@@ -1129,8 +1155,8 @@ test('customized social draft carries edits into a separately editable trip', ()
   );
   trip.days[0].items.reverse();
   assert.deepEqual(
-    organizeSocialPosts(['xhs-guiyang']).stops.map((s) => s.placeId),
-    ['jiaxiu', 'qingyun', 'batik'],
+    organizeSocialPosts(['hot-food-note']).stops.map((s) => s.placeId),
+    ['changwang', 'huaxi-noodles', 'qingyun'],
   );
 });
 
@@ -1139,7 +1165,7 @@ test('empty or unknown social selections cannot create a fabricated route', () =
   assert.throws(() => organizeSocialPosts(['missing']), /选择/);
 });
 
-test('low budget filters unaffordable mock experiences and explains omissions', () => {
+test('low budget filters unaffordable estimated experiences and explains omissions', () => {
   const t = makeTrip({
     destination: '贵州',
     start: '2026-08-29',
@@ -1230,18 +1256,18 @@ test('saved source materials migrate without losing older trips and survive pers
   const migrated = restore(JSON.stringify(old));
   assert.deepEqual(migrated.savedPostIds, []);
   assert.deepEqual(migrated.trips, old.trips);
-  migrated.savedPostIds = ['dy-guizhou'];
+  migrated.savedPostIds = ['hot-nature-video'];
   migrated.trips[0] = attachTripSources(migrated.trips[0], [
-    'dy-guizhou',
-    'xhs-guiyang',
-    'dy-guizhou',
+    'hot-nature-video',
+    'hot-food-video',
+    'hot-nature-video',
     'unknown',
   ]);
   const roundtrip = restore(JSON.stringify(migrated));
-  assert.deepEqual(roundtrip.savedPostIds, ['dy-guizhou']);
+  assert.deepEqual(roundtrip.savedPostIds, ['hot-nature-video']);
   assert.deepEqual(roundtrip.trips[0].sourcePostIds, [
-    'dy-guizhou',
-    'xhs-guiyang',
+    'hot-nature-video',
+    'hot-food-video',
   ]);
   assert.equal(old.trips[0].sourcePostIds, undefined);
   migrated.savedPostIds = ['unknown'];
@@ -1376,7 +1402,7 @@ test('local persistence roundtrips and rejects corrupt or unknown data', () => {
   d.trips[0].days[0].items[0].placeId = 'unknown';
   assert.equal(restore(JSON.stringify(d)), null);
 });
-test('link mock handles supported domain, text extraction and manual fallback', async () => {
+test('link handler supports source domains, text extraction and manual fallback', async () => {
   assert.ok(
     (await parseGuide('https://www.xiaohongshu.com/explore/demo')).length > 0,
   );

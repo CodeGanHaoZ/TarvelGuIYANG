@@ -1,7 +1,7 @@
 'use client';
-/* oxlint-disable next/no-img-element -- Local demo photography, with no image transformation service. */
+/* oxlint-disable next/no-img-element -- Source thumbnails and local editorial photography do not use an image service. */
 /* oxlint-disable next/no-html-link-for-pages -- Full document navigation refreshes shared device-local planning state after collecting content. */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   socialStories,
   socialPosts,
@@ -16,15 +16,16 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   Bookmark,
   Check,
   Sparkles,
   MapPin,
-  Play,
   Mountain,
 } from '@/components/travel-icons';
 import { Button } from '@/components/ui/button';
-import { RecommendationScore } from '@/components/recommendation-score';
+import { GoScoreCard } from '@/components/go-score';
+import { goScore } from '@/lib/day-plan';
 
 export function SocialContentPage({ post }: { post: SocialPost }) {
   const story = socialStories[post.id];
@@ -32,7 +33,6 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState('');
   const [preferences, setPreferences] = useState<Theme[]>([]);
-  const video = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     let active = true;
     queueMicrotask(() => {
@@ -79,17 +79,6 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
       );
     }
   }
-  function seek(at: string) {
-    if (!video.current || video.current.readyState === 0) {
-      setMessage('请先播放视频，再选择分镜。');
-      return;
-    }
-    const [m, s] = at.split(':').map(Number);
-    video.current.currentTime = m * 60 + s;
-    void video.current
-      .play()
-      .catch(() => setMessage('请点击播放器中的播放按钮继续。'));
-  }
   return (
     <div className="story-page">
       <header className="story-header">
@@ -100,18 +89,22 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
           <Mountain size={23} />
           AI 黔驴
         </a>
-        <span className="mini-tag">灵感内容库 · Mock</span>
+        <span className="mini-tag">灵感内容库 · 来源可追溯</span>
       </header>
       <main>
         <div className="story-heading">
           <div className="eyebrow">
-            {post.theme || '综合灵感'} ·{' '}
-            {post.kind === 'video' ? '演示视频' : '图文笔记'}
+            {post.kind === 'video'
+              ? '贵州综合旅行 · 原作者公开视频'
+              : `${post.theme || '综合灵感'} · 站内攻略`}
           </div>
           <h1>{post.title}</h1>
           <p>
-            {post.author} · 虚构创作者{' '}
-            <span>2026.08.28 · {story.readTime}</span>
+            {post.author} ·{' '}
+            {post.kind === 'video' ? '原作者' : 'AI 黔驴编辑整理'}{' '}
+            <span>
+              {post.publishedAt || '持续更新'} · {story.readTime}
+            </span>
           </p>
           <div className="social-tags">
             {post.tags.map((tag) => (
@@ -119,7 +112,7 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
             ))}
           </div>
         </div>
-        {post.theme && (
+        {post.theme && post.kind === 'article' && (
           <aside className="content-theme-note">
             <b>
               {post.theme} · {themeInfo[post.theme].subtitle} · 以“
@@ -127,6 +120,22 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
             </b>
             <p>{post.recommendation}</p>
             <small>{themeInfo[post.theme].boundary}</small>
+          </aside>
+        )}
+        {post.kind === 'video' && (
+          <aside className="content-theme-note">
+            <b>一条内容，多种贵州体验</b>
+            <p>{post.recommendation}</p>
+            <small>
+              已识别：
+              {[
+                ...new Set(
+                  post.mentions.map(
+                    (mention) => placeById(mention.placeId).category,
+                  ),
+                ),
+              ].join('、')}
+            </small>
           </aside>
         )}
         <div className="story-layout">
@@ -137,33 +146,31 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
               }
             >
               {post.kind === 'video' ? (
-                <video
-                  ref={video}
-                  controls
-                  playsInline
-                  preload="metadata"
-                  poster={post.cover}
-                  aria-label={post.title + '，无声合成短片'}
-                >
-                  <source src={post.media} type="video/mp4" />
-                  <track
-                    kind="captions"
-                    src={post.captions}
-                    srcLang="zh"
-                    label="中文分镜字幕"
-                    default
-                  />
-                  浏览器不支持视频，可阅读下面的完整分镜。
-                </video>
+                <iframe
+                  src={post.embedUrl}
+                  title={`${post.title} · ${post.author}`}
+                  loading="lazy"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
               ) : (
-                <img src={post.cover} alt={post.title} />
+                <img
+                  src={post.cover}
+                  alt={post.title}
+                  referrerPolicy="no-referrer"
+                />
               )}
             </div>
             <p className="story-media-note">
               {post.kind === 'video'
-                ? '本地风景图合成的无声短片，非真实平台视频。'
-                : '原创演示文案与风景图，非真实平台转载。'}
-              账号、互动量和地点供给信息均为 Mock。
+                ? '使用原平台公开播放器，不下载、不转存、不替代来源页。'
+                : 'AI 黔驴依据贵州旅行分类整理的站内攻略。'}
+              {post.sourceUrl && (
+                <a href={post.sourceUrl} target="_blank" rel="noreferrer">
+                  在原页面查看 <ArrowUpRight size={12} />
+                </a>
+              )}
             </p>
             <p className="story-lead">{post.intro}</p>
             {story.sections.map((section) => (
@@ -174,7 +181,9 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
             ))}
             <section className="story-section">
               <h2>
-                {post.kind === 'video' ? '视频分镜与地点' : '笔记里提到的地点'}
+                {post.kind === 'video'
+                  ? '来源页明确提及的地点'
+                  : '攻略里提到的地点'}
               </h2>
               <p>
                 每个地点都可以作为规划候选，展开指数查看品类与文旅属性依据。
@@ -193,21 +202,11 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
                             {place.region} · {place.category}
                           </p>
                         </div>
-                        {mention.at && (
-                          <button
-                            className="text-btn"
-                            onClick={() => seek(mention.at!)}
-                            aria-label={'播放' + mention.at + '分镜'}
-                          >
-                            <Play size={13} />
-                            {mention.at}
-                          </button>
-                        )}
                       </div>
                       <blockquote>{mention.quote}</blockquote>
-                      <RecommendationScore
-                        place={place}
-                        preferences={preferences}
+                      <GoScoreCard
+                        placeName={place.name}
+                        score={goScore(place, { preferences })}
                       />
                     </article>
                   );
@@ -278,7 +277,8 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
         </div>
       </main>
       <footer className="story-site-footer">
-        AI 黔驴 · 内容是灵感，选择由你决定。所有指数、场次与供给信息仅作演示。
+        AI 黔驴 ·
+        内容是灵感，选择由你决定。指数、场次与供给信息均为规划参考，出发前请核验。
       </footer>
     </div>
   );

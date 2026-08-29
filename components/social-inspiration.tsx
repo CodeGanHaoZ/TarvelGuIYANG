@@ -1,5 +1,5 @@
 'use client';
-/* oxlint-disable next/no-img-element -- Fixed-size local demo assets do not require an image service. */
+/* oxlint-disable next/no-img-element -- Source thumbnails and local editorial photography do not use an image service. */
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,13 +13,14 @@ import { HomeCarousel } from '@/components/home-carousel';
 import { InspirationPlanner } from '@/components/inspiration-planner';
 import type { PlanningContext } from '@/lib/planning-input';
 import { RouteMap } from '@/components/route-map';
-import { RecommendationScore } from '@/components/recommendation-score';
+import { GoScoreCard } from '@/components/go-score';
+import { goScore } from '@/lib/day-plan';
 import {
   ArrowRight,
+  ArrowUpRight,
   ArrowUp,
   ArrowDown,
   Play,
-  Heart,
   Sparkles,
   MapPin,
   Check,
@@ -176,13 +177,18 @@ export function SocialInspiration({
           >
             <button
               className="social-cover"
-              aria-label={`${p.kind === 'video' ? '播放演示视频' : '阅读演示笔记'}：${p.title}`}
+              aria-label={`${p.kind === 'video' ? '播放原作者视频' : '阅读站内攻略'}：${p.title}`}
               onClick={() => {
                 setPostId(p.id);
                 setPanel('post');
               }}
             >
-              <img src={p.cover} alt={p.title} loading="lazy" />
+              <img
+                src={p.cover}
+                alt={p.title}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+              />
               {p.kind === 'video' && (
                 <>
                   <span className="play-bubble">
@@ -194,7 +200,9 @@ export function SocialInspiration({
             </button>
             <div className="social-copy">
               <span className="social-topic">
-                {p.theme} · {p.kind === 'video' ? '视频' : '图文'}
+                {p.kind === 'video'
+                  ? '贵州综合旅行 · 原作者视频'
+                  : `${p.theme} · 站内攻略`}
               </span>
               <a className="social-title" href={'/inspiration/' + p.id}>
                 <h3>{p.title}</h3>
@@ -204,11 +212,8 @@ export function SocialInspiration({
                   <i aria-hidden="true">{p.author.slice(0, 1)}</i>
                   <span>{p.author}</span>
                 </span>
-                <span
-                  className="social-likes"
-                  aria-label={`${p.likes} 次喜欢，演示数据`}
-                >
-                  <Heart size={12} /> {p.likes}
+                <span className="social-source-label">
+                  {p.kind === 'video' ? p.publishedAt : '编辑整理'}
                 </span>
               </div>
               <div className="social-card-actions">
@@ -285,48 +290,54 @@ export function SocialInspiration({
             {panel === 'post' ? post.title : 'AI 整理与定制路线'}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            虚构社交内容与本地规则演示。所有路线都可修改，不会抓取真实平台内容。
+            公开视频使用原平台播放器并标注原作者与来源。地点提取结果可继续修改。
           </DialogDescription>
           {panel === 'post' ? (
             <div className="post-reader">
               <div className="post-media">
                 {post.kind === 'video' ? (
-                  <video
+                  <iframe
                     key={post.id}
-                    controls
-                    playsInline
-                    preload="metadata"
-                    poster={post.cover}
-                    aria-label={post.title + '，无声演示短片'}
-                  >
-                    <source src={post.media} type="video/mp4" />
-                    <track
-                      kind="captions"
-                      src={post.captions}
-                      srcLang="zh"
-                      label="中文样例字幕"
-                      default
-                    />
-                    您的浏览器不支持视频，请阅读右侧分镜文案。
-                  </video>
+                    src={post.embedUrl}
+                    title={`${post.title} · ${post.author}`}
+                    loading="lazy"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                  />
                 ) : (
-                  <img src={post.cover} alt={post.title} />
+                  <img
+                    src={post.cover}
+                    alt={post.title}
+                    referrerPolicy="no-referrer"
+                  />
                 )}
                 <p>
                   {post.kind === 'video'
-                    ? '由风景图合成的无声演示短片，非真实平台视频。'
-                    : '演示图文，非真实平台博文。'}
+                    ? '原平台公开视频播放器；播放、登录和下架状态以来源页为准。'
+                    : 'AI 黔驴编辑整理的贵州旅行攻略。'}
+                  {post.sourceUrl && (
+                    <a href={post.sourceUrl} target="_blank" rel="noreferrer">
+                      在原页面查看 <ArrowUpRight size={12} />
+                    </a>
+                  )}
                 </p>
               </div>
               <div className="post-article">
                 <span className="eyebrow">
-                  {post.theme || '综合灵感'} ·{' '}
-                  {post.kind === 'video' ? '视频分镜' : '图文笔记'} · MOCK
+                  {post.kind === 'video'
+                    ? '贵州综合旅行 · 原作者公开视频'
+                    : `${post.theme || '综合灵感'} · 站内攻略`}
                 </span>
                 <h2>{post.title}</h2>
-                <p className="post-byline">{post.author} · 虚构创作者</p>
+                <p className="post-byline">
+                  {post.author} ·{' '}
+                  {post.kind === 'video'
+                    ? `原作者 · ${post.publishedAt}`
+                    : 'AI 黔驴编辑整理'}
+                </p>
                 <p>{post.intro}</p>
-                {post.theme && (
+                {post.theme && post.kind === 'article' && (
                   <div className="content-theme-note">
                     <b>
                       {post.theme} · {themeInfo[post.theme].subtitle} · 以“
@@ -336,10 +347,27 @@ export function SocialInspiration({
                     <small>{themeInfo[post.theme].boundary}</small>
                   </div>
                 )}
+                {post.kind === 'video' && (
+                  <div className="content-theme-note">
+                    <b>一条内容，多种贵州体验</b>
+                    <p>{post.recommendation}</p>
+                    <small>
+                      已识别：
+                      {[
+                        ...new Set(
+                          post.mentions.map(
+                            (mention) => placeById(mention.placeId).category,
+                          ),
+                        ),
+                      ].join('、')}
+                    </small>
+                  </div>
+                )}
                 {post.mentions.map((m, i) => (
                   <div className="post-paragraph" key={m.placeId}>
                     <b>
-                      {m.at || `0${i + 1}`} · {placeById(m.placeId).name}
+                      {String(i + 1).padStart(2, '0')} ·{' '}
+                      {placeById(m.placeId).name}
                     </b>
                     <p>{m.quote}</p>
                   </div>
@@ -374,7 +402,7 @@ export function SocialInspiration({
                   : '路线已整理，你来决定怎么走。'}
               </h2>
               <p className="planner-intro">
-                AI 整理为本地规则模拟，不抓取真实视频，不调用大模型。
+                根据已记录的来源标题与简介提取地点；无法说明来源的内容不会伪装成原视频到访点。
               </p>
               {busy ? (
                 <div className="social-loading">
@@ -382,7 +410,7 @@ export function SocialInspiration({
                   <output>
                     {
                       [
-                        '读取样例文案与视频分镜…',
+                        '读取来源页与地点提及…',
                         '提取地点，合并重复提及…',
                         '连接路线，补充同区域推荐…',
                       ][stage]
@@ -491,9 +519,9 @@ export function SocialInspiration({
                                         你添加的地点
                                       </small>
                                     )}
-                                    <RecommendationScore
-                                      place={p}
-                                      preferences={preferences}
+                                    <GoScoreCard
+                                      placeName={p.name}
+                                      score={goScore(p, { preferences })}
                                     />
                                   </div>
                                   <div className="draft-controls">
@@ -601,7 +629,7 @@ export function SocialInspiration({
                           ))
                         ) : (
                           <p className="social-empty">
-                            当前偏好没有更多同区域样例，可换个偏好或手动搜索。
+                            当前偏好没有更多同区域候选，可换个偏好或手动搜索。
                           </p>
                         )}
                       </div>
@@ -621,7 +649,7 @@ export function SocialInspiration({
                                   <small>
                                     {p.region} · 推荐指数{' '}
                                     {score(p, 'normal', preferences).total} ·
-                                    Mock
+                                    规划参考
                                   </small>
                                 </span>
                                 <Plus size={18} />
@@ -636,7 +664,14 @@ export function SocialInspiration({
                       )}
                     </div>
                     <div className="social-planner-footer">
-                      <p>下一步选择日期、预算与节奏。生成后仍可随时编辑。</p>
+                      <div>
+                        <b>统一输出为详细行程</b>
+                        <p>
+                          下一步选择日期、预算与同行人；生成后进入“今日概览 →
+                          完整时间轴 → 五项
+                          GoScore”。支持排序、删除、替换、延时与加点，后续时间自动重算。
+                        </p>
+                      </div>
                       <Button
                         className="primary-btn"
                         disabled={!route.length}
@@ -648,7 +683,7 @@ export function SocialInspiration({
                           close();
                         }}
                       >
-                        用这条路线定制旅行 <ArrowRight />
+                        继续生成标准行程 <ArrowRight />
                       </Button>
                     </div>
                   </>

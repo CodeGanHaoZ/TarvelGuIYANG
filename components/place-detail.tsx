@@ -46,7 +46,7 @@ export function PlaceDetail({
           <p>
             <MapPin size={13} />
             {place.region} · {place.category}{' '}
-            <span className="mini-tag">Mock</span>
+            <span className="mini-tag">规划参考</span>
           </p>
         </div>
         <button
@@ -136,7 +136,7 @@ export function PlaceDetail({
                     {p.name}
                     <small>
                       {p.category} · 推荐指数{' '}
-                      {score(p, 'normal', preferences).total} · Mock
+                      {score(p, 'normal', preferences).total} · 规划参考
                     </small>
                   </span>
                   <Plus size={17} />
@@ -166,7 +166,7 @@ export function PlaceDetail({
           <div className="transport-row">
             <Ticket />
             <span>
-              门票 / 体验<small>参考 ¥{place.price} / 人 · Mock 样例价</small>
+              门票 / 体验<small>参考 ¥{place.price} / 人 · 规划参考价</small>
             </span>
           </div>
           <div className="transport-row">

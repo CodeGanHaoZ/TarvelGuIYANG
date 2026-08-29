@@ -32,7 +32,7 @@ export function GoScoreCard({
           <i />
           {score.label}
         </strong>
-        <small>Mock</small>
+        <small>规划参考</small>
       </div>
       <div className="go-score-factors">
         {score.factors.map((factor, i) => {

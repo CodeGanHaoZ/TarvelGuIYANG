@@ -65,7 +65,7 @@ export const itineraryPlaces: Place[] = [
     60,
     65,
     '午饭试试辣子鸡和时蔬，酸辣分开点，照顾同行人的口味。',
-    '虚构餐饮场景，真实门店需地图确认；预算按每人计算。',
+    '未核验餐饮场景，真实门店需地图确认；预算按每人计算。',
     '/images/theme-food.jpg',
   ),
   fixture(
@@ -91,7 +91,7 @@ export const itineraryPlaces: Place[] = [
     45,
     20,
     '到县城后吃一碗米粉，确认第二天入园信息，再轻装出发。',
-    '虚构门店，配料与营业以实际商家为准。',
+    '未核验门店，配料与营业以实际商家为准。',
   ),
   fixture(
     'deng-enming',
@@ -115,7 +115,7 @@ export const itineraryPlaces: Place[] = [
     75,
     80,
     '把夜晚留给一份豆花烤鱼，与同行人确认次日路线。',
-    '餐饮供给为 Mock；确认鱼类过敏原、辣度和份量。',
+    '餐饮供给为规划参考；确认鱼类过敏原、辣度和份量。',
     '/images/theme-food.jpg',
   ),
   fixture(
@@ -128,7 +128,7 @@ export const itineraryPlaces: Place[] = [
     60,
     45,
     '游览结束后在东门周边吃午饭、补水与休息。',
-    '虚构餐饮点，实际门店需在地图确认，预留景区车排队时间。',
+    '未核验餐饮点，实际门店需在地图确认，预留景区车排队时间。',
   ),
   fixture(
     'daqikong',
@@ -140,7 +140,7 @@ export const itineraryPlaces: Place[] = [
     120,
     0,
     '沿开放步道看峡谷和天生桥，仅安排成熟观景线，不含探险。',
-    'Mock 按小七孔组合票已包含处理，避免重复计费；真实票种、水位和开放路段需核实。',
+    '规划时按小七孔组合票已包含处理，避免重复计费；真实票种、水位和开放路段需核实。',
     '/images/xiaoqikong.jpg',
   ),
   fixture(
@@ -153,7 +153,7 @@ export const itineraryPlaces: Place[] = [
     120,
     80,
     '在当地讲解者带领下了解瑶族服饰与生活，交流先于拍照。',
-    '互动和讲解为虚构供给；按居民意愿安排，不自行进入民居。',
+    '互动和讲解为未核验供给；按居民意愿安排，不自行进入民居。',
   ),
   fixture(
     'yaoshan-lunch',
@@ -177,7 +177,7 @@ export const itineraryPlaces: Place[] = [
     90,
     100,
     '与手艺人交流织染纹样，在指导下做一份简单的手作纪念。',
-    '虚构工坊与场次；提前征询手艺人许可，不代表已经预约。',
+    '未核验工坊与场次；提前征询手艺人许可，不代表已经预约。',
   ),
   fixture(
     'xijiang-dinner',
@@ -189,7 +189,7 @@ export const itineraryPlaces: Place[] = [
     75,
     95,
     '在村寨结束游览后体验长桌宴，按自己的饮食习惯选择菜品。',
-    '用餐与苗寨文化分开计入；虚构供给，不劝酒、不默认提供表演。',
+    '用餐与苗寨文化分开计入；未核验供给，不劝酒、不默认提供表演。',
     '/images/theme-food.jpg',
   ),
   fixture(
@@ -202,7 +202,7 @@ export const itineraryPlaces: Place[] = [
     120,
     80,
     '跟随当地向导认识吊脚楼与日常生活，听歌舞背后的故事。',
-    '接待、歌舞场次与向导为 Mock；尊重居民，不把村寨当作随意拍摄的布景。',
+    '接待、歌舞场次与向导为规划参考；尊重居民，不把村寨当作随意拍摄的布景。',
     '/images/xijiang.jpg',
   ),
   fixture(
@@ -215,7 +215,7 @@ export const itineraryPlaces: Place[] = [
     60,
     65,
     '尝试腊肉与时蔬，留出缓冲时间后返回住宿地。',
-    '虚构餐饮场景，不代表具体农家已提供接待。',
+    '未核验餐饮场景，不代表具体农家已提供接待。',
   ),
   fixture(
     'danzhai-food',
@@ -227,7 +227,7 @@ export const itineraryPlaces: Place[] = [
     60,
     70,
     '非遗体验结束后，用一餐酸汤和家常菜为旅程收尾。',
-    '虚构门店；返程前避免饮酒，确认高铁和接驳时间。',
+    '未核验门店；返程前避免饮酒，确认高铁和接驳时间。',
   ),
 ];
 
@@ -237,7 +237,7 @@ export const itineraryAttributes = Object.fromEntries(
     {
       nature:
         p.category === '舌尖黔味'
-          ? '地方餐饮 · 虚构供给'
+          ? '地方餐饮 · 未核验供给'
           : p.name.split(' · ')[1],
       values: [86 + (i % 10), 78 + (i % 12), 80 + (i % 9)],
       effort: p.indoor ? '坐姿用餐或体验' : '成熟步道 · 可缩短停留',
@@ -318,7 +318,7 @@ export const itineraryPresets: ItineraryPreset[] = [
             '08:30',
             45,
             '吃早餐，寄存大件行李；不吃内脏可换米粉。',
-            '门店为 Mock，选店后再确认起点。',
+            '门店为规划参考，选店后再确认起点。',
           ),
           stop(
             'qianling',
@@ -358,7 +358,7 @@ export const itineraryPresets: ItineraryPreset[] = [
           '继续住贵阳市区原酒店，不换房、不搬行李。',
           [
             '省博需核验预约和闭馆日，周一等特殊日期请换日或调整。',
-            '蜡染工坊为虚构供给，真实体验需要另行预约。',
+            '蜡染工坊为未核验供给，真实体验需要另行预约。',
           ],
         ),
         stops: [
@@ -424,7 +424,7 @@ export const itineraryPresets: ItineraryPreset[] = [
             '13:30',
             150,
             '进古镇后慢看街巷、城门与石板建筑，按体力选择参观范围。',
-            '费用为 Mock；实际购票范围需核实。',
+            '费用为规划参考；实际购票范围需核实。',
           ),
           stop(
             'qingyan-food',
@@ -523,7 +523,7 @@ export const itineraryPresets: ItineraryPreset[] = [
           '今日退房返程；预留取行李、接驳与进站时间。',
           [
             '先确认居民接待意愿和体验场次。',
-            '没有实际供给时删除体验，不以 Mock 当成已预约。',
+            '没有实际供给时删除体验，不把未核验供给当成已预约。',
           ],
           true,
         ),
@@ -592,7 +592,7 @@ export const itineraryPresets: ItineraryPreset[] = [
             '18:00',
             75,
             '长桌宴只作为用餐体验，提前沟通口味与忌口。',
-            '不劝酒，活动场次和供给为 Mock。',
+            '不劝酒，活动场次和供给为规划参考。',
           ),
         ],
       },
@@ -613,7 +613,7 @@ export const itineraryPresets: ItineraryPreset[] = [
             '09:00',
             90,
             '听银饰纹样的故事，在指导下体验简单工序。',
-            '虚构工坊，不直接导航到示意坐标。',
+            '未核验工坊，不直接导航到示意坐标。',
           ),
           stop(
             'langde',

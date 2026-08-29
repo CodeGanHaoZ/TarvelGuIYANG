@@ -395,7 +395,11 @@ export default function TravelApp() {
     setModal(null);
     setTripTab('行程');
     go('trip');
-    notify('你的旅行已生成，所有地点都可以继续调整。');
+    notify(
+      t.sourcePostIds?.length
+        ? '视频 / 贴文已转化为标准行程：概览、时间轴和 GoScore 均可继续调整。'
+        : '你的旅行已生成，所有地点都可以继续调整。',
+    );
   }
   function activateTrip(id: string) {
     setData((d) => ({ ...d, activeTripId: id }));
@@ -465,7 +469,7 @@ export default function TravelApp() {
   }
   function exportGuide() {
     const text =
-      `# ${trip.title}\n\n> AI 黔驴演示攻略。评分、交通、价格均为 Mock，出发前请核验。\n\n日期：${trip.start} 起\n同行：${trip.people.join('、')}\n总预算：¥${trip.budget}\n\n` +
+      `# ${trip.title}\n\n> AI 黔驴行程建议。评分、交通、价格均为规划参考，出发前请核验。\n\n日期：${trip.start} 起\n同行：${trip.people.join('、')}\n总预算：¥${trip.budget}\n\n` +
       trip.days
         .map((_d, dayNumber) => dayPlanMarkdown(buildDayPlan(trip, dayNumber)))
         .join('\n\n') +
@@ -475,7 +479,7 @@ export default function TravelApp() {
           trip.sourcePostIds
             .map(
               (id) =>
-                `- ${socialPosts.find((p) => p.id === id)?.title}（Mock）`,
+                `- ${socialPosts.find((p) => p.id === id)?.title}（${socialPosts.find((p) => p.id === id)?.sourceUrl ? '原作者公开内容' : '站内编辑整理'}）`,
             )
             .join('\n')
         : '');
@@ -510,7 +514,7 @@ export default function TravelApp() {
             <span className="image-tag">{p.category}</span>
             <span className="score-tag">
               <b>{score(p, 'normal', trip.preferences).total}</b> 推荐指数 ·
-              Mock
+              规划参考
             </span>
           </div>
           <div className="destination-info">
@@ -633,7 +637,7 @@ export default function TravelApp() {
               <Mountain size={22} /> AI 黔驴
             </button>
             <div>
-              <span className="mock-badge">DEMO · 模拟数据</span>
+              <span className="mock-badge">AI 黔驴 · 贵州智能行程</span>
               <span className="save-state">
                 {online ? <Check size={14} /> : <WifiOff size={14} />}{' '}
                 {ready
@@ -1915,7 +1919,9 @@ export default function TravelApp() {
                           <b>{p.title}</b>
                           <small>
                             {p.theme || '综合灵感'} ·{' '}
-                            {p.kind === 'video' ? '视频' : '图文'} · Mock
+                            {p.kind === 'video'
+                              ? `原作者视频 · ${p.author}`
+                              : '站内编辑攻略'}
                           </small>
                         </span>
                         <ArrowUpRight size={16} />
@@ -1989,16 +1995,16 @@ export default function TravelApp() {
                 </p>
               )}
               <div className="about-demo">
-                <h3>关于这个 Demo</h3>
+                <h3>关于规划数据</h3>
                 <p>
-                  Vite + TypeScript · 本地 Mock 服务 ·
+                  Vite + TypeScript · 本地规划服务 ·
                   无真实交易与社交发送。所有天气、交通、评分和价格仅用于交互演示。地图为近似地理示意，不提供导航。
                 </p>
                 <details>
                   <summary>图片来源与演示说明</summary>
                   <p>
-                    贵州风景摄影来自公开攻略页面，仅作为本次 Demo
-                    视觉示例。正式公开发布前需替换为团队授权素材。
+                    贵州风景摄影来自公开攻略页面，仅用于界面中的规划参考。
+                    正式对外使用前需替换为团队授权素材。
                   </p>
                   <a
                     href="https://you.ctrip.com/sight/libo659/107386.html"
@@ -2249,7 +2255,7 @@ export default function TravelApp() {
                   </div>
                 </form>
                 <p className="notice">
-                  Mock
+                  规划参考
                   模式不会抓取平台内容。支持域名的链接统一返回贵阳样例；直接输入地点名称可匹配本地数据。
                 </p>
                 {error && (
@@ -2355,7 +2361,8 @@ export default function TravelApp() {
                         <b>{p.name}</b>
                         <small>
                           {p.region} · {p.category} · 推荐指数{' '}
-                          {score(p, 'normal', trip.preferences).total} · Mock
+                          {score(p, 'normal', trip.preferences).total} ·
+                          规划参考
                         </small>
                         <small>{p.description}</small>
                       </div>
@@ -2788,7 +2795,7 @@ export default function TravelApp() {
 function DataFootnote() {
   return (
     <p className="data-footnote">
-      演示版本 · 评分、天气、路线与价格均为 Mock 数据，不作为真实出行依据。
+      评分、天气、路线与价格为规划参考，未接入实时运营数据；出发前请核验。
     </p>
   );
 }

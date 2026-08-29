@@ -105,7 +105,8 @@ export function transportOptions(a: Place, b: Place): TransportOption[] {
       },
       {
         title: '公路行驶',
-        detail: '道路、转弯和拥堵情况请打开高德查询；此处不生成虚构道路名称。',
+        detail:
+          '道路、转弯和拥堵情况请打开高德查询；此处不生成未核验道路名称。',
         minutes: driveMinutes - 5,
       },
       {
@@ -114,7 +115,7 @@ export function transportOptions(a: Place, b: Place): TransportOption[] {
         minutes: 0,
       },
     ],
-    note: '时间按近似距离与假定车速估算；费用为打车/包车 Mock 区间，不是报价。自驾油费、停车和高速费另计。每车按最多4位乘客估算。',
+    note: '时间按近似距离与假定车速估算；费用为打车/包车估算区间，不是报价。自驾油费、停车和高速费另计。每车按最多4位乘客估算。',
     sources: [],
   };
   const options: TransportOption[] = [drive];
@@ -206,7 +207,7 @@ export function transportOptions(a: Place, b: Place): TransportOption[] {
           minutes: 14,
         },
       ],
-      note: '站点及换乘关系根据官方资料整理（查阅2026-08-29）；逐段时长、票价仍是 Mock，未查询首末班或实时运营状态。',
+      note: '站点及换乘关系根据官方资料整理（查阅2026-08-29）；逐段时长、票价仍是 规划参考，未查询首末班或实时运营状态。',
       sources: [transportSources.metro, transportSources.museum],
     });
   } else {
@@ -264,7 +265,7 @@ export function transportOptions(a: Place, b: Place): TransportOption[] {
         },
         {
           title: '进站安检与候车',
-          detail: 'Mock 预留40分钟；具体检票口和停止检票时间按车站公告。',
+          detail: '建议预留40分钟；具体检票口和停止检票时间按车站公告。',
           minutes: 40,
         },
         {
@@ -284,7 +285,7 @@ export function transportOptions(a: Place, b: Place): TransportOption[] {
           minutes: exit,
         },
       ],
-      note: '仅提供铁路枢纽与接驳思路，不代表当天存在指定班次。全部时长和含接驳费用为 Mock；真实日期、票价和余票请在12306查询。',
+      note: '仅提供铁路枢纽与接驳思路，不代表当天存在指定班次。全部时长和含接驳费用为规划参考；真实日期、票价和余票请在12306查询。',
       sources: [transportSources.xijiang],
     });
   }

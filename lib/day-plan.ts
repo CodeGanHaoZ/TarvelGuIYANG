@@ -613,7 +613,7 @@ export function buildDayPlan(trip: Trip, index: number): DayPlan {
       key: `rest:${events.length}`,
       kind: 'rest',
       title,
-      detail: '可在当前位置周边休息、补水；不额外添加景点或虚构交通。',
+      detail: '可在当前位置周边休息、补水；不额外添加景点或未核验交通。',
       start: time,
       end: until,
     });
@@ -1057,7 +1057,7 @@ export function replaceDayPlace(
 export function dayPlanMarkdown(plan: DayPlan): string {
   const s = plan.summary;
   return (
-    `## Day ${plan.dayNumber}｜${plan.title} · ${plan.date}\n\n${s.weather} ${s.low}–${s.high}°C · 人流${s.crowd} · 交通${s.trafficMinutes}分钟 · 步行${s.walkingKm}km · 预计¥${s.perPerson}/人\n\n今日行程强度：${s.intensity}（${travelerProfiles[plan.profile]}）\nAI评价：${'★'.repeat(s.stars)} ${s.evaluation} · 全部为Mock\n\n` +
+    `## Day ${plan.dayNumber}｜${plan.title} · ${plan.date}\n\n${s.weather} ${s.low}–${s.high}°C · 人流${s.crowd} · 交通${s.trafficMinutes}分钟 · 步行${s.walkingKm}km · 预计¥${s.perPerson}/人\n\n今日行程强度：${s.intensity}（${travelerProfiles[plan.profile]}）\nAI评价：${'★'.repeat(s.stars)} ${s.evaluation} · 全部为规划参考\n\n` +
     plan.events
       .map((event) => {
         let text = `- ${clock(event.start)}${event.end > event.start ? `–${clock(event.end)}` : ''} **${event.title}**：${event.detail}${event.costPerPerson !== undefined ? `；¥${event.costPerPerson}/人` : ''}`;

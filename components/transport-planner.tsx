@@ -148,7 +148,7 @@ export function TransportPlanner({
         <Info size={17} />
         <p>
           下方数值是
-          Mock，不是实时查询结果。高德按钮会带入起终点和交通方式；坐标为示意，务必在地图核对出入口和实际门店。地图结果不会自动回填。
+          规划参考，不是实时查询结果。高德按钮会带入起终点和交通方式；坐标为示意，务必在地图核对出入口和实际门店。地图结果不会自动回填。
         </p>
       </div>
       <div className="transport-options">
@@ -277,7 +277,7 @@ export function TransportPlanner({
             <p>
               {mode === 'walk'
                 ? '较远路程不生成步行方案；山路与封闭路段不能用直线推断。'
-                : '未核验该路段的铁路与接驳，不生成虚构班次。'}
+                : '未核验该路段的铁路与接驳，不生成未核验班次。'}
             </p>
             <a
               className="outline-btn"

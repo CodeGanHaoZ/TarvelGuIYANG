@@ -97,7 +97,7 @@ export function ItineraryLibrary({
           <span>
             <MapPin size={14} /> {count}个地点
           </span>
-          <span>已列地点约 ¥{money(cost)}/人 · Mock</span>
+          <span>已列地点约 ¥{money(cost)}/人 · 规划参考</span>
         </div>
       </div>
       <div className="preset-days">

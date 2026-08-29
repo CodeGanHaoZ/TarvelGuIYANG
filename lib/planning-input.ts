@@ -80,17 +80,15 @@ export function planningPostFromUrl(raw: string, origin: string) {
       const id = path.match(/^\/inspiration\/([^/]+)$/)?.[1];
       return socialPosts.find((post) => post.id === id);
     }
-    const platform =
-      host === 'xiaohongshu.com' || host === 'www.xiaohongshu.com'
-        ? '小红书'
-        : host === 'douyin.com' || host === 'www.douyin.com'
-          ? '抖音'
-          : undefined;
-    if (!platform) return undefined;
-    const id = path.match(/^\/(?:explore|video)\/([^/]+)$/)?.[1];
-    return socialPosts.find(
-      (post) => post.platform === platform && post.id === id,
-    );
+    return socialPosts.find((post) => {
+      if (!post.sourceUrl) return false;
+      const source = new URL(post.sourceUrl);
+      const normalize = (value: string) => value.replace(/\/$/, '');
+      return (
+        source.hostname === host &&
+        normalize(source.pathname) === normalize(path)
+      );
+    });
   } catch {
     return undefined;
   }

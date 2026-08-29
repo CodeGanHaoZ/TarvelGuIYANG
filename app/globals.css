@@ -5537,7 +5537,7 @@ textarea {
   grid-template-columns: 0.86fr 1fr;
   gap: 28px;
 }
-.post-media video,
+.post-media iframe,
 .post-media img {
   display: block;
   width: 100%;
@@ -5547,14 +5547,22 @@ textarea {
   border-radius: 17px;
   background: #17271f;
 }
-.post-media video {
-  object-fit: contain;
+.post-media iframe {
+  border: 0;
 }
 .post-media > p {
   font-size: 10px;
   color: var(--muted-foreground);
   line-height: 1.8;
   padding-top: 9px;
+}
+.post-media > p a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 8px;
+  color: var(--primary);
+  font-weight: 650;
 }
 .post-article > p,
 .post-paragraph p {
@@ -5687,6 +5695,26 @@ textarea {
 .draft-stop-copy q {
   display: block;
 }
+.draft-stop-copy .go-score-card {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #e2e8dd;
+  border-radius: 11px;
+}
+.draft-stop-copy .go-score-heading b {
+  font-size: 20px;
+}
+.draft-stop-copy .go-score-factors {
+  gap: 5px;
+  margin-top: 9px;
+}
+.draft-stop-copy .go-score-factors span {
+  font-size: 9px;
+}
+.draft-stop-copy .go-score-factors b {
+  font-size: 13px;
+  margin: 4px 0;
+}
 .draft-controls {
   display: flex;
   flex-direction: column;
@@ -5802,6 +5830,14 @@ textarea {
   color: var(--muted-foreground);
   line-height: 1.8;
 }
+.social-planner-footer > div {
+  max-width: 570px;
+}
+.social-planner-footer > div > b {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
 @media (max-width: 1150px) {
   .carousel-slide {
     flex-basis: calc((100% - 36px) / 2.3);
@@ -5897,12 +5933,12 @@ textarea {
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  .post-media video,
+  .post-media iframe,
   .post-media img {
     max-height: 48dvh;
     aspect-ratio: 4 / 3;
   }
-  .post-media video {
+  .post-media iframe {
     background: #17271f;
   }
   .post-article .post-byline {
@@ -5928,6 +5964,9 @@ textarea {
   .social-planner-footer p {
     text-align: center;
     font-size: 10px;
+  }
+  .social-planner-footer > div > b {
+    text-align: center;
   }
 }
 
@@ -6193,17 +6232,25 @@ textarea {
   aspect-ratio: 3 / 2;
   object-fit: cover;
 }
-.story-media video {
+.story-media iframe {
   display: block;
   width: 100%;
   height: min(62vh, 560px);
-  object-fit: contain;
+  border: 0;
 }
 .story-media-note {
   font-size: 10px;
   line-height: 1.8;
   color: var(--muted-foreground);
   margin: 10px 0 25px;
+}
+.story-media-note a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 8px;
+  color: var(--primary);
+  font-weight: 650;
 }
 .story-lead {
   font-size: 16px;

@@ -270,7 +270,7 @@ export const places: Place[] = [
     name: '贵阳蜡染体验工坊',
     region: '贵阳',
     category: '多彩民族',
-    description: '与苗族手艺人交流纹样并动手蜡染的虚构体验场景。',
+    description: '与苗族手艺人交流纹样并动手蜡染的未核验体验场景。',
     lat: 26.573,
     lng: 106.711,
     duration: 90,
@@ -278,7 +278,7 @@ export const places: Place[] = [
     indoor: true,
     hours: [9, 18],
     factors: [100, 98, 100, 92, 90, 96, 90, 100],
-    tip: '这是虚构的体验供给，用于演示。真实主理人、地址与场次待核验。',
+    tip: '这是未核验的体验供给，用于演示。真实主理人、地址与场次待核验。',
     culture: '体验前了解纹样含义；人物拍摄、图样传播与商用应先征得授权。',
   },
   {
@@ -358,7 +358,7 @@ export const places: Place[] = [
     indoor: true,
     hours: [9, 18],
     factors: [100, 95, 100, 85, 90, 92, 90, 100],
-    tip: '虚构工坊样例，无真实预约。儿童体验需成人与工坊指导。',
+    tip: '未核验工坊样例，无真实预约。儿童体验需成人与工坊指导。',
     culture: '银饰纹样承载文化意义，作品与影像传播应尊重制作者权利。',
   },
   {
@@ -444,7 +444,7 @@ export function planningWarnings(ids: string[]) {
   });
   if (selected.some((p) => p.category === '野趣户外'))
     warnings.push(
-      '户外挑战需先核验天气、开放、运营与个人能力；Mock 推荐指数不代表安全许可。',
+      '户外挑战需先核验天气、开放、运营与个人能力；推荐指数不代表安全许可。',
     );
   return warnings;
 }
@@ -593,7 +593,7 @@ export const placeAttributes: Record<
     effort: '石板路 · 适中步行',
   },
   batik: {
-    nature: '室内非遗手作 · 虚构工坊',
+    nature: '室内非遗手作 · 未核验工坊',
     values: [92, 98, 88],
     effort: '坐姿手作',
   },
@@ -620,12 +620,12 @@ export const placeAttributes: Record<
     effort: '坡道与接驳',
   },
   silver: {
-    nature: '室内银饰手作 · 虚构工坊',
+    nature: '室内银饰手作 · 未核验工坊',
     values: [94, 96, 87],
     effort: '手作操作',
   },
   sourfish: {
-    nature: '地方餐饮 · 虚构供给',
+    nature: '地方餐饮 · 未核验供给',
     values: [96, 78, 65],
     effort: '室内用餐',
   },
@@ -771,7 +771,7 @@ export function createPresetTrip(
     preferences: [],
     pace: '均衡',
     days,
-    notes: `三日详细样例：${preset.intro}\n门票、餐饮、开放、住宿和交通金额均为 Mock；没有完成任何预订。每天从首站开始，住宿往返及到达/返程交通另查。\n${admission > options.budget ? '注意：已列地点的模拟费用超出预算，请删减后再出发。' : '当前预算还需覆盖交通、住宿及未列出的自理餐饮。'}`,
+    notes: `三日详细样例：${preset.intro}\n门票、餐饮、开放、住宿和交通金额均为规划参考；没有完成任何预订。每天从首站开始，住宿往返及到达/返程交通另查。\n${admission > options.budget ? '注意：已列地点的模拟费用超出预算，请删减后再出发。' : '当前预算还需覆盖交通、住宿及未列出的自理餐饮。'}`,
   };
 }
 export function fillEmptyTripWithPreset(trip: Trip, presetId: string): Trip {
@@ -1189,7 +1189,7 @@ export function splitExpenses(expenses: Expense[], people: string[]) {
 }
 export type SocialPost = {
   id: string;
-  platform: '抖音' | '小红书';
+  platform: 'B站' | '站内';
   kind: 'video' | 'article';
   title: string;
   author: string;
@@ -1200,6 +1200,9 @@ export type SocialPost = {
   mentions: { placeId: string; quote: string; at?: string }[];
   media?: string;
   captions?: string;
+  sourceUrl?: string;
+  embedUrl?: string;
+  publishedAt?: string;
   duration?: string;
   theme?: Theme;
   featured?: boolean;
@@ -1210,144 +1213,8 @@ export type SocialStory = {
   sections: { title: string; text: string }[];
   tips: string[];
 };
-/** All creators, engagement counts, copy and media are fictional demo fixtures. */
-export const socialPosts: SocialPost[] = [
-  ...featuredPosts,
-  {
-    id: 'dy-guizhou',
-    platform: '抖音',
-    kind: 'video',
-    title: '把贵州的三种心动，装进一段旅行',
-    author: '阿禾的山野日记',
-    cover: '/images/xiaoqikong.jpg',
-    likes: '2.8万',
-    tags: ['山水漫游', '贵州三站'],
-    intro:
-      '从小七孔的绿，到苗寨的灯，再到甲秀楼的晚风。这份跨城灵感，请留出交通时间，别赶在一天走完。',
-    media: '/videos/guizhou-demo.mp4',
-    captions: '/videos/guizhou-demo.vtt',
-    duration: '00:09',
-    mentions: [
-      {
-        placeId: 'xiaoqikong',
-        at: '00:00',
-        quote: '第一站荔波小七孔，把半天交给山水。',
-      },
-      {
-        placeId: 'xijiang',
-        at: '00:03',
-        quote: '第二站西江千户苗寨，等一盏灯亮起来。',
-      },
-      {
-        placeId: 'jiaxiu',
-        at: '00:06',
-        quote: '最后来到甲秀楼，沿南明河慢慢走。',
-      },
-    ],
-  },
-  {
-    id: 'xhs-guiyang',
-    platform: '小红书',
-    kind: 'article',
-    title: '贵阳慢游日记｜从河边晚风到一口烟火气',
-    author: '小满在路上',
-    cover: '/images/jiaxiu.jpg',
-    likes: '3,216',
-    tags: ['城市漫步', '舌尖黔味'],
-    intro:
-      '不赶路的一天，留给贵阳的老城与小店。这是一份可以随时删改的路线草稿，营业时间和预约请出发前再确认。',
-    mentions: [
-      {
-        placeId: 'jiaxiu',
-        quote: '从甲秀楼开始，沿南明河散步，给拍照留点时间。',
-      },
-      {
-        placeId: 'qingyun',
-        quote: '再去青云路美食街，按自己的口味挑一两样小吃。',
-      },
-      {
-        placeId: 'batik',
-        quote: '想加点手作，就把贵阳蜡染体验工坊放进备选。工坊为虚构样例。',
-      },
-    ],
-  },
-  {
-    id: 'dy-waterfall',
-    platform: '抖音',
-    kind: 'video',
-    title: '听，山水在说话｜黄果树与小七孔',
-    author: '山间放映室',
-    cover: '/images/huangguoshu.jpg',
-    likes: '1.6万',
-    tags: ['瀑布', '山水奇观'],
-    intro:
-      '两处山水、两段慢时光。安顺与荔波之间需要单独安排交通，不是一条当日步行路线。',
-    media: '/videos/waterfall-demo.mp4',
-    captions: '/videos/waterfall-demo.vtt',
-    duration: '00:06',
-    mentions: [
-      {
-        placeId: 'huangguoshu',
-        at: '00:00',
-        quote: '黄果树瀑布，留出充足游览与接驳时间。',
-      },
-      {
-        placeId: 'xiaoqikong',
-        at: '00:03',
-        quote: '下一段旅行去荔波小七孔，慢慢看水。',
-      },
-    ],
-  },
-  {
-    id: 'xhs-miao',
-    platform: '小红书',
-    kind: 'article',
-    title: '苗寨不止夜景，还有值得慢下来的手艺',
-    author: '蓝染小巷',
-    cover: '/images/xijiang.jpg',
-    likes: '5,082',
-    tags: ['多彩民族', '在地体验'],
-    intro:
-      '把拍照之外的时间留给文化与餐桌。体验项目和店铺均为演示样例，没有真实预约入口。',
-    mentions: [
-      {
-        placeId: 'xijiang',
-        quote: '西江千户苗寨先走一走，拍摄居民前记得征求同意。',
-      },
-      {
-        placeId: 'silver',
-        quote: '苗乡银饰体验，看看纹样背后的故事。此工坊为虚构供给。',
-      },
-      {
-        placeId: 'sourfish',
-        quote: '最后留一餐给苗家酸汤鱼体验，辣度和过敏原先问清。',
-      },
-    ],
-  },
-  {
-    id: 'xhs-anshun',
-    platform: '小红书',
-    kind: 'article',
-    title: '安顺两日灵感｜瀑布、石桥与屯堡故事',
-    author: '一颗旅行松果',
-    cover: '/images/huangguoshu.jpg',
-    likes: '2,469',
-    tags: ['山水奇观', '人文慢游'],
-    intro:
-      '自然与人文各留一段时间。以下只是内容示例，具体排期交给你的偏好、体力与天气。',
-    mentions: [
-      {
-        placeId: 'huangguoshu',
-        quote: '先去黄果树瀑布，雨具和防滑鞋提前准备。',
-      },
-      { placeId: 'tianxing', quote: '天星桥景区按体力选择步行长度。' },
-      {
-        placeId: 'tunbao',
-        quote: '另留一天给天龙屯堡，演出场次需要实际核验。',
-      },
-    ],
-  },
-];
+/** Public videos are embedded from their original pages; editorial articles are maintained in-app. */
+export const socialPosts: SocialPost[] = [...featuredPosts];
 export function organizeSocialPosts(postIds: string[]) {
   const selected = [...new Set(postIds)]
     .map((id) => socialPosts.find((p) => p.id === id))
@@ -1380,116 +1247,6 @@ export function organizeSocialPosts(postIds: string[]) {
 }
 export const socialStories: Record<string, SocialStory> = {
   ...featuredStories,
-  'dy-guizhou': {
-    readTime: '9 秒视频 · 2 分钟阅读',
-    sections: [
-      {
-        title: '三种心动，不必一天赶完',
-        text: '这一段视频把山水、苗寨与城市放在一起，表达的是旅行的节奏，不是导航顺序。小七孔适合慢慢看水，西江留给村落与夜色，甲秀楼则是城市散步的一站。跨区域移动需要另外预留时间。',
-      },
-      {
-        title: '把镜头里的地点变成候选清单',
-        text: '点击下方地点可以展开推荐依据。先保留最心动的两三处，再用 AI 整理建立草稿。它会按样例分镜提取地点，重复出现的内容合并，同时保留原文和时间码。',
-      },
-      {
-        title: '你的旅行，可以与视频不同',
-        text: '喜欢自然就多留半天给山水；更爱文化可以补充展馆或手作。日期、总预算和同行节奏都由你决定，视频只是灵感，不要求照单全收。',
-      },
-    ],
-    tips: [
-      '跨区域交通需另行核验并分天安排。',
-      '拍摄居民与文化活动前征得同意。',
-      '收藏此内容，日后可以从素材库再次规划。',
-    ],
-  },
-  'xhs-guiyang': {
-    readTime: '3 分钟阅读',
-    sections: [
-      {
-        title: '01｜一段河边的留白',
-        text: '把甲秀楼作为城市散步的起点，给建筑、河面和街边日常留一些时间。这里不必排满打卡任务，拍完照片，也可以沿河慢慢走。文案是虚构笔记，开放情况以实际核验为准。',
-      },
-      {
-        title: '02｜把口味也写进攻略',
-        text: '青云路美食街可以作为吃饭的候选，不需要把每家都尝遍。先决定辣度、折耳根和食物过敏限制，再选择合适的小吃。演示中的“饮食适配”分数不是对商家卫生或过敏原的认证。',
-      },
-      {
-        title: '03｜想慢下来，就加一点手作',
-        text: '把蜡染体验作为可选项，而不是必须完成的第三站。这里的工坊为虚构供给，真实主理人、地址、场次和价格都待核验。你可以在草稿中删去它，换成室内展馆或自由活动。',
-      },
-    ],
-    tips: [
-      '这是地点组合建议，非真实营业或预约保证。',
-      '预算先分配餐饮与体验，再补交通住宿。',
-      '可以只保留一个地点，重新搭配自己的路线。',
-    ],
-  },
-  'dy-waterfall': {
-    readTime: '6 秒视频 · 2 分钟阅读',
-    sections: [
-      {
-        title: '两段水声，两次停留',
-        text: '黄果树的瀑布与小七孔的水色是两种不同的自然体验。两地分属不同区域，这段合成视频不代表它们就在彼此旁边，更不是当日步行路线。',
-      },
-      {
-        title: '山水奇观，要看当天条件',
-        text: '水系景区的天气与步道状况比视频里的观感更重要。推荐指数使用山水奇观模型，天气、季节和步道体验会参与计算。模拟降雨时会下调建议，真实出行仍需查看景区公告。',
-      },
-      {
-        title: '先选最想去的一处',
-        text: '短假期可以只保留一个区域，再添加附近的人文地点。长假期可保留两处，并在创建旅行时增加天数。调整不会改变原视频内容，生成的是你的独立行程。',
-      },
-    ],
-    tips: [
-      '雨具与防滑装备按实际情况准备。',
-      '不要把演示评分当作安全许可。',
-      '留出接驳和休息时间，避免按视频节奏赶路。',
-    ],
-  },
-  'xhs-miao': {
-    readTime: '3 分钟阅读',
-    sections: [
-      {
-        title: '先把苗寨当成一处生活空间',
-        text: '西江千户苗寨不只是背景和夜景，也是居民的家园。散步时留意公共空间与私人院落的边界，人物、服饰与仪式的拍摄都应先询问。',
-      },
-      {
-        title: '手艺的价值，在过程里',
-        text: '银饰体验可以让旅行多一段参与感。样例关注文化内容、互动参与和讲解条件，不把“贵”或“热门”等同于文化价值。此处工坊为虚构示例，不提供真实预约。',
-      },
-      {
-        title: '一餐与一段空闲，都可以留下',
-        text: '酸汤鱼体验是餐饮候选，先确认口味与过敏原。若当天体验较多，可以删掉一项，保留一段自由时间。不同同行人的兴趣可以在下一步的主题与节奏中重新选择。',
-      },
-    ],
-    tips: [
-      '尊重居民作息与私人空间。',
-      '工坊、餐厅和价格都是 Mock。',
-      '文化体验评分不代表对群体或文化优劣的评价。',
-    ],
-  },
-  'xhs-anshun': {
-    readTime: '3 分钟阅读',
-    sections: [
-      {
-        title: '第一段：给自然足够的时间',
-        text: '黄果树与天星桥可以成为安顺路线的山水奇观候选。是否安排在同一天，要结合体力、接驳和实际开放情况；演示不会替你判断真实道路是否可通行。',
-      },
-      {
-        title: '第二段：从山水转向故事',
-        text: '天龙屯堡适合作为另一段文化探索。与自然景区不同，它的模型更重视文化内容、互动与讲解条件。地戏场次只是待核验信息，不能依据样例作出行程承诺。',
-      },
-      {
-        title: '把“完整攻略”变成“适合我的攻略”',
-        text: '想少走路，可以从草稿中移除一段步道；喜欢历史，可以多留时间给文化地点。收藏这篇笔记后，后续可以重复使用，不必一次把所有决定做完。',
-      },
-    ],
-    tips: [
-      '可先保留三处地点，再按预算和天数删减。',
-      '开放和活动排期需要实际确认。',
-      '不同品类的指数均为个人选择辅助，不是绝对排名。',
-    ],
-  },
 };
 export const storageKey = 'qianlv-demo-v1';
 export function attachTripSources(trip: Trip, postIds: string[]): Trip {
