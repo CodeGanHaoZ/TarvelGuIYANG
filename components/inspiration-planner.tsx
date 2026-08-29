@@ -190,7 +190,9 @@ export function InspirationPlanner({
       const ids = next.stops.map((stop) => stop.placeId);
       const count = next.constraints.dayCount ?? suggestedTripDays(ids);
       const summary = ids.length
-        ? `已整理好 ${ids.length} 个候选地点，${next.constraints.dayCount ? '按你的要求' : '建议'}安排 ${count} 天。先确认下方清单，再补充日期、人数与预算，生成每日行程。`
+        ? next.choices.length
+          ? `已整理好 ${ids.length} 个候选地点，${next.constraints.dayCount ? '按你的要求' : '建议'}安排 ${count} 天。请先确认具体玩法。`
+          : `已整理好 ${ids.length} 个地点，正在生成 ${count} 天行程并打开路线。`
         : '我先帮你提取地点，确认后再排成每日路线。';
       setDraft(next);
       setMessages(
@@ -215,6 +217,8 @@ export function InspirationPlanner({
       );
       setText('');
       if (!imageText.some((image) => image.error)) clearAttachments();
+      if (ids.length && !next.choices.length)
+        onCustomize(ids, next.postIds, planningContext(next));
     } catch (cause) {
       if (token === generation.current)
         setError(cause instanceof Error ? cause.message : '整理失败，请重试。');

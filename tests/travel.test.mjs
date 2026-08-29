@@ -40,6 +40,7 @@ import {
   placeById,
   copyTripWithNewIds,
 } from '../lib/travel.ts';
+import { createTripFromPlanningMaterial } from '../lib/planning-trip.ts';
 import {
   itineraryPresets,
   itineraryPlaces,
@@ -844,6 +845,48 @@ test('confirmed chat content generates editable day routes with the selected pla
   );
   trip.days[0].items.pop();
   assert.equal(draft.stops.length, 2);
+});
+
+test('valid planning input creates a complete trip model without a second wizard', () => {
+  const draft = organizePlanningMaterial({
+    text: '黄果树和天星桥，3天，2人，预算1500元，轻松一点',
+    origin: plannerOrigin,
+  });
+  const ids = draft.stops.map((stop) => stop.placeId);
+  const trip = createTripFromPlanningMaterial(
+    ids,
+    draft.postIds,
+    planningContext(draft),
+    '2026-09-01',
+  );
+
+  assert.equal(trip.start, '2026-09-01');
+  assert.equal(trip.days.length, 3);
+  assert.deepEqual(trip.people, ['我', '同行人1']);
+  assert.equal(trip.budget, 1500);
+  assert.equal(trip.pace, '留白');
+  assert.deepEqual(
+    trip.days.flatMap((day) => day.items.map((item) => item.placeId)),
+    ids,
+  );
+  assert.match(trip.notes, /来自首页 AI 对话框/);
+});
+
+test('planning material without a confirmed place never creates an empty trip', () => {
+  assert.throws(
+    () => createTripFromPlanningMaterial([], [], undefined, '2026-09-01'),
+    /还没有可规划的地点/,
+  );
+  assert.throws(
+    () =>
+      createTripFromPlanningMaterial(
+        ['not-a-place'],
+        [],
+        undefined,
+        '2026-09-01',
+      ),
+    /没有识别到可用地点/,
+  );
 });
 
 test('all six theme entries produce nonempty, category-specific daily routes from their defaults', () => {

@@ -56,6 +56,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { RouteMap } from '@/components/route-map';
 import type { PlanningContext } from '@/lib/planning-input';
+import { createTripFromPlanningMaterial } from '@/lib/planning-trip';
 import { PlaceDetail } from '@/components/place-detail';
 import { TripWizard } from '@/components/trip-wizard';
 import { ItineraryLibrary } from '@/components/itinerary-library';
@@ -731,8 +732,17 @@ export default function TravelApp() {
                   setData((d) => ({ ...d, savedPostIds: ids }))
                 }
                 onCustomize={(ids, sourceIds, context) => {
-                  setImported(ids);
-                  open('create', sourceIds, undefined, context);
+                  try {
+                    createTrip(
+                      createTripFromPlanningMaterial(ids, sourceIds, context),
+                    );
+                  } catch (cause) {
+                    notify(
+                      cause instanceof Error
+                        ? cause.message
+                        : '暂时无法生成行程，请补充具体地点后重试。',
+                    );
+                  }
                 }}
               />
               <HomeCarousel
