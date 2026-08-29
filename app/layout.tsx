@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin),
   title: 'AI 黔驴 · 下一站，去贵州',
   description:
-    '贵州旅行规划：链接生成攻略、地图时间轴、今日游玩指数、路线优化与发现约伴。',
+    '贵州旅行规划交互 Demo：链接生成攻略、地图时间轴、今日游玩指数、路线优化与发现约伴。数据为演示模拟。',
   openGraph: {
     title: 'AI 黔驴 · 下一站，去贵州',
     description: '山水与烟火之间，找到属于你的旅行节奏。',

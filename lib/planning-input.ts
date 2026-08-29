@@ -80,17 +80,15 @@ export function planningPostFromUrl(raw: string, origin: string) {
       const id = path.match(/^\/inspiration\/([^/]+)$/)?.[1];
       return socialPosts.find((post) => post.id === id);
     }
-    const platform =
-      host === 'xiaohongshu.com' || host === 'www.xiaohongshu.com'
-        ? '小红书'
-        : host === 'douyin.com' || host === 'www.douyin.com'
-          ? '抖音'
-          : undefined;
-    if (!platform) return undefined;
-    const id = path.match(/^\/(?:explore|video)\/([^/]+)$/)?.[1];
-    return socialPosts.find(
-      (post) => post.platform === platform && post.id === id,
-    );
+    return socialPosts.find((post) => {
+      if (!post.sourceUrl) return false;
+      const source = new URL(post.sourceUrl);
+      const normalize = (value: string) => value.replace(/\/$/, '');
+      return (
+        source.hostname === host &&
+        normalize(source.pathname) === normalize(path)
+      );
+    });
   } catch {
     return undefined;
   }
@@ -181,7 +179,7 @@ export function organizePlanningMaterial(
       if (post) {
         if (!draft.postIds.includes(post.id)) draft.postIds.push(post.id);
         for (const mention of post.mentions)
-          add(mention.placeId, `灵感内容《${post.title}》`);
+          add(mention.placeId, `演示内容《${post.title}》`);
       } else
         draft.warnings.push(
           '有链接暂时无法读取。请粘贴正文或添加攻略截图；已识别的其他内容仍可规划。',
@@ -253,6 +251,26 @@ export function planningContext(draft: PlanningDraft): PlanningContext {
     ]
       .join('\n')
       .slice(0, 3500),
+  };
+}
+
+export function resolvePlanningChoice(
+  draft: PlanningDraft,
+  choiceName: string,
+  placeId?: string,
+): PlanningDraft {
+  const choice = draft.choices.find((item) => item.name === choiceName);
+  if (!choice || (placeId && !choice.ids.includes(placeId))) return draft;
+  const stops = draft.stops.map((stop) => ({
+    ...stop,
+    sources: [...stop.sources],
+  }));
+  if (placeId && !stops.some((stop) => stop.placeId === placeId))
+    stops.push({ placeId, sources: ['你确认的具体玩法'] });
+  return {
+    ...draft,
+    stops,
+    choices: draft.choices.filter((item) => item.name !== choiceName),
   };
 }
 

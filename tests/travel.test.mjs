@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import {
   organizePlanningMaterial,
   emptyPlanningDraft,
   planningPostFromUrl,
   planningContext,
+  resolvePlanningChoice,
   validatePlanningImage,
 } from '../lib/planning-input.ts';
 import {
@@ -34,19 +35,715 @@ import {
   planningWarnings,
   suggestedTripDays,
   tripCreationDefaults,
+  createPresetTrip,
+  fillEmptyTripWithPreset,
+  previousDayConnection,
+  placeById,
+  copyTripWithNewIds,
+  placeMedia,
+  placeVisitInfo,
 } from '../lib/travel.ts';
+import { createTripFromPlanningMaterial } from '../lib/planning-trip.ts';
+import {
+  itineraryPresets,
+  itineraryPlaces,
+} from '../lib/itinerary-fixtures.ts';
+import {
+  transportOptions,
+  selectTransport,
+  resolveTransport,
+  baiduRouteUrl,
+  transportCost,
+} from '../lib/transport.ts';
+import {
+  departureChecklist,
+  mountainRouteSummary,
+  provinceMarkers,
+  rainPlanChanges,
+  scenicStopsForPace,
+} from '../lib/guizhou-map.ts';
+import {
+  buildDayPlan,
+  goScore,
+  chooseDayTransport,
+  replaceDayPlace,
+  dayPlanMarkdown,
+  transportForProfile,
+} from '../lib/day-plan.ts';
+
+function dailyTestTrip(ids = ['qianling', 'museum']) {
+  const trip = initialData().trips[0];
+  trip.days[0] = {
+    id: 'test-day',
+    date: '2026-09-01',
+    title: '测试日',
+    items: ids.map(makeItem),
+  };
+  return trip;
+}
+
+test('daily plans enrich all six themes and legacy days without changing chosen POIs', () => {
+  for (const theme of themes) {
+    const trip = makeTrip({
+      ...tripCreationDefaults([], theme),
+      start: '2026-09-01',
+      people: ['我', '家人'],
+      budget: 8000,
+      pace: '均衡',
+    });
+    const before = JSON.stringify(trip);
+    trip.days.forEach((day, index) => {
+      const plan = buildDayPlan(trip, index);
+      assert.ok(plan.visits.length);
+      assert.equal(plan.visits.length, day.items.length);
+      assert.ok(plan.visits.every((v) => v.place.category === theme));
+      assert.equal(plan.events[0].kind, 'hotel');
+      assert.equal(plan.events.at(-1).kind, 'hotel');
+      assert.equal(plan.segments.length, day.items.length + 1);
+      for (const meal of ['breakfast', 'lunch', 'dinner'])
+        assert.equal(
+          plan.events.filter((e) => e.meal === meal).length,
+          1,
+          `${theme} ${index} ${meal}`,
+        );
+      assert.ok(plan.events.every((e) => e.end >= e.start));
+      assert.equal(
+        new Set(plan.events.map((e) => e.key)).size,
+        plan.events.length,
+      );
+      for (const visit of plan.visits) {
+        assert.equal(visit.details.length, 3);
+        assert.equal(
+          visit.details.reduce((n, s) => n + s.minutes, 0),
+          visit.item.duration,
+        );
+        assert.equal(visit.goScore.factors.length, 5);
+      }
+    });
+    assert.equal(JSON.stringify(trip), before);
+  }
+  const legacy = dailyTestTrip(['tunbao']);
+  const plan = buildDayPlan(legacy, 0);
+  assert.ok(plan.events.length >= 9);
+  assert.equal(plan.visits[0].place.id, 'tunbao');
+  assert.ok(!legacy.days[0].settings && !legacy.days[0].guide);
+});
+
+test('three-day preset summaries include complete services and consistent per-person totals', () => {
+  for (const preset of itineraryPresets) {
+    const trip = createPresetTrip(preset.id, {
+      start: '2026-09-01',
+      people: ['我', '家人'],
+      budget: 6000,
+    });
+    trip.days.forEach((_day, index) => {
+      const plan = buildDayPlan(trip, index);
+      assert.equal(
+        plan.summary.trafficMinutes,
+        plan.segments.reduce((n, s) => n + s.option.minutes, 0),
+      );
+      assert.equal(
+        plan.summary.perPerson,
+        Math.round(
+          Object.values(plan.summary.costs).reduce((a, b) => a + b, 0),
+        ),
+      );
+      assert.ok(
+        Number.isFinite(plan.summary.walkingKm) && plan.summary.walkingKm >= 0,
+      );
+      assert.equal(plan.summary.costs.hotel, index === 2 ? 0 : 120);
+      for (const meal of ['breakfast', 'lunch', 'dinner'])
+        assert.equal(
+          plan.events.filter((e) => e.meal === meal).length,
+          1,
+          `${preset.id} day${index} ${meal}`,
+        );
+    });
+  }
+});
+
+test('extending, reordering, deleting and adding stops recomputes downstream times', () => {
+  const trip = dailyTestTrip();
+  trip.days[0].settings = {
+    includeHotel: false,
+    includeMeals: false,
+    departure: 540,
+  };
+  const before = buildDayPlan(trip, 0);
+  const extended = structuredClone(trip);
+  extended.days[0].items[0].duration += 30;
+  const after = buildDayPlan(extended, 0);
+  assert.equal(after.visits[1].start, before.visits[1].start + 30);
+  assert.equal(after.visits[1].end, before.visits[1].end + 30);
+  assert.equal(trip.days[0].items[0].duration, before.visits[0].item.duration);
+  extended.days[0].items.reverse();
+  assert.equal(buildDayPlan(extended, 0).visits[0].place.id, 'museum');
+  extended.days[0].items.pop();
+  assert.equal(buildDayPlan(extended, 0).segments.length, 0);
+  extended.days[0].items.push(makeItem('jiaxiu'));
+  assert.equal(buildDayPlan(extended, 0).segments.length, 1);
+});
+
+test('replacement preserves position and clears route choices bound to the old location', () => {
+  const trip = dailyTestTrip(),
+    day = trip.days[0];
+  const [first, second] = day.items;
+  first.plan = { earliestStart: 540, activity: '原活动', tips: ['原提示'] };
+  day.settings = {
+    transportModes: { [`${first.id}>${second.id}`]: 'transit' },
+  };
+  second.transport = { fromId: first.id, mode: 'transit' };
+  const before = JSON.stringify(day);
+  const replaced = replaceDayPlace(day, first.id, 'huaxi-park');
+  assert.equal(replaced.items[0].id, first.id);
+  assert.equal(replaced.items[0].placeId, 'huaxi-park');
+  assert.equal(replaced.items[0].plan.earliestStart, 540);
+  assert.equal(replaced.items[0].duration, placeById('huaxi-park').duration);
+  assert.equal(replaced.items[1].transport, undefined);
+  assert.deepEqual(replaced.settings.transportModes, {});
+  assert.equal(JSON.stringify(day), before);
+  assert.equal(replaceDayPlace(day, first.id, 'museum'), day);
+  assert.equal(replaceDayPlace(day, first.id, 'not-a-place'), day);
+});
+
+test('hotel and intermediate traffic choices update the same timing and summary model', () => {
+  const trip = dailyTestTrip();
+  const before = buildDayPlan(trip, 0);
+  const between = before.segments.find(
+    (s) => s.from.id === 'qianling' && s.to.id === 'museum',
+  );
+  trip.days[0] = chooseDayTransport(trip.days[0], between, 'transit');
+  const after = buildDayPlan(trip, 0);
+  assert.equal(
+    after.segments.find((s) => s.key === between.key).option.id,
+    'transit',
+  );
+  assert.equal(
+    after.summary.trafficMinutes - before.summary.trafficMinutes,
+    74 - between.option.minutes,
+  );
+  const home = after.segments.at(-1);
+  assert.equal(home.boundary, 'return');
+  assert.match(home.to.id, /^hotel:/);
+  assert.ok(
+    new URL(baiduRouteUrl(home.from, home.to, 'drive')).searchParams
+      .get('destination')
+      .includes(home.to.name),
+  );
+  assert.equal(chooseDayTransport(trip.days[0], home, 'rail'), trip.days[0]);
+});
+
+test('GoScore exposes five factors without endorsing closed or late visits', () => {
+  const place = placeById('huangguoshu');
+  assert.deepEqual(
+    goScore(place).factors.map((f) => f.name),
+    ['天气', '人流', '适合你', '交通', '时段适配'],
+  );
+  for (const scenario of ['normal', 'rain', 'crowd', 'closed']) {
+    const result = goScore(place, { scenario });
+    assert.ok(result.total >= 0 && result.total <= 100);
+    assert.ok(
+      result.factors.every((f) => f.value >= 0 && f.value <= 100 && f.note),
+    );
+  }
+  assert.equal(goScore(place, { scenario: 'closed' }).total, 0);
+  const late = goScore(place, { start: 1200, end: 1380 });
+  assert.ok(late.total <= 45 && late.warnings.length);
+  assert.equal(late.factors[4].value, 20);
+  assert.ok(
+    goScore(placeById('fanjing-hike'), { scenario: 'rain' }).total <= 35,
+  );
+});
+
+test('family, elder and child profiles adjust intensity, fit and walking time', () => {
+  const trip = dailyTestTrip(['fanjing-hike']);
+  const normal = buildDayPlan(trip, 0);
+  for (const profile of ['family', 'senior', 'children']) {
+    const plan = buildDayPlan({ ...trip, travelerProfile: profile }, 0);
+    assert.equal(plan.summary.intensity, '特种兵');
+    assert.ok(
+      plan.visits[0].goScore.factors[2].value <
+        normal.visits[0].goScore.factors[2].value,
+    );
+    assert.ok(plan.summary.stars <= 3);
+    assert.ok(plan.summary.warnings.some((w) => w.includes('参与条件')));
+    const option = transportOptions(
+      placeById('jiaxiu'),
+      placeById('qingyun'),
+    ).find((o) => o.id === 'walk');
+    const adapted = transportForProfile(option, profile);
+    assert.ok(adapted.minutes > option.minutes);
+    assert.equal(
+      adapted.minutes,
+      adapted.steps.reduce((sum, step) => sum + step.minutes, 0),
+    );
+  }
+});
+
+test('food POIs replace support meals and disabled services are not charged', () => {
+  const trip = dailyTestTrip(['changwang', 'guanshan-food', 'qingyun']);
+  trip.days[0].items.forEach(
+    (item, i) =>
+      (item.plan = {
+        earliestStart: [480, 720, 1080][i],
+        activity: '用餐',
+        tips: [],
+      }),
+  );
+  const plan = buildDayPlan(trip, 0);
+  assert.equal(plan.summary.costs.meals, 0);
+  assert.equal(plan.events.filter((e) => e.kind === 'meal').length, 0);
+  assert.equal(
+    plan.summary.costs.places,
+    trip.days[0].items.reduce((sum, i) => sum + placeById(i.placeId).price, 0),
+  );
+  trip.days[0].settings = { includeHotel: false, includeMeals: false };
+  const off = buildDayPlan(trip, 0);
+  assert.ok(off.events.every((e) => e.kind !== 'hotel' && e.kind !== 'meal'));
+  assert.equal(off.summary.costs.hotel, 0);
+});
+
+test('room costs divide per person and last day excludes another night', () => {
+  const trip = dailyTestTrip(['tunbao']);
+  trip.people = ['A', 'B', 'C'];
+  trip.days[0].settings = { roomPrice: 300 };
+  assert.equal(buildDayPlan(trip, 0).summary.costs.hotel, 200);
+  trip.days = trip.days.slice(0, 1);
+  assert.equal(buildDayPlan(trip, 0).summary.costs.hotel, 0);
+});
+
+test('cross-day transfers start at the previous hotel and lunch precedes late sightseeing', () => {
+  const trip = dailyTestTrip(['qingyan']);
+  trip.days[1] = {
+    id: 'far-day',
+    date: '2026-09-02',
+    title: '跨城',
+    items: [makeItem('xiaoqikong')],
+  };
+  const previous = buildDayPlan(trip, 0),
+    next = buildDayPlan(trip, 1);
+  assert.equal(next.segments[0].from.id, previous.segments.at(-1).to.id);
+  assert.equal(next.segments[0].crossDay, true);
+  assert.ok(
+    next.events.find((e) => e.meal === 'lunch').end <= next.visits[0].start,
+  );
+});
+
+test('day settings roundtrip and corrupt optional data is rejected without breaking legacy storage', () => {
+  const data = initialData();
+  data.trips[0].travelerProfile = 'family';
+  data.trips[0].days[0].settings = {
+    departure: 450,
+    includeHotel: false,
+    includeMeals: true,
+    mealMinutes: 50,
+    hotelLat: 26.5,
+    hotelLng: 106.7,
+  };
+  const restored = restore(JSON.stringify(data));
+  assert.equal(restored.trips[0].travelerProfile, 'family');
+  assert.equal(restored.trips[0].days[0].settings.departure, 450);
+  assert.ok(restore(JSON.stringify(initialData())));
+  for (const bad of [
+    { departure: -1 },
+    { departure: 1440 },
+    { hotelLat: 91 },
+    { roomPrice: -1 },
+    { includeHotel: 'false' },
+    { scenario: 'storm' },
+    { mealMinutes: 1 },
+    { transportModes: { 'a>b': 'plane' } },
+    null,
+    [],
+  ]) {
+    const corrupted = structuredClone(data);
+    corrupted.trips[0].days[0].settings = bad;
+    assert.equal(restore(JSON.stringify(corrupted)), null, JSON.stringify(bad));
+  }
+});
+
+test('copying plans remaps hotel and stop bindings and preserves settings', () => {
+  const trip = dailyTestTrip();
+  const plan = buildDayPlan(trip, 0);
+  trip.days[0] = chooseDayTransport(trip.days[0], plan.segments[0], 'drive');
+  trip.days[0] = chooseDayTransport(trip.days[0], plan.segments[1], 'transit');
+  trip.days[0] = chooseDayTransport(
+    trip.days[0],
+    plan.segments.at(-1),
+    'drive',
+  );
+  trip.travelerProfile = 'senior';
+  const copy = copyTripWithNewIds(trip),
+    cloned = buildDayPlan(copy, 0);
+  assert.notEqual(copy.days[0].id, trip.days[0].id);
+  assert.equal(copy.travelerProfile, 'senior');
+  for (const segment of cloned.segments)
+    assert.equal(
+      copy.days[0].settings.transportModes[segment.key],
+      segment.option.id,
+    );
+  assert.equal(cloned.segments[1].option.id, 'transit');
+});
+
+test('empty days stay empty and exported guides use the visible detailed plan', () => {
+  const empty = dailyTestTrip([]),
+    blank = buildDayPlan(empty, 0);
+  assert.equal(blank.events.length, 0);
+  assert.equal(blank.summary.stars, 0);
+  assert.equal(blank.summary.perPerson, 0);
+  assert.equal(blank.summary.intensity, '待规划');
+  const trip = dailyTestTrip(['tunbao']),
+    plan = buildDayPlan(trip, 0);
+  const text = dayPlanMarkdown(plan);
+  assert.match(text, /今日行程强度/);
+  assert.match(text, /GoScore/);
+  assert.match(text, /早餐/);
+  assert.match(text, /午餐/);
+  assert.match(text, /晚餐/);
+  assert.match(text, /返回/);
+  assert.match(text, /去百度地图查询/);
+  assert.ok(text.includes(`¥${plan.summary.perPerson}/人`));
+});
+
+test('three-day regional presets have detailed, feasible days and independently editable fixtures', () => {
+  const before = JSON.stringify(itineraryPresets);
+  for (const preset of itineraryPresets) {
+    const trip = createPresetTrip(preset.id, {
+      start: '2026-08-31',
+      people: ['我', '同行人'],
+      budget: 3000,
+    });
+    assert.equal(trip.days.length, 3);
+    assert.equal(trip.days[2].date, '2026-09-02');
+    for (const day of trip.days) {
+      assert.ok(day.items.length >= 3);
+      assert.ok(day.guide.summary && day.guide.meals && day.guide.stay);
+      assert.ok(day.guide.preparation.length >= 2);
+      const scheduled = timeline(day.items);
+      assert.ok(
+        scheduled.every((stop) => !stop.warning),
+        `${preset.id}: ${day.title}`,
+      );
+      assert.ok(scheduled.at(-1).end <= 22 * 60);
+      for (const [i, stop] of scheduled.entries()) {
+        assert.equal(stop.place.region, preset.destination);
+        assert.ok(stop.item.plan.activity.length > 10);
+        assert.ok(stop.item.plan.tips.length);
+        assert.ok(stop.start >= stop.item.plan.earliestStart);
+        if (i)
+          assert.ok(stop.start >= scheduled[i - 1].end + stop.transit.minutes);
+      }
+    }
+    assert.equal(
+      new Set(trip.days.flatMap((day) => day.items.map((item) => item.id)))
+        .size,
+      trip.days.flatMap((day) => day.items).length,
+    );
+    trip.days[0].guide.preparation.push('local edit');
+    trip.days[0].items[0].plan.tips.push('local edit');
+  }
+  assert.equal(JSON.stringify(itineraryPresets), before);
+  for (const place of itineraryPlaces) {
+    assert.equal(placeById(place.id), place);
+    assert.ok(score(place).total >= 0 && score(place).total <= 100);
+  }
+});
+
+test('detailed presets are the default for eligible three-day routes but never alter imported selections', () => {
+  const options = {
+    destination: '荔波',
+    start: '2026-08-29',
+    dayCount: 3,
+    people: ['我'],
+    budget: 3000,
+    preferences: [],
+    pace: '均衡',
+  };
+  const trip = makeTrip(options);
+  assert.ok(
+    trip.days.every(
+      (day) => day.items.length >= 3 && day.items.every((item) => item.plan),
+    ),
+  );
+  const imported = ['xiaoqikong', 'daqikong', 'yaoshan'];
+  const custom = makeTrip(options, imported);
+  assert.ok(custom.days.every((day) => day.items.length === 1));
+  assert.deepEqual(
+    custom.days.flatMap((day) => day.items.map((item) => item.placeId)),
+    imported,
+  );
+  const shortage = makeTrip(options, ['xiaoqikong']);
+  assert.equal(shortage.days.flatMap((day) => day.items).length, 1);
+  assert.match(shortage.notes, /候选地点或预算不足/);
+});
+
+test('filling an empty trip preserves dates and notes and refuses to overwrite a nonempty day', () => {
+  const original = initialData().trips[0];
+  assert.throws(
+    () => fillEmptyTripWithPreset(original, 'libo-three'),
+    /不会被覆盖/,
+  );
+  const empty = {
+    ...original,
+    notes: '保留我的原笔记',
+    days: original.days.map((day) => ({ ...day, items: [] })),
+  };
+  const before = JSON.stringify(empty);
+  const filled = fillEmptyTripWithPreset(empty, 'libo-three');
+  assert.equal(filled.id, empty.id);
+  assert.equal(filled.destination, '荔波');
+  assert.deepEqual(filled.people, empty.people);
+  assert.equal(filled.budget, empty.budget);
+  assert.deepEqual(
+    filled.days.map((d) => [d.id, d.date]),
+    empty.days.map((d) => [d.id, d.date]),
+  );
+  assert.ok(filled.days.every((d) => d.items.length >= 3));
+  assert.match(filled.notes, /保留我的原笔记/);
+  assert.equal(JSON.stringify(empty), before);
+  assert.throws(() => createPresetTrip('invalid', empty), /未找到/);
+});
+
+test('transport estimates have consistent steps, unit costs and honest unavailable modes', () => {
+  const [a, b] = ['qianling', 'museum'].map(placeById);
+  const metro = transportOptions(a, b).find((o) => o.id === 'transit');
+  assert.equal(metro.available, true);
+  assert.equal(metro.transfers, 1);
+  assert.match(metro.summary, /北京路/);
+  assert.equal(metro.sources.length, 2);
+  for (const pair of [
+    [a, b],
+    [b, a],
+    [a, placeById('xijiang')],
+    [placeById('jiaxiu'), placeById('qingyun')],
+  ]) {
+    for (const option of transportOptions(...pair).filter((o) => o.available)) {
+      assert.equal(
+        option.minutes,
+        option.steps.reduce((sum, step) => sum + step.minutes, 0),
+      );
+      assert.ok(option.minutes > 0);
+      assert.ok(option.km >= 0);
+      assert.ok(option.cost[1] >= option.cost[0]);
+    }
+  }
+  const drive = transportOptions(a, b).find((o) => o.id === 'drive');
+  assert.deepEqual(
+    transportCost(drive, 5),
+    drive.cost.map((n) => n * 2),
+  );
+  assert.deepEqual(
+    transportCost(metro, 3),
+    metro.cost.map((n) => n * 3),
+  );
+  const unknown = transportOptions(
+    placeById('xiaoqikong'),
+    placeById('yaoshan'),
+  );
+  assert.equal(unknown.find((o) => o.id === 'transit').available, false);
+  assert.equal(unknown.find((o) => o.id === 'transit').cost, null);
+  assert.ok(
+    !transportOptions(a, placeById('xijiang')).some((o) => o.id === 'walk'),
+  );
+});
+
+test('choosing transport updates timeline and summaries and only binds to that exact leg', () => {
+  const items = ['qianling', 'museum', 'jiaxiu'].map(makeItem);
+  const before = JSON.stringify(items);
+  const updated = selectTransport(
+    items,
+    items[1].id,
+    items[0],
+    'transit',
+    placeById,
+  );
+  const rows = timeline(updated);
+  assert.equal(rows[1].transit.option.id, 'transit');
+  assert.equal(rows[1].transit.minutes, 74);
+  assert.equal(
+    metrics(updated).minutes,
+    rows.reduce((sum, row) => sum + (row.transit?.minutes ?? 0), 0),
+  );
+  assert.ok(rows[2].start >= rows[1].end + rows[2].transit.minutes);
+  assert.equal(JSON.stringify(items), before);
+  const reordered = [updated[2], updated[1]];
+  assert.notEqual(timeline(reordered)[1].transit.option.id, 'transit');
+  assert.equal(
+    selectTransport(items, items[2].id, items[0], 'drive', placeById),
+    items,
+  );
+  const unknown = ['xiaoqikong', 'yaoshan'].map(makeItem);
+  assert.equal(
+    selectTransport(unknown, unknown[1].id, unknown[0], 'transit', placeById),
+    unknown,
+  );
+  assert.ok(
+    resolveTransport(placeById('museum'), placeById('jiaxiu')).available,
+  );
+});
+
+test('cross-city day connections account for transfer time instead of teleporting between days', () => {
+  const trip = makeTrip(
+    {
+      destination: '贵州',
+      start: '2026-08-29',
+      dayCount: 2,
+      people: ['我'],
+      preferences: [],
+      pace: '均衡',
+      budget: 3000,
+    },
+    ['jiaxiu', 'xijiang'],
+  );
+  const previous = previousDayConnection(trip, 1);
+  assert.equal(previous.id, trip.days[0].items[0].id);
+  const items = selectTransport(
+    trip.days[1].items,
+    trip.days[1].items[0].id,
+    previous,
+    'rail',
+    placeById,
+  );
+  const rows = timeline(items, previous);
+  assert.equal(rows[0].transit.option.id, 'rail');
+  assert.ok(rows[0].start >= 8 * 60 + 30 + rows[0].transit.minutes);
+  assert.equal(metrics(items, previous).minutes, rows[0].transit.minutes);
+  assert.equal(previousDayConnection(trip, 0), undefined);
+});
+
+test('map queries encode complete explicit endpoints and valid mode and policy without a key', () => {
+  const a = { ...placeById('qianling'), name: '起点 & # 甲' },
+    b = placeById('museum');
+  const url = new URL(baiduRouteUrl(a, b, 'transit', 'transfers'));
+  assert.equal(url.origin, 'https://api.map.baidu.com');
+  assert.equal(url.pathname, '/direction');
+  assert.equal(
+    url.searchParams.get('origin'),
+    `latlng:${a.lat},${a.lng}|name:${a.name}`,
+  );
+  assert.equal(
+    url.searchParams.get('destination'),
+    `latlng:${b.lat},${b.lng}|name:${b.name}`,
+  );
+  assert.equal(url.searchParams.get('mode'), 'transit');
+  assert.equal(url.searchParams.get('sy'), '1');
+  assert.equal(url.searchParams.get('coord_type'), 'gcj02');
+  assert.equal(url.searchParams.get('output'), 'html');
+  assert.equal(url.searchParams.has('ak'), false);
+  assert.equal(
+    new URL(baiduRouteUrl(a, b, 'walk')).searchParams.get('mode'),
+    'walking',
+  );
+  assert.equal(
+    new URL(baiduRouteUrl(a, b, 'drive')).searchParams.get('mode'),
+    'driving',
+  );
+});
+
+test('Guizhou two-level map adapts mountain time and rain replan without losing places', () => {
+  const day = ['tianxing', 'huangguoshu', 'qingyan'].map(makeItem);
+  const normal = mountainRouteSummary('standard', 'normal');
+  const rain = mountainRouteSummary('standard', 'rain');
+  assert.ok(normal.stops.some((stop) => stop.id === 'water-curtain'));
+  assert.equal(
+    rain.stops.some((stop) => stop.id === 'water-curtain'),
+    false,
+  );
+  assert.ok(
+    rain.minutes > rain.stops.reduce((sum, stop) => sum + stop.minutes, 0),
+  );
+  assert.ok(
+    scenicStopsForPace('easy').every((stop) => stop.paces.includes('easy')),
+  );
+
+  const result = rainPlanChanges(day);
+  assert.equal(result.items.length, day.length);
+  assert.equal(result.items[0].placeId, 'huangguoshu');
+  assert.ok(result.changes.length >= 3);
+  assert.deepEqual(
+    new Set(result.items.map((item) => item.id)),
+    new Set(day.map((item) => item.id)),
+  );
+
+  const markers = provinceMarkers(result.items);
+  assert.deepEqual(
+    markers.map((marker) => marker.sequence),
+    [1, 2, 3],
+  );
+  const checklist = departureChecklist(
+    result.items.map((item) => item.placeId),
+    'rain',
+  );
+  assert.ok(
+    checklist.some((item) => item.id === 'weather' && item.state === 'warning'),
+  );
+});
+
+test('copying a shared itinerary remaps incoming route choices to the new item IDs', () => {
+  const trip = initialData().trips[0];
+  trip.days[0].items = ['qianling', 'museum'].map(makeItem);
+  const day = trip.days[0];
+  day.items = selectTransport(
+    day.items,
+    day.items[1].id,
+    day.items[0],
+    'transit',
+    placeById,
+  );
+  const before = JSON.stringify(trip);
+  const copy = copyTripWithNewIds(trip);
+  assert.notEqual(copy.id, trip.id);
+  assert.notEqual(copy.days[0].items[0].id, day.items[0].id);
+  assert.equal(
+    copy.days[0].items[1].transport.fromId,
+    copy.days[0].items[0].id,
+  );
+  assert.equal(timeline(copy.days[0].items)[1].transit.option.id, 'transit');
+  assert.equal(JSON.stringify(trip), before);
+});
+
+test('detailed plans and mode selections survive persistence; corrupt optional fields are rejected', () => {
+  const data = initialData();
+  const day = data.trips[0].days[0];
+  day.items = selectTransport(
+    day.items,
+    day.items[1].id,
+    day.items[0],
+    'drive',
+    placeById,
+  );
+  assert.deepEqual(restore(JSON.stringify(data)), data);
+  const invalidTime = structuredClone(data);
+  invalidTime.trips[0].days[0].items[0].plan.earliestStart = -10;
+  assert.equal(restore(JSON.stringify(invalidTime)), null);
+  const invalidTransport = structuredClone(data);
+  invalidTransport.trips[0].days[0].items[1].transport.mode = 'magic';
+  assert.equal(restore(JSON.stringify(invalidTransport)), null);
+  const invalidGuide = structuredClone(data);
+  invalidGuide.trips[0].days[0].guide.preparation = 'not an array';
+  assert.equal(restore(JSON.stringify(invalidGuide)), null);
+  const legacy = structuredClone(data);
+  legacy.trips[0].days.forEach((d) => {
+    delete d.guide;
+    d.items.forEach((i) => {
+      delete i.plan;
+      delete i.transport;
+    });
+  });
+  assert.deepEqual(restore(JSON.stringify(legacy)), legacy);
+});
 
 const plannerOrigin = 'http://localhost:3000';
-test('planning chat merges text, exact demo links and screenshot OCR with source evidence', () => {
+test('planning chat merges text, exact public-video links and screenshot OCR with source evidence', () => {
   const result = organizePlanningMaterial({
     origin: plannerOrigin,
-    text: '甲秀楼、黄果树，3天慢游，2个人，预算1500元\nhttps://www.xiaohongshu.com/explore/xhs-guiyang',
+    text: '甲秀楼、黄果树，3天慢游，2个人，预算1500元\nhttps://www.bilibili.com/video/BV1oVLQzbEJg/',
     images: [{ name: '攻略.png', text: '甲 秀 楼\n荔波小\n七孔' }],
   });
   const ids = result.stops.map((stop) => stop.placeId);
   assert.ok(
-    ['jiaxiu', 'qingyun', 'batik', 'huangguoshu', 'xiaoqikong'].every((id) =>
-      ids.includes(id),
+    ['jiaxiu', 'huangguoshu', 'xiaoqikong', 'qianling', 'changwang'].every(
+      (id) => ids.includes(id),
     ),
   );
   assert.equal(new Set(ids).size, ids.length);
@@ -54,7 +751,7 @@ test('planning chat merges text, exact demo links and screenshot OCR with source
     result.stops.find((stop) => stop.placeId === 'jiaxiu').sources.length,
     3,
   );
-  assert.deepEqual(result.postIds, ['xhs-guiyang']);
+  assert.deepEqual(result.postIds, ['hot-food-video']);
   assert.deepEqual(result.constraints, {
     dayCount: 3,
     peopleCount: 2,
@@ -111,6 +808,39 @@ test('unqualified geographic names ask for activity choice instead of mixing cat
     removed.stops.map((stop) => stop.placeId),
     ['maling-rafting'],
   );
+});
+
+test('the last activity choice produces a standardized itinerary without another confirmation', () => {
+  const ambiguous = organizePlanningMaterial({
+    text: '梵净山和马岭河峡谷，2天，2人',
+    origin: plannerOrigin,
+  });
+  const withView = resolvePlanningChoice(ambiguous, '梵净山', 'fanjing-view');
+  assert.equal(withView.choices.length, 1);
+  const confirmed = resolvePlanningChoice(
+    withView,
+    '马岭河峡谷',
+    'maling-rafting',
+  );
+  assert.equal(confirmed.choices.length, 0);
+  assert.deepEqual(
+    confirmed.stops.map((stop) => stop.placeId),
+    ['fanjing-view', 'maling-rafting'],
+  );
+
+  const trip = createTripFromPlanningMaterial(
+    confirmed.stops.map((stop) => stop.placeId),
+    confirmed.postIds,
+    planningContext(confirmed),
+    '2026-09-01',
+  );
+  assert.equal(trip.days.length, 2);
+  for (let index = 0; index < trip.days.length; index++) {
+    const plan = buildDayPlan(trip, index);
+    assert.ok(plan.summary.evaluation);
+    assert.ok(plan.events.length);
+    assert.ok(plan.visits.every((visit) => visit.goScore.factors.length === 5));
+  }
 });
 
 test('unknown and spoofed links never manufacture an unrelated itinerary', () => {
@@ -207,6 +937,48 @@ test('confirmed chat content generates editable day routes with the selected pla
   assert.equal(draft.stops.length, 2);
 });
 
+test('valid planning input creates a complete trip model without a second wizard', () => {
+  const draft = organizePlanningMaterial({
+    text: '黄果树和天星桥，3天，2人，预算1500元，轻松一点',
+    origin: plannerOrigin,
+  });
+  const ids = draft.stops.map((stop) => stop.placeId);
+  const trip = createTripFromPlanningMaterial(
+    ids,
+    draft.postIds,
+    planningContext(draft),
+    '2026-09-01',
+  );
+
+  assert.equal(trip.start, '2026-09-01');
+  assert.equal(trip.days.length, 3);
+  assert.deepEqual(trip.people, ['我', '同行人1']);
+  assert.equal(trip.budget, 1500);
+  assert.equal(trip.pace, '留白');
+  assert.deepEqual(
+    trip.days.flatMap((day) => day.items.map((item) => item.placeId)),
+    ids,
+  );
+  assert.match(trip.notes, /来自首页 AI 对话框/);
+});
+
+test('planning material without a confirmed place never creates an empty trip', () => {
+  assert.throws(
+    () => createTripFromPlanningMaterial([], [], undefined, '2026-09-01'),
+    /还没有可规划的地点/,
+  );
+  assert.throws(
+    () =>
+      createTripFromPlanningMaterial(
+        ['not-a-place'],
+        [],
+        undefined,
+        '2026-09-01',
+      ),
+    /没有识别到可用地点/,
+  );
+});
+
 test('all six theme entries produce nonempty, category-specific daily routes from their defaults', () => {
   for (const theme of themes) {
     const defaults = tripCreationDefaults([], theme);
@@ -301,7 +1073,7 @@ test('theme route defaults can be customized before generation', () => {
   assert.match(changedTheme.notes, /不代表安全许可/);
 });
 
-test('featured feed covers all six themes with a video and article without mixing activity categories', () => {
+test('featured feed combines six sourced multi-theme videos with six themed editorial guides', () => {
   const featured = socialPosts.filter((post) => post.featured);
   assert.equal(featured.length, 12);
   assert.equal(new Set(places.map((place) => place.id)).size, places.length);
@@ -309,56 +1081,119 @@ test('featured feed covers all six themes with a video and article without mixin
     new Set(socialPosts.map((post) => post.id)).size,
     socialPosts.length,
   );
-  for (const theme of themes) {
-    const entries = featured.filter((post) => post.theme === theme);
-    assert.deepEqual(entries.map((post) => post.kind).sort(), [
-      'article',
-      'video',
-    ]);
-    for (const post of entries) {
-      assert.ok(post.recommendation);
+  const videos = featured.filter((post) => post.kind === 'video');
+  const articles = featured.filter((post) => post.kind === 'article');
+  assert.equal(videos.length, 6);
+  assert.deepEqual(
+    articles.map((post) => post.theme).sort((a, b) => a.localeCompare(b)),
+    [...themes].sort((a, b) => a.localeCompare(b)),
+  );
+  for (const post of featured) {
+    assert.ok(post.recommendation);
+    if (post.kind === 'article')
       assert.ok(existsSync(new URL(`../public${post.cover}`, import.meta.url)));
-      const draft = organizeSocialPosts([post.id]);
-      assert.ok(draft.stops.length);
-      for (const stop of draft.stops)
-        assert.equal(places.find((p) => p.id === stop.placeId).category, theme);
-      const ids = draft.stops.map((stop) => stop.placeId);
-      const trip = attachTripSources(
-        makeTrip(
-          {
-            destination: '贵州',
-            start: '2026-09-01',
-            dayCount: suggestedTripDays(ids),
-            people: ['我'],
-            budget: 5000,
-            pace: '均衡',
-            preferences: draft.themes,
-          },
-          ids,
+    const draft = organizeSocialPosts([post.id]);
+    assert.ok(draft.stops.length);
+    const ids = draft.stops.map((stop) => stop.placeId);
+    const trip = attachTripSources(
+      makeTrip(
+        {
+          destination: '贵州',
+          start: '2026-09-01',
+          dayCount: suggestedTripDays(ids),
+          people: ['我'],
+          budget: 5000,
+          pace: '均衡',
+          preferences: draft.themes,
+        },
+        ids,
+      ),
+      [post.id],
+    );
+    assert.deepEqual(
+      trip.days.flatMap((day) => day.items.map((item) => item.placeId)).sort(),
+      [...ids].sort(),
+    );
+    assert.deepEqual(trip.sourcePostIds, [post.id]);
+    for (const [dayIndex, day] of trip.days.entries()) {
+      if (!day.items.length) continue;
+      const plan = buildDayPlan(trip, dayIndex);
+      assert.ok(plan.title);
+      assert.ok(plan.summary.low < plan.summary.high);
+      assert.ok(plan.summary.perPerson >= 0);
+      assert.ok(['轻松', '适中', '特种兵'].includes(plan.summary.intensity));
+      assert.equal(plan.events[0].kind, 'hotel');
+      assert.equal(plan.events.at(-1).kind, 'hotel');
+      assert.equal(plan.visits.length, day.items.length);
+      assert.ok(
+        plan.visits.every((visit) => visit.goScore.factors.length === 5),
+      );
+      assert.ok(plan.events.some((event) => event.meal === 'lunch'));
+      assert.ok(plan.events.some((event) => event.meal === 'dinner'));
+    }
+    if (post.kind === 'video') {
+      const source = new URL(post.sourceUrl);
+      const embed = new URL(post.embedUrl);
+      assert.equal(source.hostname, 'www.bilibili.com');
+      assert.equal(embed.hostname, 'player.bilibili.com');
+      const bvid = source.pathname.split('/').filter(Boolean).at(-1);
+      assert.equal(embed.searchParams.get('bvid'), bvid);
+      assert.ok(post.author);
+      assert.match(post.publishedAt, /^20\d{2}-\d{2}-\d{2}$/);
+      const categories = new Set(
+        draft.stops.map(
+          (stop) => places.find((place) => place.id === stop.placeId).category,
         ),
-        [post.id],
       );
-      assert.deepEqual(
-        trip.days
-          .flatMap((day) => day.items.map((item) => item.placeId))
-          .sort(),
-        [...ids].sort(),
-      );
-      assert.deepEqual(trip.sourcePostIds, [post.id]);
-      if (post.kind === 'video') {
-        assert.ok(
-          existsSync(new URL(`../public${post.media}`, import.meta.url)),
-        );
-        const captions = readFileSync(
-          new URL(`../public${post.captions}`, import.meta.url),
-          'utf8',
-        );
-        assert.match(captions, /^WEBVTT/);
-        for (const mention of post.mentions)
-          assert.ok(captions.includes(`00:${mention.at}.000`));
-      }
+      assert.ok(categories.has('舌尖黔味'));
+      assert.ok([...categories].some((category) => category !== '舌尖黔味'));
     }
   }
+});
+
+test('place details only surface images and sourced videos that mention that place', () => {
+  const media = placeMedia('huangguoshu');
+  assert.ok(media.images.length);
+  assert.equal(
+    new Set(media.images.map((image) => image.src)).size,
+    media.images.length,
+  );
+  assert.ok(media.videos.length);
+  for (const video of media.videos) {
+    assert.ok(video.embedUrl.startsWith('https://player.bilibili.com/'));
+    assert.ok(video.sourceUrl.startsWith('https://www.bilibili.com/video/'));
+    assert.ok(
+      video.mentions.some((mention) => mention.placeId === 'huangguoshu'),
+    );
+  }
+  assert.deepEqual(placeMedia('not-a-place'), { images: [], videos: [] });
+});
+
+test('place visit details distinguish verified official information from planning references', () => {
+  for (const id of ['museum', 'xiaoqikong', 'xijiang']) {
+    const place = placeById(id);
+    const visit = placeVisitInfo(place);
+    assert.equal(visit.openingStatus, 'official');
+    assert.ok(visit.sourceTitle);
+    assert.match(visit.verifiedAt, /^20\d{2}-\d{2}-\d{2}$/);
+    assert.ok(visit.phones.length);
+    assert.match(visit.officialUrl, /^https:\/\//);
+    assert.match(visit.ticketUrl, /^https:\/\//);
+    assert.match(visit.mapUrl, /^https:\/\/api\.map\.baidu\.com\/marker\?/);
+    assert.equal(new URL(visit.mapUrl).searchParams.get('title'), place.name);
+    assert.ok(visit.introduction.length > place.description.length);
+  }
+
+  const fallback = placeVisitInfo(placeById('huangguoshu'));
+  assert.equal(fallback.openingStatus, 'reference');
+  assert.deepEqual(fallback.phones, []);
+  assert.equal(fallback.officialUrl, undefined);
+  assert.equal(fallback.ticketUrl, undefined);
+  assert.match(fallback.openingText, /规划参考/);
+  assert.equal(
+    new URL(fallback.mapUrl).searchParams.get('title'),
+    '黄果树瀑布',
+  );
 });
 
 test('same geographic location keeps sightseeing and outdoor activities separate through extraction and planning', () => {
@@ -411,7 +1246,7 @@ test('renamed themes migrate existing trips and feed preferences without losing 
   const data = initialData();
   data.trips[0].preferences = ['自然景观', '身体力行', '经典路线'];
   data.feed[0].trip.preferences = ['民族文化', '美食体验', '红色旅游'];
-  data.savedPostIds = ['dy-guizhou', 'xhs-miao'];
+  data.savedPostIds = ['hot-nature-video', 'hot-culture-note'];
   const migrated = restore(JSON.stringify(data));
   assert.deepEqual(migrated.trips[0].preferences, [
     '山水奇观',
@@ -429,25 +1264,33 @@ test('renamed themes migrate existing trips and feed preferences without losing 
 
 test('social extraction merges overlapping posts while retaining ordered source evidence', () => {
   const result = organizeSocialPosts([
-    'dy-guizhou',
-    'xhs-guiyang',
-    'dy-guizhou',
+    'hot-nature-video',
+    'hot-food-video',
+    'hot-nature-video',
   ]);
-  assert.deepEqual(result.postIds, ['dy-guizhou', 'xhs-guiyang']);
+  assert.deepEqual(result.postIds, ['hot-nature-video', 'hot-food-video']);
   assert.deepEqual(
     result.stops.map((s) => s.placeId),
-    ['xiaoqikong', 'xijiang', 'jiaxiu', 'qingyun', 'batik'],
+    [
+      'xiaoqikong',
+      'huangguoshu',
+      'xijiang',
+      'jiaxiu',
+      'sourfish',
+      'siwawa',
+      'qianling',
+      'changwang',
+    ],
   );
   assert.deepEqual(
     result.stops
       .find((s) => s.placeId === 'jiaxiu')
       .sources.map((s) => s.postId),
-    ['dy-guizhou', 'xhs-guiyang'],
+    ['hot-nature-video', 'hot-food-video'],
   );
-  assert.equal(result.stops[0].sources[0].at, '00:00');
   result.stops[0].sources[0].quote = 'changed locally';
   assert.notEqual(
-    organizeSocialPosts(['dy-guizhou']).stops[0].sources[0].quote,
+    organizeSocialPosts(['hot-nature-video']).stops[0].sources[0].quote,
     'changed locally',
   );
 });
@@ -467,7 +1310,7 @@ test('social recommendations stay in selected regions, respect preferences and e
 });
 
 test('customized social draft carries edits into a separately editable trip', () => {
-  const draft = organizeSocialPosts(['xhs-guiyang']);
+  const draft = organizeSocialPosts(['hot-food-note']);
   const edited = [
     'museum',
     ...draft.stops.filter((s) => s.placeId === 'qingyun').map((s) => s.placeId),
@@ -490,8 +1333,8 @@ test('customized social draft carries edits into a separately editable trip', ()
   );
   trip.days[0].items.reverse();
   assert.deepEqual(
-    organizeSocialPosts(['xhs-guiyang']).stops.map((s) => s.placeId),
-    ['jiaxiu', 'qingyun', 'batik'],
+    organizeSocialPosts(['hot-food-note']).stops.map((s) => s.placeId),
+    ['changwang', 'huaxi-noodles', 'qingyun'],
   );
 });
 
@@ -500,7 +1343,7 @@ test('empty or unknown social selections cannot create a fabricated route', () =
   assert.throws(() => organizeSocialPosts(['missing']), /选择/);
 });
 
-test('low budget filters unaffordable mock experiences and explains omissions', () => {
+test('low budget filters unaffordable estimated experiences and explains omissions', () => {
   const t = makeTrip({
     destination: '贵州',
     start: '2026-08-29',
@@ -591,18 +1434,18 @@ test('saved source materials migrate without losing older trips and survive pers
   const migrated = restore(JSON.stringify(old));
   assert.deepEqual(migrated.savedPostIds, []);
   assert.deepEqual(migrated.trips, old.trips);
-  migrated.savedPostIds = ['dy-guizhou'];
+  migrated.savedPostIds = ['hot-nature-video'];
   migrated.trips[0] = attachTripSources(migrated.trips[0], [
-    'dy-guizhou',
-    'xhs-guiyang',
-    'dy-guizhou',
+    'hot-nature-video',
+    'hot-food-video',
+    'hot-nature-video',
     'unknown',
   ]);
   const roundtrip = restore(JSON.stringify(migrated));
-  assert.deepEqual(roundtrip.savedPostIds, ['dy-guizhou']);
+  assert.deepEqual(roundtrip.savedPostIds, ['hot-nature-video']);
   assert.deepEqual(roundtrip.trips[0].sourcePostIds, [
-    'dy-guizhou',
-    'xhs-guiyang',
+    'hot-nature-video',
+    'hot-food-video',
   ]);
   assert.equal(old.trips[0].sourcePostIds, undefined);
   migrated.savedPostIds = ['unknown'];
@@ -737,7 +1580,7 @@ test('local persistence roundtrips and rejects corrupt or unknown data', () => {
   d.trips[0].days[0].items[0].placeId = 'unknown';
   assert.equal(restore(JSON.stringify(d)), null);
 });
-test('link mock handles supported domain, text extraction and manual fallback', async () => {
+test('link handler supports source domains, text extraction and manual fallback', async () => {
   assert.ok(
     (await parseGuide('https://www.xiaohongshu.com/explore/demo')).length > 0,
   );

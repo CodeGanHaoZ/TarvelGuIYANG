@@ -4,6 +4,17 @@ import {
   featuredPosts,
   featuredStories,
 } from './themed-fixtures.ts';
+import {
+  itineraryPlaces,
+  itineraryAttributes,
+  itineraryPresets,
+  type DayGuide,
+} from './itinerary-fixtures.ts';
+import {
+  roadDistance,
+  resolveTransport,
+  type TransportChoice,
+} from './transport.ts';
 
 export type Theme =
   | '舌尖黔味'
@@ -89,12 +100,36 @@ export type Place = {
   /** Different activities at one location remain distinct bookable/plannable candidates. */
   locationId?: string;
 };
-export type TripItem = { id: string; placeId: string; duration: number };
+export type TripItem = {
+  id: string;
+  placeId: string;
+  duration: number;
+  plan?: { earliestStart: number; activity: string; tips: string[] };
+  transport?: TransportChoice;
+};
 export type TripDay = {
   id: string;
   date: string;
   title: string;
   items: TripItem[];
+  guide?: DayGuide;
+  settings?: DaySettings;
+};
+export type TravelerProfile = 'standard' | 'family' | 'senior' | 'children';
+export type DaySettings = {
+  departure?: number;
+  scenario?: 'normal' | 'rain' | 'crowd' | 'closed';
+  hotelName?: string;
+  hotelLat?: number;
+  hotelLng?: number;
+  roomPrice?: number;
+  mealMinutes?: number;
+  lunchPrice?: number;
+  dinnerPrice?: number;
+  breakfastPrice?: number;
+  includeMeals?: boolean;
+  includeHotel?: boolean;
+  transportModes?: Record<string, import('./transport').TransportMode>;
 };
 export type Trip = {
   id: string;
@@ -108,6 +143,7 @@ export type Trip = {
   days: TripDay[];
   notes: string;
   sourcePostIds?: string[];
+  travelerProfile?: TravelerProfile;
 };
 export type Expense = {
   id: string;
@@ -234,7 +270,7 @@ export const places: Place[] = [
     name: '贵阳蜡染体验工坊',
     region: '贵阳',
     category: '多彩民族',
-    description: '与苗族手艺人交流纹样并动手蜡染的虚构体验场景。',
+    description: '与苗族手艺人交流纹样并动手蜡染的未核验体验场景。',
     lat: 26.573,
     lng: 106.711,
     duration: 90,
@@ -242,7 +278,7 @@ export const places: Place[] = [
     indoor: true,
     hours: [9, 18],
     factors: [100, 98, 100, 92, 90, 96, 90, 100],
-    tip: '这是虚构的体验供给。真实主理人、地址与场次待核验。',
+    tip: '这是未核验的体验供给，用于演示。真实主理人、地址与场次待核验。',
     culture: '体验前了解纹样含义；人物拍摄、图样传播与商用应先征得授权。',
   },
   {
@@ -259,7 +295,7 @@ export const places: Place[] = [
     image: '/images/huangguoshu.jpg',
     hours: [7, 18],
     factors: [95, 82, 100, 88, 96, 94, 80, 95],
-    tip: '建议 08:30—09:30 入园。步道湿滑，真实天气与开放情况待核验。',
+    tip: '模拟建议 08:30—09:30 入园。步道湿滑，真实天气与开放情况待核验。',
   },
   {
     id: 'tianxing',
@@ -289,7 +325,7 @@ export const places: Place[] = [
     indoor: false,
     hours: [8, 18],
     factors: [92, 94, 100, 84, 88, 90, 90, 96],
-    tip: '地戏场次待核验，请勿将排期当作真实演出安排。',
+    tip: '地戏场次待核验，请勿将演示排期当作真实演出安排。',
     culture: '尊重当地服饰与民俗，不擅自进入居民院落；拍摄人物请先询问。',
   },
   {
@@ -322,7 +358,7 @@ export const places: Place[] = [
     indoor: true,
     hours: [9, 18],
     factors: [100, 95, 100, 85, 90, 92, 90, 100],
-    tip: '虚构工坊样例，无真实预约。儿童体验需成人与工坊指导。',
+    tip: '未核验工坊样例，无真实预约。儿童体验需成人与工坊指导。',
     culture: '银饰纹样承载文化意义，作品与影像传播应尊重制作者权利。',
   },
   {
@@ -338,7 +374,7 @@ export const places: Place[] = [
     indoor: true,
     hours: [11, 21],
     factors: [100, 90, 100, 90, 92, 90, 85, 98],
-    tip: '餐厅信息待核验。用餐前询问鱼类、辣椒及其他过敏原。',
+    tip: '餐厅为演示供给。用餐前询问鱼类、辣椒及其他过敏原。',
   },
   {
     id: 'xiaoqikong',
@@ -388,6 +424,7 @@ export const places: Place[] = [
     tip: '预约、闭馆日与展陈安排待接入官方信息，请提前核实。',
   },
   ...additionalPlaces,
+  ...itineraryPlaces,
 ];
 export const travelRegions = [...new Set(places.map((p) => p.region))];
 export const placeById = (id: string): Place =>
@@ -537,6 +574,7 @@ export const placeAttributes: Record<
   }
 > = {
   ...additionalAttributes,
+  ...itineraryAttributes,
   qianling: {
     nature: '城市森林公园',
     values: [89, 88, 82],
@@ -555,7 +593,7 @@ export const placeAttributes: Record<
     effort: '石板路 · 适中步行',
   },
   batik: {
-    nature: '室内非遗手作 · 虚构工坊',
+    nature: '室内非遗手作 · 未核验工坊',
     values: [92, 98, 88],
     effort: '坐姿手作',
   },
@@ -582,12 +620,12 @@ export const placeAttributes: Record<
     effort: '坡道与接驳',
   },
   silver: {
-    nature: '室内银饰手作 · 虚构工坊',
+    nature: '室内银饰手作 · 未核验工坊',
     values: [94, 96, 87],
     effort: '手作操作',
   },
   sourfish: {
-    nature: '地方餐饮 · 虚构供给',
+    nature: '地方餐饮 · 未核验供给',
     values: [96, 78, 65],
     effort: '室内用餐',
   },
@@ -640,17 +678,17 @@ export function score(
   let total = Math.round(rawTotal);
   if (factors[2] === 0) {
     total = 0;
-    warnings.push('闭园：不推荐安排，其他高分不能抵消未开放。');
+    warnings.push('模拟闭园：不推荐安排，其他高分不能抵消未开放。');
   } else if (
     scenario === 'rain' &&
     p.category === '野趣户外' &&
     attributes.weatherSensitive
   ) {
     total = Math.min(total, 35);
-    warnings.push('降雨：户外挑战项目暂缓，需核验运营方、体力与天气条件。');
+    warnings.push('模拟降雨：户外挑战项目暂缓，需核验运营方、体力与天气条件。');
   } else if (scenario === 'rain' && attributes.weatherSensitive) {
     total = Math.min(total, 60);
-    warnings.push('降雨：天气敏感景观降级推荐，步道与开放情况需核验。');
+    warnings.push('模拟降雨：天气敏感景观降级推荐，步道与开放情况需核验。');
   }
   return {
     factors,
@@ -700,6 +738,107 @@ const templates = [
   ['huangguoshu', 'tianxing'],
   ['xijiang', 'silver', 'sourfish'],
 ];
+export function createPresetTrip(
+  presetId: string,
+  options: { start: string; people: string[]; budget: number },
+): Trip {
+  const preset = itineraryPresets.find((p) => p.id === presetId);
+  if (!preset) throw new Error('未找到这份三日样例。');
+  const days: TripDay[] = preset.days.map((d, index) => ({
+    id: uid(),
+    date: dateAfter(options.start, index),
+    title: d.title,
+    guide: structuredClone(d.guide),
+    items: d.stops.map((s) => ({
+      ...makeItem(s.placeId),
+      duration: s.duration,
+      plan: { earliestStart: s.at, activity: s.activity, tips: [...s.tips] },
+    })),
+  }));
+  const admission = days
+    .flatMap((d) => d.items)
+    .reduce(
+      (sum, i) => sum + placeById(i.placeId).price * options.people.length,
+      0,
+    );
+  return {
+    id: uid(),
+    title: preset.title,
+    destination: preset.destination,
+    start: options.start,
+    people: [...options.people],
+    budget: options.budget,
+    preferences: [],
+    pace: '均衡',
+    days,
+    notes: `三日详细样例：${preset.intro}\n门票、餐饮、开放、住宿和交通金额均为规划参考；没有完成任何预订。每天从首站开始，住宿往返及到达/返程交通另查。\n${admission > options.budget ? '注意：已列地点的模拟费用超出预算，请删减后再出发。' : '当前预算还需覆盖交通、住宿及未列出的自理餐饮。'}`,
+  };
+}
+export function fillEmptyTripWithPreset(trip: Trip, presetId: string): Trip {
+  if (trip.days.length !== 3 || trip.days.some((d) => d.items.length))
+    throw new Error('仅可填入完全空白的三日行程，已有内容不会被覆盖。');
+  const sample = createPresetTrip(presetId, trip);
+  return {
+    ...sample,
+    id: trip.id,
+    sourcePostIds: trip.sourcePostIds,
+    days: sample.days.map((day, i) => ({
+      ...day,
+      id: trip.days[i].id,
+      date: trip.days[i].date,
+    })),
+    notes: [trip.notes, sample.notes].filter(Boolean).join('\n\n'),
+  };
+}
+export function copyTripWithNewIds(trip: Trip): Trip {
+  const copy = structuredClone(trip);
+  const ids = new Map(
+    copy.days.flatMap((day) =>
+      day.items.map((item) => [item.id, uid()] as const),
+    ),
+  );
+  copy.id = uid();
+  const dayIds = new Map(copy.days.map((day) => [day.id, uid()]));
+  const remapEndpoint = (endpoint: string) => {
+    if (ids.has(endpoint)) return ids.get(endpoint)!;
+    for (const [oldId, newId] of dayIds) {
+      if (endpoint.startsWith(`hotel:${oldId}:`))
+        return endpoint.replace(`hotel:${oldId}:`, `hotel:${newId}:`);
+    }
+    return endpoint;
+  };
+  copy.days = copy.days.map((day) => ({
+    ...day,
+    id: dayIds.get(day.id)!,
+    ...(day.settings
+      ? {
+          settings: {
+            ...day.settings,
+            transportModes: Object.fromEntries(
+              Object.entries(day.settings.transportModes ?? {}).map(
+                ([key, mode]) => [
+                  key.split('>').map(remapEndpoint).join('>'),
+                  mode,
+                ],
+              ),
+            ),
+          },
+        }
+      : {}),
+    items: day.items.map((item) => {
+      const next = { ...item, id: ids.get(item.id)! };
+      if (item.transport && ids.has(item.transport.fromId))
+        next.transport = {
+          ...item.transport,
+          fromId: ids.get(item.transport.fromId)!,
+        };
+      else delete next.transport;
+      return next;
+    }),
+  }));
+  return copy;
+}
+
 export function makeTrip(
   options: {
     destination: string;
@@ -716,6 +855,26 @@ export function makeTrip(
   const region =
     travelRegions.find((r) => destination.includes(r)) ??
     (destination.includes('苗寨') ? '黔东南' : undefined);
+  // Detailed regional defaults, without adding unselected places to imported/theme-only plans.
+  if (
+    options.dayCount === 3 &&
+    !imported.length &&
+    !options.preferences.length &&
+    options.pace === '均衡'
+  ) {
+    const preset = itineraryPresets.find(
+      (p) => p.destination === (region ?? '贵阳'),
+    );
+    if (preset) {
+      const cost = preset.days
+        .flatMap((d) => d.stops)
+        .reduce(
+          (sum, s) => sum + placeById(s.placeId).price * options.people.length,
+          0,
+        );
+      if (cost <= options.budget) return createPresetTrip(preset.id, options);
+    }
+  }
   const pool = places.filter(
     (p) =>
       (!region || p.region === region) &&
@@ -746,6 +905,9 @@ export function makeTrip(
           )
         : [];
       ids = selectDayPlaces(group, options.pace);
+      // Reserve candidates for later days instead of consuming every stop on day one.
+      // When there are fewer places than days, keep the shortage honest; never invent imports.
+      ids = ids.slice(0, Math.max(1, remaining.length - (count - i - 1)));
       remaining = remaining.filter((id) => !ids.includes(id));
     }
     if (!imported.length)
@@ -765,6 +927,22 @@ export function makeTrip(
         ? `${placeById(ids[0]).region} · ${options.preferences.length === 1 ? options.preferences[0] : i === 0 ? '初见山水' : '慢慢相遇'}`
         : '自由探索 · 留一点空白',
       items: ids.map(makeItem),
+      guide: ids.length
+        ? {
+            summary: `按${placeById(ids[0]).region}同区域安排，地点不足时可从三日样例中另建行程，或手动添加。`,
+            meals:
+              '已选餐饮随地点计费；其余三餐请在当天住宿或游览区域安排，费用另计。',
+            stay:
+              i < count - 1
+                ? `建议在${placeById(ids.at(-1)!).region}选择住宿，确认下一日交通后再预订。`
+                : '返程日：预留取行李、到车站和安检时间，班次需自行核实。',
+            stayCost: i < count - 1 ? [180, 320] : [0, 0],
+            preparation: [
+              '交通与开放时段为估算，出发前打开地图核对。',
+              ...planningWarnings(ids),
+            ],
+          }
+        : undefined,
     };
   });
   return {
@@ -779,7 +957,10 @@ export function makeTrip(
         ? `另有 ${remaining.length} 个地点未排入，请在添加地点中补充或延长旅行。`
         : '',
       budgetSkipped
-        ? `有 ${budgetSkipped} 个地点因门票/体验费用超出预算未排入。预算未计入交通和住宿，请继续核验。`
+        ? `有 ${budgetSkipped} 个地点因模拟门票/体验费用超出预算未排入。预算未计入交通和住宿，请继续核验。`
+        : '',
+      days.some((d) => !d.items.length)
+        ? '部分日期因候选地点或预算不足留白。未自动添加未选地点；可以补充地点或另建详细三日样例。'
         : '',
     ]
       .filter(Boolean)
@@ -858,27 +1039,45 @@ export function initialData(): AppData {
   };
 }
 export function distance(a: Place, b: Place) {
-  const rad = (n: number) => (n * Math.PI) / 180;
-  const dlat = rad(b.lat - a.lat),
-    dlng = rad(b.lng - a.lng);
-  const h =
-    Math.sin(dlat / 2) ** 2 +
-    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dlng / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)) * 1.45;
+  return roadDistance(a, b);
 }
-export function leg(a: Place, b: Place) {
-  const km = distance(a, b);
+export function leg(
+  a: Place,
+  b: Place,
+  choice?: TransportChoice,
+  fromId?: string,
+) {
+  const option = resolveTransport(a, b, choice, fromId);
   return {
-    km: Math.round(km * 10) / 10,
-    minutes: Math.max(5, Math.round((km / (km > 30 ? 55 : 25)) * 60)),
-    mode: km > 30 ? '城际交通' : '市内交通',
+    km: option.km,
+    minutes: option.minutes,
+    mode: option.label,
+    option,
   };
 }
-export function metrics(items: TripItem[]) {
+export function previousDayConnection(
+  trip: Trip,
+  dayIndex: number,
+): TripItem | undefined {
+  const from = trip.days[dayIndex - 1]?.items.at(-1),
+    to = trip.days[dayIndex]?.items[0];
+  return from &&
+    to &&
+    placeById(from.placeId).region !== placeById(to.placeId).region
+    ? from
+    : undefined;
+}
+export function metrics(items: TripItem[], previous?: TripItem) {
   return items.reduce(
     (out, item, i) => {
-      if (i) {
-        const l = leg(placeById(items[i - 1].placeId), placeById(item.placeId));
+      const from = items[i - 1] ?? previous;
+      if (from) {
+        const l = leg(
+          placeById(from.placeId),
+          placeById(item.placeId),
+          item.transport,
+          from.id,
+        );
         out.km += l.km;
         out.minutes += l.minutes;
       }
@@ -887,13 +1086,17 @@ export function metrics(items: TripItem[]) {
     { km: 0, minutes: 0 },
   );
 }
-export function timeline(items: TripItem[]) {
+export function timeline(items: TripItem[], previous?: TripItem) {
   let time = 8 * 60 + 30;
   return items.map((item, i) => {
     const p = placeById(item.placeId);
-    const transit = i ? leg(placeById(items[i - 1].placeId), p) : null;
+    const from = items[i - 1] ?? previous;
+    const transit = from
+      ? leg(placeById(from.placeId), p, item.transport, from.id)
+      : null;
     if (transit) time += transit.minutes;
-    time = Math.max(time, p.hours[0] * 60);
+    const arrival = time;
+    time = Math.max(time, p.hours[0] * 60, item.plan?.earliestStart ?? 0);
     const start = time;
     time += item.duration;
     return {
@@ -902,19 +1105,20 @@ export function timeline(items: TripItem[]) {
       start,
       end: time,
       transit,
+      wait: start - arrival,
       warning: time > p.hours[1] * 60,
     };
   });
 }
 export const clock = (m: number) =>
   `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}${m >= 1440 ? ' (+1天)' : ''}`;
-export function optimize(items: TripItem[]): TripItem[] {
+export function optimize(items: TripItem[], previous?: TripItem): TripItem[] {
   if (items.length < 3) return [...items];
   let best = [...items];
-  let bestCost = metrics(best).minutes;
+  let bestCost = metrics(best, previous).minutes;
   const visit = (prefix: TripItem[], rest: TripItem[]) => {
     if (!rest.length) {
-      const cost = metrics(prefix).minutes;
+      const cost = metrics(prefix, previous).minutes;
       if (cost < bestCost) {
         best = prefix;
         bestCost = cost;
@@ -940,7 +1144,7 @@ export function optimize(items: TripItem[]): TripItem[] {
       );
       route.push(rest.shift()!);
     }
-    if (metrics(route).minutes < bestCost) best = route;
+    if (metrics(route, previous).minutes < bestCost) best = route;
   }
   return best;
 }
@@ -985,7 +1189,7 @@ export function splitExpenses(expenses: Expense[], people: string[]) {
 }
 export type SocialPost = {
   id: string;
-  platform: '抖音' | '小红书';
+  platform: 'B站' | '站内';
   kind: 'video' | 'article';
   title: string;
   author: string;
@@ -996,6 +1200,9 @@ export type SocialPost = {
   mentions: { placeId: string; quote: string; at?: string }[];
   media?: string;
   captions?: string;
+  sourceUrl?: string;
+  embedUrl?: string;
+  publishedAt?: string;
   duration?: string;
   theme?: Theme;
   featured?: boolean;
@@ -1006,149 +1213,139 @@ export type SocialStory = {
   sections: { title: string; text: string }[];
   tips: string[];
 };
-/** All creators, engagement counts, copy and media are fictional fixtures. */
-export const socialPosts: SocialPost[] = [
-  ...featuredPosts,
-  {
-    id: 'dy-guizhou',
-    platform: '抖音',
-    kind: 'video',
-    title: '把贵州的三种心动，装进一段旅行',
-    author: '阿禾的山野日记',
-    cover: '/images/xiaoqikong.jpg',
-    likes: '2.8万',
-    tags: ['山水漫游', '贵州三站'],
-    intro:
-      '从小七孔的绿，到苗寨的灯，再到甲秀楼的晚风。这份跨城灵感，请留出交通时间，别赶在一天走完。',
-    media: '/videos/guizhou.mp4',
-    captions: '/videos/guizhou.vtt',
-    duration: '00:09',
-    mentions: [
-      {
-        placeId: 'xiaoqikong',
-        at: '00:00',
-        quote: '第一站荔波小七孔，把半天交给山水。',
-      },
-      {
-        placeId: 'xijiang',
-        at: '00:03',
-        quote: '第二站西江千户苗寨，等一盏灯亮起来。',
-      },
-      {
-        placeId: 'jiaxiu',
-        at: '00:06',
-        quote: '最后来到甲秀楼，沿南明河慢慢走。',
-      },
-    ],
+/** Public videos are embedded from their original pages; editorial articles are maintained in-app. */
+export const socialPosts: SocialPost[] = [...featuredPosts];
+export function placeMedia(placeId: string) {
+  const place = places.find((item) => item.id === placeId);
+  const related = socialPosts.filter((post) =>
+    post.mentions.some((mention) => mention.placeId === placeId),
+  );
+  const images = [
+    ...(place?.image
+      ? [{ src: place.image, source: `${place.name}地点素材` }]
+      : []),
+    ...related.map((post) => ({
+      src: post.cover,
+      source: `相关内容《${post.title}》`,
+    })),
+  ].filter(
+    (image, index, all) =>
+      image.src && all.findIndex((item) => item.src === image.src) === index,
+  );
+  return {
+    images,
+    videos: related.filter(
+      (post) => post.kind === 'video' && post.embedUrl && post.sourceUrl,
+    ),
+  };
+}
+
+export type PlaceVisitInfo = {
+  introduction: string;
+  openingText: string;
+  openingStatus: 'official' | 'reference';
+  address?: string;
+  phones: string[];
+  officialUrl?: string;
+  ticketUrl?: string;
+  ticketNote: string;
+  ticketLinkLabel?: string;
+  sourceTitle?: string;
+  verifiedAt?: string;
+  mapUrl: string;
+};
+
+const placeIntroductions: Partial<Record<string, string>> = {
+  qianling:
+    '黔灵山公园把山林、湖泊、寺庙与城市生活连在一起。适合从山门步道慢慢上行，在黔灵湖与林荫路之间安排一段轻松散步；园内野生猕猴较多，请保持距离、不投喂，也不要展示食物。',
+  museum:
+    '贵州省博物馆适合用一座馆建立对贵州历史、考古与多民族文化的整体认识。室内展陈适合作为雨天或亲子行程，建议先看常设展，再按兴趣选择专题展，给重点展厅预留充足阅读时间。',
+  jiaxiu:
+    '甲秀楼坐落在南明河上，是认识贵阳城市文脉的一处轻量停靠点。白天适合观察楼阁、石桥与河岸空间，傍晚可连同翠微园、南明河步道和周边街区一起慢游。',
+  huangguoshu:
+    '黄果树以瀑布群为核心看点，主瀑、水帘洞与多段观瀑步道带来不同距离和角度的水景。景区范围较大，游览时要把接驳、排队与湿滑步道计入时间，雨季尤其需要关注当日开放提示。',
+  xijiang:
+    '西江千户苗寨沿山谷层叠展开，吊脚楼、风雨桥、田园与夜景共同构成村寨景观。这里也是居民持续生活的社区，建议把观景台之外的时间留给村寨步行、文化讲解与合规的手工体验，并在拍摄人物前先征得同意。',
+  xiaoqikong:
+    '荔波小七孔以碧水、古桥、瀑布与水上森林串成一条山水游线。经典游览会经过小七孔古桥、拉雅瀑布、六十八级跌水瀑布等区域，景点之间通常需要观光车衔接，建议按入园时段预留半天。',
+};
+
+const verifiedPlaceVisitInfo: Partial<
+  Record<string, Omit<PlaceVisitInfo, 'introduction' | 'mapUrl'>>
+> = {
+  museum: {
+    openingText:
+      '2026 年暑期 09:00–18:00，周六延长至 21:00；周一闭馆（8 月 31 日后以常规公告为准）',
+    openingStatus: 'official',
+    address: '贵阳市观山湖区林城东路 107 号',
+    phones: ['0851-84811809', '0851-84811830'],
+    officialUrl: 'https://www.gzmuseum.com/',
+    ticketUrl: 'https://gzmuseum.com/gbgg/202606/1406.html',
+    ticketNote: '免费参观，须通过官方微信公众号或小程序预约。',
+    ticketLinkLabel: '查看官方开放与预约公告',
+    sourceTitle: '贵州省博物馆官方公告',
+    verifiedAt: '2026-08-29',
   },
-  {
-    id: 'xhs-guiyang',
-    platform: '小红书',
-    kind: 'article',
-    title: '贵阳慢游日记｜从河边晚风到一口烟火气',
-    author: '小满在路上',
-    cover: '/images/jiaxiu.jpg',
-    likes: '3,216',
-    tags: ['城市漫步', '舌尖黔味'],
-    intro:
-      '不赶路的一天，留给贵阳的老城与小店。这是一份可以随时删改的路线草稿，营业时间和预约请出发前再确认。',
-    mentions: [
-      {
-        placeId: 'jiaxiu',
-        quote: '从甲秀楼开始，沿南明河散步，给拍照留点时间。',
-      },
-      {
-        placeId: 'qingyun',
-        quote: '再去青云路美食街，按自己的口味挑一两样小吃。',
-      },
-      {
-        placeId: 'batik',
-        quote: '想加点手作，就把贵阳蜡染体验工坊放进备选。工坊为虚构样例。',
-      },
-    ],
+  xiaoqikong: {
+    openingText: '08:00 开始入园；16:00 停止售票；16:30 停止入园',
+    openingStatus: 'official',
+    phones: ['0854-3516115', '0854-3516116'],
+    officialUrl: 'https://www.liboxiaoqikong.com/',
+    ticketUrl: 'https://www.gzstv.com/a/55fd2986cf6c4f168ffc1786a7f47901',
+    ticketNote: '须按预约时段入园，票种、优惠与当日余票以景区官方平台为准。',
+    ticketLinkLabel: '查看官方开放与预约通告',
+    sourceTitle: '荔波樟江风景名胜区管理处通告',
+    verifiedAt: '2026-08-29',
   },
-  {
-    id: 'dy-waterfall',
-    platform: '抖音',
-    kind: 'video',
-    title: '听，山水在说话｜黄果树与小七孔',
-    author: '山间放映室',
-    cover: '/images/huangguoshu.jpg',
-    likes: '1.6万',
-    tags: ['瀑布', '山水奇观'],
-    intro:
-      '两处山水、两段慢时光。安顺与荔波之间需要单独安排交通，不是一条当日步行路线。',
-    media: '/videos/waterfall.mp4',
-    captions: '/videos/waterfall.vtt',
-    duration: '00:06',
-    mentions: [
-      {
-        placeId: 'huangguoshu',
-        at: '00:00',
-        quote: '黄果树瀑布，留出充足游览与接驳时间。',
-      },
-      {
-        placeId: 'xiaoqikong',
-        at: '00:03',
-        quote: '下一段旅行去荔波小七孔，慢慢看水。',
-      },
-    ],
+  xijiang: {
+    openingText: '开放与预约时段以景区官方当日公告为准',
+    openingStatus: 'official',
+    phones: ['400-153-8866'],
+    officialUrl: 'https://www.xjqhmz.com/',
+    ticketUrl:
+      'https://www.xjqhmz.com/news/detail?id=695976352326721538&type=news-notice',
+    ticketNote:
+      '官方购票渠道为“西江千户苗寨景区”微信公众号，观光车票另行购买。',
+    ticketLinkLabel: '查看官方票务说明',
+    sourceTitle: '西江千户苗寨官方网站',
+    verifiedAt: '2026-08-29',
   },
-  {
-    id: 'xhs-miao',
-    platform: '小红书',
-    kind: 'article',
-    title: '苗寨不止夜景，还有值得慢下来的手艺',
-    author: '蓝染小巷',
-    cover: '/images/xijiang.jpg',
-    likes: '5,082',
-    tags: ['多彩民族', '在地体验'],
-    intro:
-      '把拍照之外的时间留给文化与餐桌。体验项目和店铺均为样例，没有真实预约入口。',
-    mentions: [
-      {
-        placeId: 'xijiang',
-        quote: '西江千户苗寨先走一走，拍摄居民前记得征求同意。',
-      },
-      {
-        placeId: 'silver',
-        quote: '苗乡银饰体验，看看纹样背后的故事。此工坊为虚构供给。',
-      },
-      {
-        placeId: 'sourfish',
-        quote: '最后留一餐给苗家酸汤鱼体验，辣度和过敏原先问清。',
-      },
-    ],
-  },
-  {
-    id: 'xhs-anshun',
-    platform: '小红书',
-    kind: 'article',
-    title: '安顺两日灵感｜瀑布、石桥与屯堡故事',
-    author: '一颗旅行松果',
-    cover: '/images/huangguoshu.jpg',
-    likes: '2,469',
-    tags: ['山水奇观', '人文慢游'],
-    intro:
-      '自然与人文各留一段时间。以下只是内容示例，具体排期交给你的偏好、体力与天气。',
-    mentions: [
-      {
-        placeId: 'huangguoshu',
-        quote: '先去黄果树瀑布，雨具和防滑鞋提前准备。',
-      },
-      { placeId: 'tianxing', quote: '天星桥景区按体力选择步行长度。' },
-      {
-        placeId: 'tunbao',
-        quote: '另留一天给天龙屯堡，演出场次需要实际核验。',
-      },
-    ],
-  },
-];
+};
+
+function hourLabel(hour: number) {
+  return `${String(hour).padStart(2, '0')}:00`;
+}
+
+export function placeVisitInfo(place: Place): PlaceVisitInfo {
+  const verified = verifiedPlaceVisitInfo[place.id];
+  const mapParams = new URLSearchParams({
+    location: `${place.lat},${place.lng}`,
+    title: place.name,
+    content: `${place.region} · ${place.category}`,
+    output: 'html',
+    coord_type: 'gcj02',
+    src: 'webapp.openai.ai_qianlv',
+  });
+  return {
+    introduction:
+      placeIntroductions[place.id] ??
+      `${place.description} 这里以“${place.category}”体验为主，建议结合停留时长、体力与当日现场信息安排访问。`,
+    openingText: `${hourLabel(place.hours[0])}–${hourLabel(place.hours[1])}（规划参考，以现场公告为准）`,
+    openingStatus: 'reference',
+    phones: [],
+    ticketNote:
+      place.price > 0
+        ? `参考 ¥${money(place.price)} / 人；官方票种、优惠与预约入口待核验。`
+        : '参考为免费或免门票地点；预约要求与收费项目以官方公告为准。',
+    mapUrl: `https://api.map.baidu.com/marker?${mapParams.toString()}`,
+    ...verified,
+  };
+}
 export function organizeSocialPosts(postIds: string[]) {
   const selected = [...new Set(postIds)]
     .map((id) => socialPosts.find((p) => p.id === id))
     .filter((p): p is SocialPost => Boolean(p));
-  if (!selected.length) throw new Error('请先选择至少一篇灵感内容。');
+  if (!selected.length) throw new Error('请先选择至少一篇演示内容。');
   const stops: {
     placeId: string;
     sources: { postId: string; quote: string; at?: string }[];
@@ -1176,118 +1373,8 @@ export function organizeSocialPosts(postIds: string[]) {
 }
 export const socialStories: Record<string, SocialStory> = {
   ...featuredStories,
-  'dy-guizhou': {
-    readTime: '9 秒视频 · 2 分钟阅读',
-    sections: [
-      {
-        title: '三种心动，不必一天赶完',
-        text: '这一段视频把山水、苗寨与城市放在一起，表达的是旅行的节奏，不是导航顺序。小七孔适合慢慢看水，西江留给村落与夜色，甲秀楼则是城市散步的一站。跨区域移动需要另外预留时间。',
-      },
-      {
-        title: '把镜头里的地点变成候选清单',
-        text: '点击下方地点可以展开推荐依据。先保留最心动的两三处，再用 AI 整理建立草稿。它会按样例分镜提取地点，重复出现的内容合并，同时保留原文和时间码。',
-      },
-      {
-        title: '你的旅行，可以与视频不同',
-        text: '喜欢自然就多留半天给山水；更爱文化可以补充展馆或手作。日期、总预算和同行节奏都由你决定，视频只是灵感，不要求照单全收。',
-      },
-    ],
-    tips: [
-      '跨区域交通需另行核验并分天安排。',
-      '拍摄居民与文化活动前征得同意。',
-      '收藏此内容，日后可以从素材库再次规划。',
-    ],
-  },
-  'xhs-guiyang': {
-    readTime: '3 分钟阅读',
-    sections: [
-      {
-        title: '01｜一段河边的留白',
-        text: '把甲秀楼作为城市散步的起点，给建筑、河面和街边日常留一些时间。这里不必排满打卡任务，拍完照片，也可以沿河慢慢走。文案是虚构笔记，开放情况以实际核验为准。',
-      },
-      {
-        title: '02｜把口味也写进攻略',
-        text: '青云路美食街可以作为吃饭的候选，不需要把每家都尝遍。先决定辣度、折耳根和食物过敏限制，再选择合适的小吃。“饮食适配”分数不是对商家卫生或过敏原的认证。',
-      },
-      {
-        title: '03｜想慢下来，就加一点手作',
-        text: '把蜡染体验作为可选项，而不是必须完成的第三站。这里的工坊为虚构供给，真实主理人、地址、场次和价格都待核验。你可以在草稿中删去它，换成室内展馆或自由活动。',
-      },
-    ],
-    tips: [
-      '这是地点组合建议，非真实营业或预约保证。',
-      '预算先分配餐饮与体验，再补交通住宿。',
-      '可以只保留一个地点，重新搭配自己的路线。',
-    ],
-  },
-  'dy-waterfall': {
-    readTime: '6 秒视频 · 2 分钟阅读',
-    sections: [
-      {
-        title: '两段水声，两次停留',
-        text: '黄果树的瀑布与小七孔的水色是两种不同的自然体验。两地分属不同区域，这段合成视频不代表它们就在彼此旁边，更不是当日步行路线。',
-      },
-      {
-        title: '山水奇观，要看当天条件',
-        text: '水系景区的天气与步道状况比视频里的观感更重要。推荐指数使用山水奇观模型，天气、季节和步道体验会参与计算。降雨时会下调建议，真实出行仍需查看景区公告。',
-      },
-      {
-        title: '先选最想去的一处',
-        text: '短假期可以只保留一个区域，再添加附近的人文地点。长假期可保留两处，并在创建旅行时增加天数。调整不会改变原视频内容，生成的是你的独立行程。',
-      },
-    ],
-    tips: [
-      '雨具与防滑装备按实际情况准备。',
-      '不要把评分当作安全许可。',
-      '留出接驳和休息时间，避免按视频节奏赶路。',
-    ],
-  },
-  'xhs-miao': {
-    readTime: '3 分钟阅读',
-    sections: [
-      {
-        title: '先把苗寨当成一处生活空间',
-        text: '西江千户苗寨不只是背景和夜景，也是居民的家园。散步时留意公共空间与私人院落的边界，人物、服饰与仪式的拍摄都应先询问。',
-      },
-      {
-        title: '手艺的价值，在过程里',
-        text: '银饰体验可以让旅行多一段参与感。样例关注文化内容、互动参与和讲解条件，不把“贵”或“热门”等同于文化价值。此处工坊为虚构示例，不提供真实预约。',
-      },
-      {
-        title: '一餐与一段空闲，都可以留下',
-        text: '酸汤鱼体验是餐饮候选，先确认口味与过敏原。若当天体验较多，可以删掉一项，保留一段自由时间。不同同行人的兴趣可以在下一步的主题与节奏中重新选择。',
-      },
-    ],
-    tips: [
-      '尊重居民作息与私人空间。',
-      '工坊、餐厅和价格都待核验。',
-      '文化体验评分不代表对群体或文化优劣的评价。',
-    ],
-  },
-  'xhs-anshun': {
-    readTime: '3 分钟阅读',
-    sections: [
-      {
-        title: '第一段：给自然足够的时间',
-        text: '黄果树与天星桥可以成为安顺路线的山水奇观候选。是否安排在同一天，要结合体力、接驳和实际开放情况；系统不会替你判断真实道路是否可通行。',
-      },
-      {
-        title: '第二段：从山水转向故事',
-        text: '天龙屯堡适合作为另一段文化探索。与自然景区不同，它的模型更重视文化内容、互动与讲解条件。地戏场次只是待核验信息，不能依据样例作出行程承诺。',
-      },
-      {
-        title: '把“完整攻略”变成“适合我的攻略”',
-        text: '想少走路，可以从草稿中移除一段步道；喜欢历史，可以多留时间给文化地点。收藏这篇笔记后，后续可以重复使用，不必一次把所有决定做完。',
-      },
-    ],
-    tips: [
-      '可先保留三处地点，再按预算和天数删减。',
-      '开放和活动排期需要实际确认。',
-      '不同品类的指数均为个人选择辅助，不是绝对排名。',
-    ],
-  },
 };
-export const storageKey = 'qianlv-v1';
+export const storageKey = 'qianlv-demo-v1';
 export function attachTripSources(trip: Trip, postIds: string[]): Trip {
   return {
     ...trip,
@@ -1317,7 +1404,7 @@ export function recommendSocialPlaces(
     .slice(0, 4)
     .map((p) => ({
       placeId: p.id,
-      reason: `${p.region}同区域 · ${placeAttributes[p.id].nature} · 推荐指数 ${score(p, 'normal', preferences).total}`,
+      reason: `${p.region}同区域 · ${placeAttributes[p.id].nature} · 模拟推荐指数 ${score(p, 'normal', preferences).total}`,
     }));
 }
 export async function parseGuide(input: string): Promise<string[]> {
@@ -1361,7 +1448,7 @@ export function replan(
     const optimized = optimize([...items].reverse());
     return {
       items: optimized,
-      reason: '拥堵：调整访问顺序以避开原定到达窗口。道路实况尚未接入。',
+      reason: '模拟拥堵：调整访问顺序以避开原定到达窗口。道路实况尚未接入。',
     };
   }
   const outdoor = items.find((i) => !placeById(i.placeId).indoor);
@@ -1428,6 +1515,10 @@ export function restore(raw: string): AppData | null {
         typeof t.destination !== 'string' ||
         !t.days?.length ||
         typeof t.notes !== 'string' ||
+        (t.travelerProfile !== undefined &&
+          !['standard', 'family', 'senior', 'children'].includes(
+            t.travelerProfile,
+          )) ||
         (t.sourcePostIds !== undefined &&
           (!Array.isArray(t.sourcePostIds) ||
             t.sourcePostIds.some(
@@ -1440,6 +1531,24 @@ export function restore(raw: string): AppData | null {
       ];
       if (t.preferences.some((p) => !themes.includes(p))) return null;
       for (const day of t.days) {
+        if (day.settings !== undefined && !validDaySettings(day.settings))
+          return null;
+        if (
+          day.guide !== undefined &&
+          (!day.guide ||
+            typeof day.guide.summary !== 'string' ||
+            typeof day.guide.meals !== 'string' ||
+            typeof day.guide.stay !== 'string' ||
+            !Array.isArray(day.guide.stayCost) ||
+            day.guide.stayCost.length !== 2 ||
+            day.guide.stayCost.some(
+              (value) => !Number.isFinite(value) || value < 0,
+            ) ||
+            day.guide.stayCost[1] < day.guide.stayCost[0] ||
+            !Array.isArray(day.guide.preparation) ||
+            day.guide.preparation.some((value) => typeof value !== 'string'))
+        )
+          return null;
         if (
           !/^\d{4}-\d{2}-\d{2}$/.test(day.date) ||
           Number.isNaN(new Date(day.date + 'T12:00:00').getTime()) ||
@@ -1448,7 +1557,21 @@ export function restore(raw: string): AppData | null {
             (i) =>
               !places.some((p) => p.id === i.placeId) ||
               !Number.isFinite(i.duration) ||
-              i.duration < 15,
+              i.duration < 15 ||
+              (i.plan !== undefined &&
+                (!i.plan ||
+                  !Number.isInteger(i.plan.earliestStart) ||
+                  i.plan.earliestStart < 0 ||
+                  i.plan.earliestStart > 1439 ||
+                  typeof i.plan.activity !== 'string' ||
+                  !Array.isArray(i.plan.tips) ||
+                  i.plan.tips.some((tip) => typeof tip !== 'string'))) ||
+              (i.transport !== undefined &&
+                (!i.transport ||
+                  typeof i.transport.fromId !== 'string' ||
+                  !['walk', 'transit', 'drive', 'rail'].includes(
+                    i.transport.mode,
+                  ))),
           )
         )
           return null;
@@ -1467,4 +1590,70 @@ export function restore(raw: string): AppData | null {
   } catch {
     return null;
   }
+}
+
+function validDaySettings(settings: DaySettings): boolean {
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings))
+    return false;
+  const ranges: Partial<Record<keyof DaySettings, [number, number]>> = {
+    departure: [0, 1439],
+    hotelLat: [-90, 90],
+    hotelLng: [-180, 180],
+    roomPrice: [0, 10000],
+    mealMinutes: [15, 120],
+    lunchPrice: [0, 1000],
+    dinnerPrice: [0, 1000],
+    breakfastPrice: [0, 1000],
+  };
+  for (const [key, range] of Object.entries(ranges)) {
+    const value = settings[key as keyof DaySettings];
+    if (
+      value !== undefined &&
+      (typeof value !== 'number' ||
+        !Number.isFinite(value) ||
+        value < range[0] ||
+        value > range[1])
+    )
+      return false;
+  }
+  if (settings.departure !== undefined && !Number.isInteger(settings.departure))
+    return false;
+  if (
+    settings.mealMinutes !== undefined &&
+    !Number.isInteger(settings.mealMinutes)
+  )
+    return false;
+  if (
+    settings.hotelName !== undefined &&
+    (typeof settings.hotelName !== 'string' || settings.hotelName.length > 100)
+  )
+    return false;
+  if (
+    settings.scenario !== undefined &&
+    !['normal', 'rain', 'crowd', 'closed'].includes(settings.scenario)
+  )
+    return false;
+  if (
+    settings.includeMeals !== undefined &&
+    typeof settings.includeMeals !== 'boolean'
+  )
+    return false;
+  if (
+    settings.includeHotel !== undefined &&
+    typeof settings.includeHotel !== 'boolean'
+  )
+    return false;
+  if (
+    settings.transportModes !== undefined &&
+    (!settings.transportModes ||
+      typeof settings.transportModes !== 'object' ||
+      Array.isArray(settings.transportModes) ||
+      Object.entries(settings.transportModes).some(
+        ([key, value]) =>
+          key.split('>').length !== 2 ||
+          !['walk', 'transit', 'drive', 'rail'].includes(value),
+      ))
+  )
+    return false;
+  return true;
 }

@@ -54,12 +54,25 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { RouteMap } from '@/components/route-map';
+import { GuizhouRouteMap } from '@/components/guizhou-route-map';
 import type { PlanningContext } from '@/lib/planning-input';
+import { createTripFromPlanningMaterial } from '@/lib/planning-trip';
 import { PlaceDetail } from '@/components/place-detail';
 import { TripWizard } from '@/components/trip-wizard';
+import { ItineraryLibrary } from '@/components/itinerary-library';
+import { TransportPlanner } from '@/components/transport-planner';
+import { DayBrief } from '@/components/day-brief';
+import { DayEvent } from '@/components/day-event';
+import { GoScoreCard } from '@/components/go-score';
+import {
+  buildDayPlan,
+  chooseDayTransport,
+  replaceDayPlace,
+  dayPlanMarkdown,
+} from '@/lib/day-plan';
 import { HomeCarousel } from '@/components/home-carousel';
 import { SocialInspiration } from '@/components/social-inspiration';
+import { rainPlanChanges } from '@/lib/guizhou-map';
 import {
   initialData,
   restore,
@@ -69,8 +82,8 @@ import {
   themes,
   themeInfo,
   makeItem,
-  metrics,
-  timeline,
+  previousDayConnection,
+  copyTripWithNewIds,
   clock,
   optimize,
   splitExpenses,
@@ -87,6 +100,7 @@ import {
   type TripItem,
   type SharedTrip,
   type Theme,
+  type TripDay,
 } from '@/lib/travel';
 type Page = 'home' | 'trip' | 'discover' | 'profile';
 type Modal =
@@ -94,12 +108,15 @@ type Modal =
   | 'import'
   | 'detail'
   | 'add'
+  | 'replace'
   | 'optimize'
   | 'weather'
   | 'expense'
   | 'publish'
   | 'assistant'
   | 'export'
+  | 'presets'
+  | 'transport'
   | null;
 const categoryIcons = [TreePine, Utensils, Landmark, Route, Footprints, Flag];
 const themeImages: Record<Theme, string> = {
@@ -158,13 +175,42 @@ export default function TravelApp() {
     [assistantInput, setAssistantInput] = useState(''),
     [answer, setAnswer] = useState(''),
     [dragId, setDragId] = useState<string | null>(null);
+  const [transportTo, setTransportTo] = useState<string | undefined>();
+  const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trip =
     data.trips.find((t) => t.id === data.activeTripId) || data.trips[0];
   const day = trip.days[Math.min(dayIndex, trip.days.length - 1)];
   const selectedItem = day.items.find((i) => i.id === selected) || day.items[0];
-  const dayMetrics = metrics(day.items);
-  const scheduled = timeline(day.items);
+  const previous = previousDayConnection(trip, dayIndex);
+  const dayPlan = buildDayPlan(trip, Math.min(dayIndex, trip.days.length - 1));
+  const dayMetrics = {
+    km: dayPlan.summary.trafficKm,
+    minutes: dayPlan.summary.trafficMinutes,
+  };
+  const scheduled = dayPlan.visits;
+  const optimizationCandidate =
+    modal === 'optimize' ? optimize(day.items, previous) : day.items;
+  const candidatePlan =
+    modal === 'optimize'
+      ? buildDayPlan(
+          {
+            ...trip,
+            days: trip.days.map((d) =>
+              d.id === day.id ? { ...d, items: optimizationCandidate } : d,
+            ),
+          },
+          dayIndex,
+        )
+      : dayPlan;
+  const improvesRoute =
+    candidatePlan.summary.trafficMinutes <= dayPlan.summary.trafficMinutes;
+  const optimizedItems = improvesRoute ? optimizationCandidate : day.items;
+  const optimizedPlan = improvesRoute ? candidatePlan : dayPlan;
+  const optimizedMetrics = {
+    km: optimizedPlan.summary.trafficKm,
+    minutes: optimizedPlan.summary.trafficMinutes,
+  };
   const expenses = data.expenses.filter((e) => e.tripId === trip.id);
   const settlement = splitExpenses(expenses, trip.people);
   const filteredPlaces = places.filter(
@@ -186,7 +232,7 @@ export default function TravelApp() {
         if (raw) {
           const restored = restore(raw);
           if (restored) setData(restored);
-          else notify('本地数据格式已变化，已恢复初始内容。');
+          else notify('本地数据格式已变化，已恢复初始演示。');
         }
       } catch {
         notify('浏览器存储不可用，本次内容仅保留在当前页面。');
@@ -260,6 +306,22 @@ export default function TravelApp() {
       ...trip,
       days: trip.days.map((d) => (d.id === day.id ? { ...d, items } : d)),
     });
+  }
+  function updateDay(next: TripDay) {
+    updateTrip({
+      ...trip,
+      days: trip.days.map((d) => (d.id === next.id ? next : d)),
+    });
+  }
+  function startReplace(item: TripItem) {
+    setReplaceTarget(item.id);
+    setQuery('');
+    setFilter(placeById(item.placeId).category);
+    open('replace');
+  }
+  function showTransport(toId?: string) {
+    setTransportTo(toId);
+    open('transport');
   }
   function addPlace(id: string) {
     if (day.items.some((i) => i.placeId === id)) {
@@ -335,7 +397,11 @@ export default function TravelApp() {
     setModal(null);
     setTripTab('行程');
     go('trip');
-    notify('你的旅行已生成，所有地点都可以继续调整。');
+    notify(
+      t.sourcePostIds?.length
+        ? '视频 / 贴文已转化为标准行程：概览、时间轴和 GoScore 均可继续调整。'
+        : '你的旅行已生成，所有地点都可以继续调整。',
+    );
   }
   function activateTrip(id: string) {
     setData((d) => ({ ...d, activeTripId: id }));
@@ -346,15 +412,9 @@ export default function TravelApp() {
     go('trip');
   }
   function copyShared(post: SharedTrip) {
-    const t = structuredClone(post.trip);
-    t.id = uid();
+    const t = copyTripWithNewIds(post.trip);
     t.title = post.title + ' · 我的副本';
     t.people = ['我'];
-    t.days = t.days.map((d) => ({
-      ...d,
-      id: uid(),
-      items: d.items.map((i) => ({ ...i, id: uid() })),
-    }));
     createTrip(t);
   }
   async function enableOffline() {
@@ -411,18 +471,9 @@ export default function TravelApp() {
   }
   function exportGuide() {
     const text =
-      `# ${trip.title}\n\n> AI 黔驴旅行攻略。评分、交通、价格仅供参考，出发前请核验。\n\n日期：${trip.start} 起\n同行：${trip.people.join('、')}\n总预算：¥${trip.budget}\n\n` +
+      `# ${trip.title}\n\n> AI 黔驴行程建议。评分、交通、价格均为规划参考，出发前请核验。\n\n日期：${trip.start} 起\n同行：${trip.people.join('、')}\n总预算：¥${trip.budget}\n\n` +
       trip.days
-        .map(
-          (d) =>
-            `## ${dateLabel(d.date)} · ${d.title}\n\n` +
-            timeline(d.items)
-              .map(
-                (t) =>
-                  `- ${clock(t.start)} ${t.place.name}：停留 ${t.item.duration} 分钟；参考 ¥${t.place.price}；推荐指数 ${score(t.place, 'normal', trip.preferences).total}。${t.warning ? '⚠ 超出营业时间。' : ''}\n  ${t.place.tip}`,
-              )
-              .join('\n'),
-        )
+        .map((_d, dayNumber) => dayPlanMarkdown(buildDayPlan(trip, dayNumber)))
         .join('\n\n') +
       `\n\n## 我的旅行笔记\n\n${trip.notes}\n` +
       (trip.sourcePostIds?.length
@@ -430,7 +481,7 @@ export default function TravelApp() {
           trip.sourcePostIds
             .map(
               (id) =>
-                `- ${socialPosts.find((p) => p.id === id)?.title}`,
+                `- ${socialPosts.find((p) => p.id === id)?.title}（${socialPosts.find((p) => p.id === id)?.sourceUrl ? '原作者公开内容' : '站内编辑整理'}）`,
             )
             .join('\n')
         : '');
@@ -439,8 +490,8 @@ export default function TravelApp() {
   }
   const navEntries: { id: Page; label: string; Icon: typeof Compass }[] = [
     { id: 'home', label: '首页', Icon: Compass },
-    { id: 'trip', label: '行程', Icon: Map },
     { id: 'discover', label: '发现', Icon: Heart },
+    { id: 'trip', label: '行程', Icon: Map },
     { id: 'profile', label: '我的', Icon: UserRound },
   ];
   const card = (id: string) => {
@@ -464,7 +515,8 @@ export default function TravelApp() {
             )}
             <span className="image-tag">{p.category}</span>
             <span className="score-tag">
-              <b>{score(p, 'normal', trip.preferences).total}</b> 推荐指数
+              <b>{score(p, 'normal', trip.preferences).total}</b> 推荐指数 ·
+              规划参考
             </span>
           </div>
           <div className="destination-info">
@@ -587,7 +639,7 @@ export default function TravelApp() {
               <Mountain size={22} /> AI 黔驴
             </button>
             <div>
-              {/* <span className="mock-badge">DEMO · 模拟数据</span> */}
+              <span className="mock-badge">AI 黔驴 · 贵州智能行程</span>
               <span className="save-state">
                 {online ? <Check size={14} /> : <WifiOff size={14} />}{' '}
                 {ready
@@ -649,6 +701,13 @@ export default function TravelApp() {
                     >
                       查看我的行程 <ArrowRight />
                     </Button>
+                    <Button
+                      variant="ghost"
+                      className="text-btn"
+                      onClick={() => open('presets')}
+                    >
+                      <CalendarDays size={17} /> 详细三日样例
+                    </Button>
                   </div>
                   <div className="hero-foot">
                     地图规划　·　今日游玩指数　·　在地文化体验
@@ -674,8 +733,17 @@ export default function TravelApp() {
                   setData((d) => ({ ...d, savedPostIds: ids }))
                 }
                 onCustomize={(ids, sourceIds, context) => {
-                  setImported(ids);
-                  open('create', sourceIds, undefined, context);
+                  try {
+                    createTrip(
+                      createTripFromPlanningMaterial(ids, sourceIds, context),
+                    );
+                  } catch (cause) {
+                    notify(
+                      cause instanceof Error
+                        ? cause.message
+                        : '暂时无法生成行程，请补充具体地点后重试。',
+                    );
+                  }
                 }}
               />
               <HomeCarousel
@@ -764,6 +832,12 @@ export default function TravelApp() {
                   </div>
                 </div>
                 <div className="trip-actions">
+                  <Button
+                    className="outline-btn"
+                    onClick={() => open('presets')}
+                  >
+                    <CalendarDays size={16} /> 三日样例
+                  </Button>
                   <button
                     className="outline-btn"
                     onClick={() => open('export')}
@@ -818,6 +892,18 @@ export default function TravelApp() {
                         </button>
                       ))}
                     </div>
+                    <DayBrief
+                      plan={dayPlan}
+                      onSettings={(settings) =>
+                        updateDay({
+                          ...day,
+                          settings: { ...day.settings, ...settings },
+                        })
+                      }
+                      onProfile={(travelerProfile) =>
+                        updateTrip({ ...trip, travelerProfile })
+                      }
+                    />
                     <div className="day-heading">
                       <div>
                         <h2>{dateLabel(day.date)}</h2>
@@ -845,8 +931,30 @@ export default function TravelApp() {
                         <Clock size={13} />
                         {dayMetrics.minutes} 分钟交通
                       </span>
-                      <small>估算</small>
+                      <small>模拟估算</small>
                     </div>
+                    <div className="day-route-tools">
+                      <button
+                        className="outline-btn"
+                        disabled={!dayPlan.segments.length}
+                        onClick={() => showTransport()}
+                      >
+                        <Route size={16} /> 交通方案与线路查询{' '}
+                        <ArrowUpRight size={15} />
+                      </button>
+                      <button
+                        className="text-btn"
+                        onClick={() => open('presets')}
+                      >
+                        <Sparkles size={15} /> 换一份三日灵感
+                      </button>
+                    </div>
+                    {dayPlan.segments.some((segment) => segment.crossDay) && (
+                      <p className="cross-day-note">
+                        已计入上日住宿 /
+                        尾站到今日首站的跨城接续，出发时间随今日安排更新；实际接驳与班次仍需核验。
+                      </p>
+                    )}
                     <button
                       className="weather-banner"
                       onClick={() => open('weather')}
@@ -856,20 +964,31 @@ export default function TravelApp() {
                       </span>
                       <span>
                         <b>天气会变，好心情不变</b>
-                        <small>下雨 / 拥堵 / 闭园，看看黔驴怎么调整</small>
+                        <small>模拟下雨 / 拥堵 / 闭园，看看黔驴怎么调整</small>
                       </span>
                       <ChevronRight size={18} />
                     </button>
                     {scheduled.some((t) => t.warning) && (
                       <p className="warning-message">
                         <Info size={16} />
-                        部分地点超出营业时间，请减少停留或调整顺序。
+                        部分地点超出模拟营业时间，请减少停留或调整顺序。
                       </p>
                     )}
                     <div className="timeline-list">
                       {scheduled.map(
                         (
-                          { item, place: p, start, end, transit, warning },
+                          {
+                            item,
+                            place: p,
+                            start,
+                            end,
+                            warning,
+                            eventsBefore,
+                            breaks,
+                            details,
+                            goScore: currentScore,
+                            meal,
+                          },
                           i,
                         ) => (
                           <div
@@ -882,13 +1001,13 @@ export default function TravelApp() {
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={() => onDrop(item.id)}
                           >
-                            {transit && (
-                              <div className="transit">
-                                <Route size={13} />
-                                {transit.mode} · {transit.minutes} 分钟 ·{' '}
-                                {transit.km} km <span>估算</span>
-                              </div>
-                            )}
+                            {eventsBefore.map((event) => (
+                              <DayEvent
+                                event={event}
+                                key={event.key}
+                                onTransport={showTransport}
+                              />
+                            ))}
                             <div
                               className={
                                 'timeline-card ' +
@@ -905,17 +1024,23 @@ export default function TravelApp() {
                                     {clock(start)} — {clock(end)}
                                   </span>
                                   <h3>{p.name}</h3>
-                                  <p>{p.description}</p>
+                                  <p>{item.plan?.activity ?? p.description}</p>
                                   <span className="stop-tags">
                                     <span className="mini-tag">
                                       {p.category}
                                     </span>
+                                    {meal && (
+                                      <span className="mini-tag">
+                                        {meal === 'breakfast'
+                                          ? '早餐'
+                                          : meal === 'lunch'
+                                            ? '午餐'
+                                            : '晚餐'}
+                                      </span>
+                                    )}
                                     <span className="score-inline">
-                                      {
-                                        score(p, 'normal', trip.preferences)
-                                          .total
-                                      }{' '}
-                                      <small>推荐指数</small>
+                                      <Clock size={13} /> 游玩 {item.duration}{' '}
+                                      分钟
                                     </span>
                                   </span>
                                 </div>
@@ -928,6 +1053,71 @@ export default function TravelApp() {
                                   </div>
                                 )}
                               </button>
+                              <GoScoreCard
+                                score={currentScore}
+                                placeName={p.name}
+                              />
+                              <ol className="visit-steps">
+                                {details.map((step, n) => (
+                                  <li key={step.label}>
+                                    <i>{n + 1}</i>
+                                    <span>{step.label}</span>
+                                    <small>{step.minutes}分</small>
+                                  </li>
+                                ))}
+                              </ol>
+                              {breaks.map((event) => (
+                                <DayEvent
+                                  event={event}
+                                  key={event.key}
+                                  onTransport={showTransport}
+                                />
+                              ))}
+                              <details className="stop-practical">
+                                <summary>游玩提示与时间安排</summary>
+                                <p>{p.tip}</p>
+                                {item.plan?.tips.map((tip) => (
+                                  <p key={tip}>{tip}</p>
+                                ))}
+                                <p>
+                                  模拟开放 {p.hours[0]}:00—{p.hours[1]}:00 ·
+                                  参考费用 ¥{money(p.price)}/人 · 出发前核验
+                                </p>
+                                <label>
+                                  不早于此时间开始{' '}
+                                  <input
+                                    type="time"
+                                    aria-label={p.name + '建议开始时间'}
+                                    value={clock(
+                                      item.plan?.earliestStart ??
+                                        p.hours[0] * 60,
+                                    )}
+                                    onChange={(e) => {
+                                      if (!/^\d{2}:\d{2}$/.test(e.target.value))
+                                        return;
+                                      const [h, m] = e.target.value
+                                        .split(':')
+                                        .map(Number);
+                                      updateItems(
+                                        day.items.map((x) =>
+                                          x.id === item.id
+                                            ? {
+                                                ...x,
+                                                plan: {
+                                                  activity:
+                                                    x.plan?.activity ??
+                                                    p.description,
+                                                  tips: x.plan?.tips ?? [p.tip],
+                                                  earliestStart: h * 60 + m,
+                                                },
+                                              }
+                                            : x,
+                                        ),
+                                      );
+                                    }}
+                                  />
+                                </label>
+                              </details>
                               <div className="stop-toolbar">
                                 <GripVertical size={15} />
                                 <label>
@@ -951,15 +1141,57 @@ export default function TravelApp() {
                                     }
                                   >
                                     {[
-                                      30, 45, 60, 75, 90, 100, 120, 150, 180,
-                                      240,
-                                    ].map((v) => (
-                                      <option value={v} key={v}>
-                                        {v} 分钟
-                                      </option>
-                                    ))}
+                                      ...new Set([
+                                        30,
+                                        45,
+                                        60,
+                                        75,
+                                        90,
+                                        100,
+                                        120,
+                                        150,
+                                        180,
+                                        240,
+                                        item.duration,
+                                      ]),
+                                    ]
+                                      .sort((a, b) => a - b)
+                                      .map((v) => (
+                                        <option value={v} key={v}>
+                                          {v} 分钟
+                                        </option>
+                                      ))}
                                   </select>
                                 </label>
+                                <button
+                                  className="text-btn duration-more"
+                                  disabled={item.duration >= 720}
+                                  onClick={() =>
+                                    updateItems(
+                                      day.items.map((x) =>
+                                        x.id === item.id
+                                          ? {
+                                              ...x,
+                                              duration: Math.min(
+                                                720,
+                                                x.duration + 30,
+                                              ),
+                                            }
+                                          : x,
+                                      ),
+                                    )
+                                  }
+                                  aria-label={`延长${p.name}30分钟`}
+                                >
+                                  +30分钟
+                                </button>
+                                <button
+                                  className="text-btn replace-stop"
+                                  onClick={() => startReplace(item)}
+                                  aria-label={`替换${p.name}`}
+                                >
+                                  替换
+                                </button>
                                 <button
                                   className="icon-btn"
                                   aria-label={'上移' + p.name}
@@ -998,7 +1230,7 @@ export default function TravelApp() {
                               </div>
                               {warning && (
                                 <div className="stop-warning">
-                                  超出营业时间 {p.hours[0]}:00—{p.hours[1]}
+                                  超出模拟营业时间 {p.hours[0]}:00—{p.hours[1]}
                                   :00
                                 </div>
                               )}
@@ -1006,12 +1238,28 @@ export default function TravelApp() {
                           </div>
                         ),
                       )}
+                      {dayPlan.afterEvents.map((event) => (
+                        <DayEvent
+                          event={event}
+                          key={event.key}
+                          onTransport={showTransport}
+                        />
+                      ))}
                     </div>
                     {!day.items.length && (
-                      <Empty
-                        title="把第一处心动，放进行程"
-                        text="今天还没有地点，可以手动添加，或从攻略中导入。"
-                      />
+                      <div className="empty-itinerary">
+                        <Empty
+                          title="从一份完整三日计划开始"
+                          text="贵阳慢游、荔波山水、黔东南村寨，已安排每天的游览、用餐和交通参考。也可继续手动添加地点。"
+                        />
+                        <Button
+                          className="primary-btn"
+                          onClick={() => open('presets')}
+                        >
+                          <Sparkles size={18} /> 选择详细三日行程{' '}
+                          <ArrowRight size={17} />
+                        </Button>
+                      </div>
                     )}
                     <button
                       className="add-place-btn"
@@ -1025,12 +1273,13 @@ export default function TravelApp() {
                       添加地点 <span>让旅行更像你</span>
                     </button>
                     <p className="timeline-help">
-                      拖动卡片调整顺序 · 手机可使用上下箭头
+                      拖动卡片或使用上下箭头排序 · 修改后自动重算后续时间
                     </p>
                   </section>
                   <aside className="map-pane">
-                    <RouteMap
+                    <GuizhouRouteMap
                       items={day.items}
+                      summary={dayMetrics}
                       selected={selectedItem?.id || null}
                       dayIndex={dayIndex}
                       onSelect={(id) => {
@@ -1040,6 +1289,23 @@ export default function TravelApp() {
                           if (item) showPlace(item.placeId);
                         }
                       }}
+                      scenario={dayPlan.settings.scenario}
+                      onScenarioChange={(scenario) =>
+                        updateDay({
+                          ...day,
+                          settings: { ...day.settings, scenario },
+                        })
+                      }
+                      onApplyRain={() => {
+                        const result = rainPlanChanges(day.items);
+                        updateDay({
+                          ...day,
+                          items: result.items,
+                          settings: { ...day.settings, scenario: 'rain' },
+                        });
+                        notify('已应用雨天方案，并重新计算后续时间。');
+                      }}
+                      onTransport={() => showTransport()}
                     />
                     {selectedItem ? (
                       <PlaceDetail
@@ -1049,6 +1315,10 @@ export default function TravelApp() {
                         onSave={toggleSave}
                         onAdd={addPlace}
                         preferences={trip.preferences}
+                        journeyScore={
+                          scheduled.find((v) => v.item.id === selectedItem.id)
+                            ?.goScore
+                        }
                         compact
                       />
                     ) : (
@@ -1391,7 +1661,7 @@ export default function TravelApp() {
                     <div>
                       <h3>一条好路线，值得一起走。</h3>
                       <p>
-                        收藏灵感、复制行程，或者说一句“一起玩”。
+                        收藏灵感、复制行程，或者说一句“一起玩”。约伴互动仅在本机演示。
                       </p>
                     </div>
                   </div>
@@ -1445,7 +1715,7 @@ export default function TravelApp() {
                                 {post.author[0]}
                               </span>
                               {post.author}
-                              <small>发布了旅行</small>
+                              <small>发布了旅行 · 演示</small>
                             </span>
                             <h2>{post.title}</h2>
                             <p>{post.description}</p>
@@ -1500,7 +1770,7 @@ export default function TravelApp() {
                                 {post.requested ? (
                                   <>
                                     <Check size={16} />
-                                    已申请
+                                    已申请 · 模拟
                                   </>
                                 ) : (
                                   <>
@@ -1543,10 +1813,97 @@ export default function TravelApp() {
                 <div>
                   <Users />
                   <strong>{data.feed.filter((f) => f.requested).length}</strong>
-                  <span>条约伴请求</span>
+                  <span>条模拟约伴请求</span>
                 </div>
               </div>
-              <div className="section-heading profile-section-heading">
+              <div className="profile-grid">
+                <section className="panel">
+                  <h3>旅行偏好与外观</h3>
+                  <label className="field-label" htmlFor="travel-app-field-2">
+                    <span>我的称呼</span>
+                    <Input
+                      id="travel-app-field-2"
+                      maxLength={20}
+                      value={data.profile}
+                      onChange={(e) =>
+                        setData((d) => ({ ...d, profile: e.target.value }))
+                      }
+                    />
+                  </label>
+                  <h4>旅行的颜色</h4>
+                  <div className="theme-picker">
+                    {[
+                      ['coral', '珊瑚', '#ee735d'],
+                      ['ocean', '海洋', '#3874d0'],
+                      ['forest', '森林', '#2b8860'],
+                      ['lavender', '薰衣草', '#7959c3'],
+                      ['mono', '黑白', '#292929'],
+                    ].map(([id, label, color]) => (
+                      <button
+                        key={id}
+                        className={data.theme === id ? 'selected' : ''}
+                        onClick={() => setData((d) => ({ ...d, theme: id }))}
+                        aria-pressed={data.theme === id}
+                      >
+                        <i style={{ background: color }} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <h4>图标风格</h4>
+                  <div className="pill-group">
+                    {[
+                      ['line', '线性'],
+                      ['solid', '加粗'],
+                      ['emoji', 'Emoji'],
+                    ].map(([id, label]) => (
+                      <button
+                        key={id}
+                        className={
+                          'pill ' + (data.iconSet === id ? 'selected' : '')
+                        }
+                        onClick={() => setData((d) => ({ ...d, iconSet: id }))}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+                <section className="panel">
+                  <h3>山里没信号，也不慌</h3>
+                  <p className="panel-sub">
+                    本机保存行程与修改。缓存页面后，生产版本可离线读取；云端同步尚未接入。
+                  </p>
+                  <div className="offline-state">
+                    <WifiOff size={28} />
+                    <span>
+                      {data.offlineReady
+                        ? '已完成页面资源缓存'
+                        : '离线资源尚未准备'}
+                      <small>不会请求位置、相册或通讯录权限</small>
+                    </span>
+                  </div>
+                  <Button
+                    className="outline-btn"
+                    disabled={busy}
+                    onClick={() => void enableOffline()}
+                  >
+                    {busy ? (
+                      <LoaderCircle className="spin" size={16} />
+                    ) : (
+                      <Download size={16} />
+                    )}
+                    准备离线访问
+                  </Button>
+                  <button className="text-btn" onClick={exportTrip}>
+                    导出行程备份 <ArrowRight size={14} />
+                  </button>
+                  <div className="notice">
+                    开发服务器依赖开发模块，完整离线体验请使用生产构建。清除浏览器数据会移除本机内容。
+                  </div>
+                </section>
+              </div>
+              <div className="section-heading">
                 <h2>我的旅行</h2>
                 <button
                   className="text-btn"
@@ -1589,7 +1946,9 @@ export default function TravelApp() {
                           <b>{p.title}</b>
                           <small>
                             {p.theme || '综合灵感'} ·{' '}
-                            {p.kind === 'video' ? '视频' : '图文'}
+                            {p.kind === 'video'
+                              ? `原作者视频 · ${p.author}`
+                              : '站内编辑攻略'}
                           </small>
                         </span>
                         <ArrowUpRight size={16} />
@@ -1640,10 +1999,10 @@ export default function TravelApp() {
                   text="在探索页点击书签，即可收进这里。"
                 />
               )}
-              <div className="section-heading profile-section-heading">
+              <div className="section-heading">
                 <h2>收藏的路线</h2>
               </div>
-              <div className="my-trips saved-routes">
+              <div className="my-trips">
                 {data.feed
                   .filter((f) => f.saved)
                   .map((f) => (
@@ -1662,17 +2021,17 @@ export default function TravelApp() {
                   还没有收藏路线，去发现页遇见下一段旅行。
                 </p>
               )}
-              {/* <div className="about-demo">
-                <h3>关于这个 Demo</h3>
+              <div className="about-demo">
+                <h3>关于规划数据</h3>
                 <p>
-                  Vite + TypeScript · 本地 Mock 服务 ·
+                  Vite + TypeScript · 本地规划服务 ·
                   无真实交易与社交发送。所有天气、交通、评分和价格仅用于交互演示。地图为近似地理示意，不提供导航。
                 </p>
                 <details>
                   <summary>图片来源与演示说明</summary>
                   <p>
-                    贵州风景摄影来自公开攻略页面，仅作为本次 Demo
-                    视觉示例。正式公开发布前需替换为团队授权素材。
+                    贵州风景摄影来自公开攻略页面，仅用于界面中的规划参考。
+                    正式对外使用前需替换为团队授权素材。
                   </p>
                   <a
                     href="https://you.ctrip.com/sight/libo659/107386.html"
@@ -1762,40 +2121,7 @@ export default function TravelApp() {
                     丹寨蜡染（乐玩日志）
                   </a>
                 </details>
-              </div> */}
-              <section className="panel offline-panel">
-                <h3>山里没信号，也不慌</h3>
-                <p className="panel-sub">
-                  本机保存行程与修改。缓存页面后，生产版本可离线读取；云端同步尚未接入。
-                </p>
-                <div className="offline-state">
-                  <WifiOff size={28} />
-                  <span>
-                    {data.offlineReady
-                      ? '已完成页面资源缓存'
-                      : '离线资源尚未准备'}
-                    <small>不会请求位置、相册或通讯录权限</small>
-                  </span>
-                </div>
-                <Button
-                  className="outline-btn"
-                  disabled={busy}
-                  onClick={() => void enableOffline()}
-                >
-                  {busy ? (
-                    <LoaderCircle className="spin" size={16} />
-                  ) : (
-                    <Download size={16} />
-                  )}
-                  准备离线访问
-                </Button>
-                <button className="text-btn" onClick={exportTrip}>
-                  导出行程备份 <ArrowRight size={14} />
-                </button>
-                <div className="notice">
-                  开发服务器依赖开发模块，完整离线体验请使用生产构建。清除浏览器数据会移除本机内容。
-                </div>
-              </section>
+              </div>
             </main>
           )}
         </div>
@@ -1831,7 +2157,11 @@ export default function TravelApp() {
         >
           <DialogContent
             className={
-              'travel-dialog ' + (modal === 'create' ? 'wizard-dialog' : '')
+              'travel-dialog ' +
+              (modal === 'create' ? 'wizard-dialog' : '') +
+              (modal === 'transport' || modal === 'presets'
+                ? ' route-dialog'
+                : '')
             }
           >
             <DialogTitle className="sr-only">
@@ -1841,18 +2171,48 @@ export default function TravelApp() {
                   import: '从链接生成攻略',
                   detail: '地点详情',
                   add: '添加地点',
+                  replace: '替换行程地点',
                   optimize: '优化路线',
                   weather: '应对旅途变化',
                   expense: '记录费用',
                   publish: '发布行程约伴',
                   assistant: '黔驴旅行助手',
                   export: '导出旅行',
+                  presets: '选择详细三日行程',
+                  transport: '交通方案与线路查询',
                 } as Record<string, string>
               )[modal || ''] || '旅行工具'}
             </DialogTitle>
             <DialogDescription className="sr-only">
-              AI 黔驴旅行助手，数据保存在当前浏览器。
+              AI 黔驴交互演示，数据保存在当前浏览器。
             </DialogDescription>
+            {modal === 'presets' && (
+              <ItineraryLibrary
+                trip={trip}
+                onCreate={createTrip}
+                onFill={(next) => {
+                  updateTrip(next);
+                  setDayIndex(0);
+                  setSelected(null);
+                  setModal(null);
+                  setTripTab('行程');
+                  go('trip');
+                  notify('已填入详细三日样例，原日期与笔记保留，可撤销。');
+                }}
+              />
+            )}
+            {modal === 'transport' && (
+              <TransportPlanner
+                key={day.id + (transportTo ?? '')}
+                plan={dayPlan}
+                initialTo={transportTo}
+                onChoose={(key, mode) => {
+                  const segment = dayPlan.segments.find((s) => s.key === key);
+                  if (segment)
+                    updateDay(chooseDayTransport(day, segment, mode));
+                }}
+              />
+            )}
             {modal === 'create' && (
               <TripWizard
                 key={creationTheme ?? 'custom'}
@@ -1872,6 +2232,9 @@ export default function TravelApp() {
                 onSave={toggleSave}
                 saved={data.savedPlaces.includes(detailId)}
                 preferences={trip.preferences}
+                journeyScore={
+                  scheduled.find((v) => v.place.id === detailId)?.goScore
+                }
               />
             )}
             {modal === 'import' && (
@@ -1897,7 +2260,7 @@ export default function TravelApp() {
                     />
                   </label>
                   <div className="row-between">
-                    {/* <button
+                    <button
                       type="button"
                       className="text-btn"
                       onClick={() =>
@@ -1907,7 +2270,7 @@ export default function TravelApp() {
                       }
                     >
                       填入演示链接
-                    </button> */}
+                    </button>
                     <Button
                       type="submit"
                       className="primary-btn"
@@ -1919,7 +2282,8 @@ export default function TravelApp() {
                   </div>
                 </form>
                 <p className="notice">
-                  不会抓取平台内容。支持域名的链接统一返回贵阳样例；直接输入地点名称可匹配本地数据。
+                  规划参考
+                  模式不会抓取平台内容。支持域名的链接统一返回贵阳样例；直接输入地点名称可匹配本地数据。
                 </p>
                 {error && (
                   <div role="alert" className="error-message">
@@ -1995,12 +2359,18 @@ export default function TravelApp() {
                 )}
               </div>
             )}
-            {modal === 'add' && (
+            {(modal === 'add' || modal === 'replace') && (
               <div className="modal-body">
                 <span className="eyebrow">A PLACE TO REMEMBER</span>
-                <h2>给旅行，加一点喜欢。</h2>
+                <h2>
+                  {modal === 'replace'
+                    ? '换一站，遇见新的风景。'
+                    : '给旅行，加一点喜欢。'}
+                </h2>
                 <p>
-                  添加到「{trip.title}」第 {dayIndex + 1} 天。
+                  {modal === 'replace'
+                    ? `替换「${placeById(day.items.find((i) => i.id === replaceTarget)?.placeId ?? '').name}」。默认显示同主题，切换分类可选择其他玩法。保留此站的位置与最早开始时间。`
+                    : `添加到「${trip.title}」第 ${dayIndex + 1} 天。`}
                 </p>
                 <ExploreHeader
                   query={query}
@@ -2014,21 +2384,33 @@ export default function TravelApp() {
                       <span className="feature-icon">
                         <MapPin size={20} />
                       </span>
-                      <button
-                        className="result-name"
-                        onClick={() => showPlace(p.id)}
-                      >
+                      <div className="result-name">
                         <b>{p.name}</b>
                         <small>
                           {p.region} · {p.category} · 推荐指数{' '}
-                          {score(p, 'normal', trip.preferences).total}
+                          {score(p, 'normal', trip.preferences).total} ·
+                          规划参考
                         </small>
-                      </button>
+                        <small>{p.description}</small>
+                      </div>
                       <button
                         className="icon-btn"
-                        aria-label={'添加' + p.name}
+                        aria-label={
+                          (modal === 'replace' ? '替换为' : '添加') + p.name
+                        }
                         disabled={day.items.some((i) => i.placeId === p.id)}
-                        onClick={() => addPlace(p.id)}
+                        onClick={() => {
+                          if (modal === 'replace' && replaceTarget) {
+                            updateDay(
+                              replaceDayPlace(day, replaceTarget, p.id),
+                            );
+                            setSelected(replaceTarget);
+                            setModal(null);
+                            notify(
+                              `已替换为「${p.name}」，时间、交通和 GoScore 已重新计算。`,
+                            );
+                          } else addPlace(p.id);
+                        }}
                       >
                         {day.items.some((i) => i.placeId === p.id) ? (
                           <Check size={19} />
@@ -2067,19 +2449,19 @@ export default function TravelApp() {
                   <div>
                     <small>优化后</small>
                     <b>
-                      {metrics(optimize(day.items)).minutes}
+                      {optimizedMetrics.minutes}
                       <em>分钟</em>
                     </b>
-                    <span>{metrics(optimize(day.items)).km.toFixed(1)} km</span>
+                    <span>{optimizedMetrics.km.toFixed(1)} km</span>
                   </div>
                 </div>
                 <div className="notice">
-                  {dayMetrics.minutes === metrics(optimize(day.items)).minutes
-                    ? '当前顺序已是较优路线，无需调整。'
-                    : `预计减少 ${dayMetrics.minutes - metrics(optimize(day.items)).minutes} 分钟交通。`}
+                  {dayMetrics.minutes === optimizedMetrics.minutes
+                    ? '当前顺序已是此模拟模型下的较优路线，无需调整。'
+                    : `预计减少 ${dayMetrics.minutes - optimizedMetrics.minutes} 分钟交通。`}
                 </div>
                 <div className="route-preview">
-                  {optimize(day.items).map((i, n) => (
+                  {optimizedItems.map((i, n) => (
                     <span key={i.id}>
                       <b>{n + 1}</b>
                       {placeById(i.placeId).name}
@@ -2089,9 +2471,9 @@ export default function TravelApp() {
                 <Button
                   className="primary-btn full-width"
                   onClick={() => {
-                    updateItems(optimize(day.items));
+                    updateItems(optimizedItems);
                     setModal(null);
-                    notify('已应用优化路线，地图与时间轴同步更新。');
+                    notify('已应用模拟优化路线，地图与时间轴同步更新。');
                   }}
                 >
                   应用这个顺序 <Check />
@@ -2107,7 +2489,7 @@ export default function TravelApp() {
                   <CloudRain />
                 </span>
                 <h2>计划有变，故事继续。</h2>
-                <p>选择一个事件，先看调整，再由你决定。</p>
+                <p>选择一个模拟事件，先看调整，再由你决定。</p>
                 <div className="pill-group">
                   {[
                     ['rain', '突然下雨'],
@@ -2248,7 +2630,7 @@ export default function TravelApp() {
                   <Users />
                 </span>
                 <h2>好风景，想和你一起看。</h2>
-                <p>把这份行程发布到本机的发现页，寻找同路人。</p>
+                <p>把这份行程发布到本机的发现页，演示寻找同路人的过程。</p>
                 <div className="publish-preview">
                   <h3>{trip.title}</h3>
                   <p>
@@ -2298,7 +2680,7 @@ export default function TravelApp() {
                     notify('已发布到本机发现页，未向真实社区发送。');
                   }}
                 >
-                  发布行程 <Share2 />
+                  发布演示行程 <Share2 />
                 </Button>
               </div>
             )}
@@ -2323,10 +2705,10 @@ export default function TravelApp() {
                           setAssistantInput(q);
                           setAnswer(
                             q.includes('下雨')
-                              ? '可以将户外地点替换为同区域室内体验。点击下方“旅途变化”查看具体调整，确认后才会修改。'
+                              ? '可以将户外地点替换为同区域室内体验。点击下方“模拟旅途变化”查看具体调整，确认后才会修改。'
                               : q.includes('预算')
                                 ? `当前记录花费 ¥${money(settlement.total)}，总预算 ¥${money(trip.budget)}，${settlement.total > trip.budget ? '已超出' : '还剩'} ¥${money(Math.abs(trip.budget - settlement.total))}。费用页可以查看每人应付与补款。`
-                                : '建议从贵州省博物馆理解文化背景，再选择蜡染或银饰体验。工坊未经过真实核验，正式出行需先确认主理人、场次与授权。',
+                                : '建议从贵州省博物馆理解文化背景，再选择蜡染或银饰体验。演示工坊未经过真实核验，正式出行需先确认主理人、场次与授权。',
                           );
                         }}
                       >
@@ -2349,7 +2731,7 @@ export default function TravelApp() {
                     setAnswer(
                       assistantInput.includes('雨') ||
                         assistantInput.includes('闭')
-                        ? '天气与开放可能变化，可以使用“旅途变化”查看替代路线。'
+                        ? '天气与开放可能变化，可以使用“模拟旅途变化”查看替代路线。此 Demo 没有真实天气与闭园通知。'
                         : assistantInput.includes('钱') ||
                             assistantInput.includes('预算')
                           ? `当前花费 ¥${money(settlement.total)}，预算 ¥${money(trip.budget)}，请在费用页查看完整分摊。`
@@ -2374,7 +2756,7 @@ export default function TravelApp() {
                 <div className="row-between">
                   <button className="text-btn" onClick={() => open('weather')}>
                     <CloudRain size={16} />
-                    旅途变化
+                    模拟旅途变化
                   </button>
                   <button
                     className="text-btn"
@@ -2400,7 +2782,7 @@ export default function TravelApp() {
                   <NotebookPen />
                   <span>
                     <b>导出旅行攻略</b>
-                    <small>Markdown · 每日路线、交通、地点建议与游记</small>
+                    <small>Markdown · 每日路线、模拟交通、地点建议与游记</small>
                   </span>
                   <Download size={18} />
                 </button>
@@ -2440,7 +2822,7 @@ export default function TravelApp() {
 function DataFootnote() {
   return (
     <p className="data-footnote">
-      评分、天气、路线与价格仅供参考，不作为真实出行依据。
+      评分、天气、路线与价格为规划参考，未接入实时运营数据；出发前请核验。
     </p>
   );
 }

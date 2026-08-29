@@ -27,6 +27,7 @@ import {
   organizePlanningMaterial,
   planningContext,
   planningThemes,
+  resolvePlanningChoice,
   validatePlanningImage,
   type ImageText,
   type PlanningContext,
@@ -190,7 +191,9 @@ export function InspirationPlanner({
       const ids = next.stops.map((stop) => stop.placeId);
       const count = next.constraints.dayCount ?? suggestedTripDays(ids);
       const summary = ids.length
-        ? `已整理好 ${ids.length} 个候选地点，${next.constraints.dayCount ? '按你的要求' : '建议'}安排 ${count} 天。先确认下方清单，再补充日期、人数与预算，生成每日行程。`
+        ? next.choices.length
+          ? `已整理好 ${ids.length} 个候选地点，${next.constraints.dayCount ? '按你的要求' : '建议'}安排 ${count} 天。请先确认具体玩法。`
+          : `已整理好 ${ids.length} 个地点，正在生成 ${count} 天行程并打开路线。`
         : '我先帮你提取地点，确认后再排成每日路线。';
       setDraft(next);
       setMessages(
@@ -215,6 +218,8 @@ export function InspirationPlanner({
       );
       setText('');
       if (!imageText.some((image) => image.error)) clearAttachments();
+      if (ids.length && !next.choices.length)
+        onCustomize(ids, next.postIds, planningContext(next));
     } catch (cause) {
       if (token === generation.current)
         setError(cause instanceof Error ? cause.message : '整理失败，请重试。');
@@ -247,6 +252,16 @@ export function InspirationPlanner({
     } catch {
       setError('请添加完整的 http:// 或 https:// 链接。');
     }
+  }
+  function confirmChoice(choiceName: string, placeId?: string) {
+    const next = resolvePlanningChoice(draft, choiceName, placeId);
+    setDraft(next);
+    if (!next.choices.length && next.stops.length)
+      onCustomize(
+        next.stops.map((stop) => stop.placeId),
+        next.postIds,
+        planningContext(next),
+      );
   }
   return (
     <section
@@ -322,22 +337,7 @@ export function InspirationPlanner({
                       key={id}
                       variant="outline"
                       disabled={busy}
-                      onClick={() =>
-                        setDraft((current) => ({
-                          ...current,
-                          choices: current.choices.filter(
-                            (item) => item.name !== choice.name,
-                          ),
-                          stops: current.stops.some(
-                            (stop) => stop.placeId === id,
-                          )
-                            ? current.stops
-                            : [
-                                ...current.stops,
-                                { placeId: id, sources: ['你确认的具体玩法'] },
-                              ],
-                        }))
-                      }
+                      onClick={() => confirmChoice(choice.name, id)}
                     >
                       {placeById(id).name}
                     </Button>
@@ -345,14 +345,7 @@ export function InspirationPlanner({
                   <Button
                     variant="ghost"
                     disabled={busy}
-                    onClick={() =>
-                      setDraft((current) => ({
-                        ...current,
-                        choices: current.choices.filter(
-                          (item) => item.name !== choice.name,
-                        ),
-                      }))
-                    }
+                    onClick={() => confirmChoice(choice.name)}
                   >
                     暂不加入
                   </Button>
@@ -632,10 +625,10 @@ export function InspirationPlanner({
         <details className="planner-capabilities">
           <summary>支持范围与隐私</summary>
           <p>
-            文字按已收录的贵州地点名称整理；本站攻略及内置链接可提取地点，其他平台链接暂不联网抓取。图片在本机识别中英文文字，不上传、不识别无文字的风景照片。每次最多
+            文字按已收录的贵州地点名称整理；本站攻略及内置演示链接可提取地点，其他平台链接暂不联网抓取。图片在本机识别中英文文字，不上传、不识别无文字的风景照片。每次最多
             3 张 JPG / PNG / WebP、单张 8
             MB；识别文字请先核对。对话和原图仅本次页面保留，生成后保存地点和来源摘要。AI
-            规划为本地规则，出行前仍需核实。
+            规划为本地规则演示，出行前仍需核实。
           </p>
         </details>
       </div>

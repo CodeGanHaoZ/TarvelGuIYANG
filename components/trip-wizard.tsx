@@ -146,7 +146,7 @@ export function TripWizard({
     return (
       <div className="wizard building">
         <span className="hero-kicker">
-          <Sparkles size={18} /> 黔驴正在规划
+          <Sparkles size={18} /> 黔驴正在规划 · 规划参考
         </span>
         <h2>把心动，排进每一天。</h2>
         <p>正在使用本地规则匹配地点和节奏，无真实 AI 请求。</p>
@@ -154,8 +154,8 @@ export function TripWizard({
           {[
             '创建你的旅行',
             '匹配旅行偏好',
-            '把地点放进地图',
-            '连接每天的故事',
+            '生成每日概览',
+            '计算时间轴与 GoScore',
           ].map((s, i) => (
             <div className={i > building ? 'pending' : ''} key={s}>
               <span className="feature-icon">
@@ -168,8 +168,8 @@ export function TripWizard({
                     [
                       '设置日期与同行人',
                       '保留你偏爱的体验',
-                      '按区域分组，减少跨城奔波',
-                      '计算交通与停留时间',
+                      '补齐天气、人流、步行、消费与强度',
+                      '连接酒店、三餐、交通与逐站活动',
                     ][i]
                   }
                 </small>
@@ -243,8 +243,12 @@ export function TripWizard({
       )}
       {imported.length > 0 && (
         <div className="notice">
-          已带入 {imported.length} 个地点：
-          {imported.map((id) => placeById(id).name).join('、')}
+          <b>已带入 {imported.length} 个地点</b>
+          <div>{imported.map((id) => placeById(id).name).join('、')}</div>
+          <div>
+            将统一生成每日概览、完整时间轴和五项
+            GoScore；原视频或贴文只作为规划素材，不改变统一输出标准。
+          </div>
         </div>
       )}
       {initialPlan && (
@@ -381,7 +385,7 @@ export function TripWizard({
             />
           </label>
           <p className="notice">
-            预算为全体同行人合计。价格不含真实订单，后续可在费用页记录实际开销。
+            预算为全体同行人合计。演示价格不含真实订单，后续可在费用页记录实际开销。
           </p>
         </>
       )}

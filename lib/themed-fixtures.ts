@@ -1,6 +1,6 @@
 import type { Place, SocialPost, SocialStory, Theme } from './travel';
 
-// User-provided taxonomy; all coordinates, prices, schedules and scores below are fixtures.
+// User-provided taxonomy; all coordinates, prices, schedules and scores below are 规划参考.
 // Activities, not geographic names, are the unit of classification and route extraction.
 export const additionalPlaces: Place[] = [
   {
@@ -37,7 +37,7 @@ export const additionalPlaces: Place[] = [
     image: '/images/theme-hiking.jpg',
     hours: [7, 17],
     factors: [75, 85, 100, 75, 94, 85, 80, 90],
-    tip: '不是低强度观光。需提前核实路线开放、天气和个人能力，安排合适装备与休息；不凭此评分开展登山。',
+    tip: '不是低强度观光。需提前核实路线开放、天气和个人能力，安排合适装备与休息；不依据本页估算开展登山。',
   },
   {
     id: 'maling-view',
@@ -88,7 +88,7 @@ export const additionalPlaces: Place[] = [
     image: '/images/theme-food.jpg',
     hours: [11, 21],
     factors: [100, 87, 100, 92, 91, 95, 85, 98],
-    tip: '虚构餐饮供给，照片为丝娃娃菜品参考，不代表此处真实门店。询问辣度、折耳根与过敏原。',
+    tip: '未核验餐饮供给，照片为丝娃娃菜品参考，不代表此处真实门店。询问辣度、折耳根与过敏原。',
   },
   {
     id: 'changwang',
@@ -118,14 +118,14 @@ export const additionalPlaces: Place[] = [
     indoor: true,
     hours: [8, 20],
     factors: [100, 85, 100, 82, 92, 94, 80, 95],
-    tip: '餐饮场景为样例，不指定或背书真实商家；贵阳市区到花溪需要另留交通时间。',
+    tip: '餐饮场景为规划参考，不指定或背书真实商家；贵阳市区到花溪需要另留交通时间。',
   },
   {
     id: 'danzhai-batik',
     name: '丹寨 · 苗族蜡染交流体验',
     region: '黔东南',
     category: '多彩民族',
-    description: '与苗族手艺人交流蜡染纹样，并在指导下体验手作的虚构场景。',
+    description: '与苗族手艺人交流蜡染纹样，并在指导下体验手作的未核验场景。',
     lat: 26.199,
     lng: 107.801,
     duration: 120,
@@ -150,7 +150,7 @@ export const additionalPlaces: Place[] = [
     indoor: true,
     hours: [9, 17],
     factors: [100, 94, 100, 78, 90, 92, 90, 98],
-    tip: '体验供给为样例；请以居民意愿和实际接待安排为准。',
+    tip: '体验供给为规划参考；请以居民意愿和实际接待安排为准。',
     culture: '村寨是居民的日常生活空间，不擅自进入住家或使用工具。',
   },
   {
@@ -212,27 +212,27 @@ export const additionalAttributes = {
     weatherSensitive: true,
   },
   siwawa: {
-    nature: '地方小吃 · 虚构餐饮场景',
+    nature: '地方小吃 · 未核验餐饮场景',
     values: [96, 92, 72],
     effort: '坐姿用餐',
   },
   changwang: {
-    nature: '地方早餐 · 虚构餐饮场景',
+    nature: '地方早餐 · 未核验餐饮场景',
     values: [95, 96, 65],
     effort: '坐姿用餐',
   },
   'huaxi-noodles': {
-    nature: '地方米粉 · 虚构餐饮场景',
+    nature: '地方米粉 · 未核验餐饮场景',
     values: [96, 94, 72],
     effort: '坐姿用餐',
   },
   'danzhai-batik': {
-    nature: '苗族手艺人交流',
+    nature: '苗族手艺人交流 · 规划参考',
     values: [96, 98, 88],
     effort: '坐姿手作与交流',
   },
   kala: {
-    nature: '苗族村寨手艺交流',
+    nature: '苗族村寨手艺交流 · 规划参考',
     values: [95, 95, 86],
     effort: '村落慢行与手作',
   },
@@ -261,232 +261,13 @@ type ContentFixture = {
   mentions: SocialPost['mentions'];
   sections: SocialStory['sections'];
   tips: string[];
-  clip?: string;
+  sourceUrl?: string;
+  embedUrl?: string;
+  publishedAt?: string;
+  duration?: string;
 };
 
 const content: ContentFixture[] = [
-  {
-    id: 'hot-nature-video',
-    theme: '山水奇观',
-    kind: 'video',
-    title: '不赶路，只看风景｜黄果树与小七孔',
-    author: '山间放映室',
-    cover: '/images/huangguoshu.jpg',
-    likes: '2.6万',
-    clip: 'nature-hot',
-    intro:
-      '把瀑布与碧水装进两个观光日。只安排成熟观景线，不夹带漂流、探洞或登山挑战。',
-    recommendation: '适合以观景和拍照为主的旅行，安顺与荔波分天安排。',
-    mentions: [
-      {
-        placeId: 'huangguoshu',
-        at: '00:00',
-        quote: '第一段是黄果树瀑布的观光游览，水帘洞仅在实际开放时考虑。',
-      },
-      {
-        placeId: 'xiaoqikong',
-        at: '00:03',
-        quote: '另一日去荔波小七孔，沿开放栈道欣赏碧水、古桥与水上森林。',
-      },
-    ],
-    sections: [
-      {
-        title: '把“看”作为主角',
-        text: '这段照片合成短片记录两种水色：瀑布的力量与小七孔的清绿。规划时选择景区成熟观光段，用接驳和停留减轻体力负担，不把漂流、探洞等体验自动加进来。',
-      },
-      {
-        title: '两地不放在同一天赶',
-        text: '安顺和荔波是两个区域，内容提取后会保留两个地点。你可以只选最喜欢的一处，也可以延长天数并留出跨城交通。开放情况、通行条件与门票均需出发前核验。',
-      },
-    ],
-    tips: [
-      '观光不等于没有台阶，按体力选择步道长度。',
-      '视频、互动数和推荐均为样例，不代表实时热门榜。',
-    ],
-  },
-  {
-    id: 'hot-food-video',
-    theme: '舌尖黔味',
-    kind: 'video',
-    title: '这一口贵州，从自己包的丝娃娃开始',
-    author: '小满的贵州餐桌',
-    cover: '/images/theme-food.jpg',
-    likes: '1.9万',
-    clip: 'food-hot',
-    intro:
-      '蔬菜丝、薄饼和一碗蘸水，把口味选择留给你。这里整理的是用餐体验，不是文化村寨游。',
-    recommendation: '适合安排成贵阳市区的一餐，可在草稿中按口味补充其他小吃。',
-    mentions: [
-      {
-        placeId: 'siwawa',
-        at: '00:00',
-        quote: '把贵阳丝娃娃小吃体验放进一餐，辣度和折耳根都可以先问清。',
-      },
-    ],
-    sections: [
-      {
-        title: '先选口味，再选这一餐',
-        text: '把喜欢的蔬菜包进薄饼，蘸水、辣度与折耳根由你决定。图中为丝娃娃菜品参考，地点不是已核验的真实门店，也不代表该店在贵阳的地址。',
-      },
-      {
-        title: '一条视频，也能从一个地点开始',
-        text: '生成规划会提取这一个用餐场景。你可以在推荐区补充肠旺面、牛肉粉或青云路小吃，也可以只把它作为现有旅行中的午饭。餐饮费用、营业和过敏原须另行确认。',
-      },
-    ],
-    tips: [
-      '不根据推荐分数判断食物过敏或卫生状况。',
-      '片中为菜品照片合成的无声短片，不是真实探店视频。',
-    ],
-  },
-  {
-    id: 'hot-culture-video',
-    theme: '多彩民族',
-    kind: 'video',
-    title: '苗寨不只拍夜景，听一听手艺人的故事',
-    author: '阿禾在苗乡',
-    cover: '/images/xijiang.jpg',
-    likes: '3.1万',
-    clip: 'culture-hot',
-    intro:
-      '从居民讲解到银饰手作，把“与人交流”放在这段苗乡体验的中心。餐饮会另行归类。',
-    recommendation: '同在黔东南，可围绕苗族生活与手艺互动安排慢游。',
-    mentions: [
-      {
-        placeId: 'xijiang',
-        at: '00:00',
-        quote: '在西江千户苗寨，先听居民讲吊脚楼与苗乡生活，拍摄前征得同意。',
-      },
-      {
-        placeId: 'silver',
-        at: '00:03',
-        quote: '再和银饰手艺人交流纹样、体验手作；此工坊为虚构供给。',
-      },
-    ],
-    sections: [
-      {
-        title: '活态文化，是有人的日常',
-        text: '看建筑只是起点。这个样例把居民讲解和手艺交流作为具体玩法，所以归入多彩民族，不把单纯路过一座村寨当成已经完成文化互动。',
-      },
-      {
-        title: '把吃饭与文化分开记录',
-        text: '西江的村寨交流和银饰手作属于文化体验。若想吃酸汤鱼或长桌宴，请另加餐饮地点，系统会归入舌尖黔味。照片仅展示苗寨，工坊、主理人与场次均为样例。',
-      },
-    ],
-    tips: [
-      '先征得居民、手艺人的拍摄与传播同意。',
-      '不擅入住家，不把样例供给视作已预约项目。',
-    ],
-  },
-  {
-    id: 'hot-heritage-video',
-    theme: '古镇遗韵',
-    kind: 'video',
-    title: '从青岩石墙到甲秀楼，读一段贵阳旧时光',
-    author: '石巷慢行者',
-    cover: '/images/qingyan.jpg',
-    likes: '1.4万',
-    clip: 'heritage-hot',
-    intro:
-      '把明清古镇与历史建筑放进同一个人文主题。这里的重点是古代历史，不是民族村寨互动。',
-    recommendation: '适合喜欢古建筑与历史解读的人，古镇和市区之间留出交通。',
-    mentions: [
-      {
-        placeId: 'qingyan',
-        at: '00:00',
-        quote: '青岩古镇看军事要塞的石墙与老街，属于古镇遗韵。',
-      },
-      {
-        placeId: 'jiaxiu',
-        at: '00:03',
-        quote: '回到贵阳市区，沿南明河看甲秀楼的历史建筑。',
-      },
-    ],
-    sections: [
-      {
-        title: '沿着建筑读历史',
-        text: '青岩以古代军事与城镇历史为主题，甲秀楼则是城市历史建筑的一站。这份样例按“访”的目的整理，不将它们混入少数民族活态文化。',
-      },
-      {
-        title: '给古镇留出慢行时间',
-        text: '石板路、老街与河边建筑都值得停下来读一读。两处之间需要城市交通，别把短视频的转场当成实际距离。若吃状元蹄等小吃，可另加美食点，不重复归类。',
-      },
-    ],
-    tips: [
-      '古建开放与讲解安排以实际核验为准。',
-      '不擅自进入未开放建筑或居民院落。',
-    ],
-  },
-  {
-    id: 'hot-outdoor-video',
-    theme: '野趣户外',
-    kind: 'video',
-    title: '梵净山徒步版：给台阶、体力和休息留一天',
-    author: '山野慢慢走',
-    cover: '/images/theme-hiking.jpg',
-    likes: '8,632',
-    clip: 'outdoor-hot',
-    intro:
-      '这是一份高体力投入的登山方向样例，不是索道上山看景。先确认能力与条件，再决定是否保留。',
-    recommendation:
-      '面向有准备的户外爱好者，按全天候选安排，不与索道观光混为同一玩法。',
-    mentions: [
-      {
-        placeId: 'fanjing-hike',
-        at: '00:00',
-        quote:
-          '选择梵净山徒步登山，预留完整一天并事先核实体力、装备与开放条件。',
-      },
-    ],
-    sections: [
-      {
-        title: '同一座山，两种旅行',
-        text: '索道观景与长距离徒步不是同一个项目。此内容只提取“梵净山 · 徒步登山”，不生成索道观光线，也不承诺任何人都能完成台阶路线。',
-      },
-      {
-        title: '让挑战有准备，也能取消',
-        text: '出行前核实路线开放、天气和个人能力，安排装备、休息和退出方案。规则会在降雨场景下压低户外推荐分；它不替代官方公告、运营指导或专业安全判断。你可以在草稿删去这项。',
-      },
-    ],
-    tips: [
-      '此视频为步道照片合成，无实时路线记录。',
-      '恶劣天气或体力不适时不开展，不进入未开放路段。',
-    ],
-  },
-  {
-    id: 'hot-red-video',
-    theme: '红色征程',
-    kind: 'video',
-    title: '走进遵义会议会址，让历史停留得久一点',
-    author: '行走的历史笔记',
-    cover: '/images/theme-history.jpg',
-    likes: '1.2万',
-    clip: 'red-hot',
-    intro:
-      '以革命历史的阅读与缅怀为核心，给展陈与讲解留出时间。图文与排期为样例。',
-    recommendation: '适合以历史学习为目的的遵义行程，可补充附近红色纪念地点。',
-    mentions: [
-      {
-        placeId: 'zunyi',
-        at: '00:00',
-        quote:
-          '在遵义会议会址了解长征中的重要转折，把展陈与讲解作为主要停留内容。',
-      },
-    ],
-    sections: [
-      {
-        title: '按革命历史主题整理',
-        text: '这条内容以遵义会议旧址与相关历史解读为核心，归入红色征程。它不与古镇的明清历史或少数民族生活体验合并分类。照片为旧址相关场馆参考。',
-      },
-      {
-        title: '留时间阅读，不只匆匆打卡',
-        text: '生成后可把会址作为当天的主要停留点，再按自己的时间补充红军山或红军街。预约、闭馆日、讲解与展陈安排未接入真实服务，请出发前核验。',
-      },
-    ],
-    tips: [
-      '遵守纪念场所礼仪及现场拍摄要求。',
-      '这不是官方讲解视频，也不是实时开放公告。',
-    ],
-  },
   {
     id: 'hot-nature-note',
     theme: '山水奇观',
@@ -516,7 +297,7 @@ const content: ContentFixture[] = [
       },
       {
         title: '马岭河：观景步道不是漂流票',
-        text: '本条目只记录成熟游览步道，不包含水上体验。铜仁与黔西南应分天并预留长途交通，也可以只保留一处。季节、水位与开放均会影响体验，不以这份样例作通行判断。',
+        text: '本条目只记录成熟游览步道，不包含水上体验。铜仁与黔西南应分天并预留长途交通，也可以只保留一处。季节、水位与开放均会影响体验，不把本页估算作为通行判断。',
       },
     ],
     tips: [
@@ -552,11 +333,11 @@ const content: ContentFixture[] = [
     sections: [
       {
         title: '先写下忌口，再做选择',
-        text: '辣度、折耳根、动物内脏和过敏原，都是路线里的真实约束。这份虚构笔记不指定商家，不提供卫生或过敏安全认证；不合适的一餐可以直接删除。',
+        text: '辣度、折耳根、动物内脏和过敏原，都是路线里的真实约束。这份站内编辑笔记不指定商家，不提供卫生或过敏安全认证；不合适的一餐可以直接删除。',
       },
       {
         title: '吃饭是地点，也是时间',
-        text: '早餐、午餐和夜间小吃不必每站都吃满。地图中的坐标、营业和价格用于参考，真实门店与交通须核实。生成草稿后可以调整停留，或将花溪留到另一日。',
+        text: '早餐、午餐和夜间小吃不必每站都吃满。地图中的坐标、营业和价格仅作规划参考，真实门店与交通须核实。生成草稿后可以调整停留，或将花溪留到另一日。',
       },
     ],
     tips: [
@@ -573,13 +354,13 @@ const content: ContentFixture[] = [
     cover: '/images/danzhai-batik.jpg',
     likes: '4,892',
     intro:
-      '把与苗族手艺人的交流放在前面。蜡染与鸟笼编制是两个独立文化体验；封面为丹寨蜡染场景参考，具体体验供给为样例。',
+      '把与苗族手艺人的交流放在前面。蜡染与鸟笼编制是两个独立文化体验；封面为丹寨蜡染场景参考，具体体验供给为规划参考。',
     recommendation: '同在丹寨周边，适合喜欢手艺、交流与慢节奏的人。',
     mentions: [
       {
         placeId: 'danzhai-batik',
         quote:
-          '先在丹寨与苗族手艺人交流纹样，再在指导下体验蜡染；场次为虚构样例。',
+          '先在丹寨与苗族手艺人交流纹样，再在指导下体验蜡染；场次为未核验样例。',
       },
       {
         placeId: 'kala',
@@ -598,7 +379,7 @@ const content: ContentFixture[] = [
     ],
     tips: [
       '拍摄人物和传播纹样、作品前先取得同意。',
-      '虚构场次不能作为真实预约凭证。',
+      '未核验场次不能作为真实预约凭证。',
     ],
   },
   {
@@ -630,7 +411,7 @@ const content: ContentFixture[] = [
       },
       {
         title: '两地分开留白',
-        text: '贵阳与安顺之间需要交通，建议分日停留。地戏演出是待核验的场次信息，不能保证抵达即有演出；没有合适场次时仍可按开放范围参观历史建筑。',
+        text: '贵阳与安顺之间需要交通，规划建议分日停留。地戏演出是待核验的场次信息，不能保证抵达即有演出；没有合适场次时仍可按开放范围参观历史建筑。',
       },
     ],
     tips: [
@@ -664,7 +445,7 @@ const content: ContentFixture[] = [
       {
         placeId: 'shuichun',
         quote:
-          '水春河漂流是另一个区域的户外候选，可与前两项择一，不依据样例承诺开漂。',
+          '水春河漂流是另一个区域的户外候选，可与前两项择一，不依据本页估算承诺开漂。',
       },
     ],
     sections: [
@@ -674,7 +455,7 @@ const content: ContentFixture[] = [
       },
       {
         title: '高分不能代替安全核验',
-        text: '漂流需合格运营方提供装备与指导，登山需核实路线、天气和个人能力。闭园会使指数归零，降雨会压低户外建议；这些规则仍不构成真实安全许可，也不指导进入未开发路线。',
+        text: '漂流需合格运营方提供装备与指导，登山需核实路线、天气和个人能力。闭园会使模拟指数归零，降雨会压低户外建议；这些规则仍不构成真实安全许可，也不指导进入未开发路线。',
       },
     ],
     tips: [
@@ -714,45 +495,250 @@ const content: ContentFixture[] = [
       },
       {
         title: '给纪念地一段安静时间',
-        text: '在展陈前停留、阅读，在纪念地遵守礼仪。按同城点位生成路线，真实预约、闭馆日、交通和开放规则仍需核验。可以删去一站，把时间留给讲解。',
+        text: '在展陈前停留、阅读，在纪念地遵守礼仪。本页按同城点位生成路线，真实预约、闭馆日、交通和开放规则仍需核验。可以删去一站，把时间留给讲解。',
       },
     ],
     tips: [
       '保持纪念场所秩序，按现场要求拍摄。',
-      '不将虚构笔记当作官方史料或讲解。',
+      '不将站内编辑笔记当作官方史料或讲解。',
     ],
   },
 ];
 
-export const featuredPosts: SocialPost[] = content.map((entry) => ({
+const publicVideoContent = [
+  {
+    id: 'hot-nature-video',
+    theme: '山水奇观' as Theme,
+    bvid: 'BV1n6421f7ei',
+    title:
+      '贵州VLOG｜6天5夜，美食景点两不误：小七孔、黄果树、千户苗寨与贵阳味道',
+    author: '逢坂鱼鱼',
+    cover:
+      'https://i1.hdslb.com/bfs/archive/8faae609bf0c84abf8de0b92b2db3f5ec311870d.jpg',
+    publishedAt: '2024-07-15',
+    duration: '10:17',
+    intro:
+      '原视频同时记录小七孔、黄果树、西江千户苗寨、甲秀楼，以及烙锅、酸汤牛肉、冰浆和丝娃娃等贵州味道。',
+    recommendation:
+      '适合从一条综合旅行记录中同时提取山水、民族村寨、城市散步与用餐候选。',
+    mentions: [
+      { placeId: 'xiaoqikong', quote: '来源标题明确提到荔波小七孔。' },
+      { placeId: 'huangguoshu', quote: '来源标题明确提到黄果树瀑布。' },
+      { placeId: 'xijiang', quote: '来源标题明确提到千户苗寨写真。' },
+      { placeId: 'jiaxiu', quote: '来源标题明确提到甲秀楼。' },
+      {
+        placeId: 'sourfish',
+        quote: '来源标题明确提到酸汤牛肉；规划时以酸汤类用餐候选承接，可替换。',
+      },
+      { placeId: 'siwawa', quote: '来源标题明确提到丝娃娃。' },
+    ],
+  },
+  {
+    id: 'hot-food-video',
+    theme: '舌尖黔味' as Theme,
+    bvid: 'BV1oVLQzbEJg',
+    title: '贵州四天三晚｜烙锅、糯米饭、肠旺面，也去甲秀楼、黄果树和小七孔',
+    author: '雪小叮',
+    cover:
+      'https://i0.hdslb.com/bfs/archive/66c41cbafa2464d8b2d911f5f63e5a360d6f6e1d.jpg',
+    publishedAt: '2025-04-26',
+    duration: '07:41',
+    intro:
+      '原视频按四天记录贵阳、安顺与荔波：城市建筑、瀑布、山水公园与多餐贵州美食交替出现。',
+    recommendation:
+      '适合希望把“吃什么”与“去哪看”一起排进日程的人，餐饮不再只是行程备注。',
+    mentions: [
+      { placeId: 'jiaxiu', quote: '来源简介 Day 1 明确提到甲秀楼。' },
+      {
+        placeId: 'huangguoshu',
+        quote: '来源简介 Day 2 明确提到黄果树瀑布。',
+      },
+      {
+        placeId: 'xiaoqikong',
+        quote: '来源简介 Day 3 明确提到荔波小七孔。',
+      },
+      { placeId: 'qianling', quote: '来源简介 Day 4 明确提到黔灵山公园。' },
+      { placeId: 'changwang', quote: '来源标题与简介明确提到肠旺面。' },
+    ],
+  },
+  {
+    id: 'hot-culture-video',
+    theme: '多彩民族' as Theme,
+    bvid: 'BV1se41197nE',
+    title: '贵阳4天3夜｜肇兴侗寨、蜡染与苗族服装，也有酸汤、烙锅和城市漫步',
+    author: '思然missy',
+    cover:
+      'https://i2.hdslb.com/bfs/archive/0fcffaf5bdcc49dd9682264f12bba13b6a6f71c5.jpg',
+    publishedAt: '2023-10-28',
+    duration: '09:53',
+    intro:
+      '原视频把侗寨、蜡染、苗族服装、甲秀楼与多种贵州小吃放在同一趟四天三夜旅行中。',
+    recommendation:
+      '适合文化互动与美食并重的旅行；未在地点库中精确对应的内容不会被强行生成。',
+    mentions: [
+      { placeId: 'jiaxiu', quote: '来源标题明确提到甲秀楼与 city walk。' },
+      {
+        placeId: 'batik',
+        quote: '来源标题明确提到蜡染；具体工坊需自行核验后替换。',
+      },
+      { placeId: 'sourfish', quote: '来源标题明确提到酸汤鱼。' },
+      {
+        placeId: 'qingyun',
+        quote: '来源标题列出多种贵州小吃；青云路作为可替换的市区用餐落点。',
+      },
+    ],
+  },
+  {
+    id: 'hot-heritage-video',
+    theme: '古镇遗韵' as Theme,
+    bvid: 'BV11ouszXEXB',
+    title: '贵州5天4夜｜黄果树、青岩古镇、小七孔与贵州味道',
+    author: '奇奇的解忧杂货铺',
+    cover:
+      'https://i2.hdslb.com/bfs/archive/fb6943b8e842cdde5a6ee96d9cbb9038904d49ab.jpg',
+    publishedAt: '2025-07-16',
+    duration: '10:28',
+    intro:
+      '原视频同时记录黄果树、小七孔、青岩古镇及贵州火锅和小吃，景色、人文与饮食都有完整段落。',
+    recommendation:
+      '适合自然与古镇兼顾的五日路线，并为景区步行强度留出调整空间。',
+    mentions: [
+      {
+        placeId: 'huangguoshu',
+        quote: '来源标题与简介明确提到黄果树瀑布。',
+      },
+      { placeId: 'qingyan', quote: '来源标题与简介明确提到青岩古镇。' },
+      {
+        placeId: 'xiaoqikong',
+        quote: '来源标题与简介明确提到荔波小七孔。',
+      },
+      {
+        placeId: 'qingyun',
+        quote: '来源简介提到贵州火锅与小吃；青云路作为可替换的市区用餐落点。',
+      },
+    ],
+  },
+  {
+    id: 'hot-outdoor-video',
+    theme: '野趣户外' as Theme,
+    bvid: 'BV1e2ebzVEpa',
+    title: '贵州自由行攻略｜小七孔、黄果树、漂流与贵阳美食交通',
+    author: 'YaCherry',
+    cover:
+      'https://i1.hdslb.com/bfs/archive/818681ca5c37b6c7b9ddf32d813b916d2ef8e336.jpg',
+    publishedAt: '2025-08-22',
+    duration: '06:34',
+    intro:
+      '原视频把小七孔、黄果树、漂流、贵阳美食与交通放在同一份自由行攻略中，内容维度完整。',
+    recommendation:
+      '适合想把观光与户外体验组合的人；漂流项目须在确认运营方和具体河段后再加入。',
+    mentions: [
+      { placeId: 'xiaoqikong', quote: '来源标题明确提到小七孔。' },
+      { placeId: 'huangguoshu', quote: '来源标题明确提到黄果树。' },
+      {
+        placeId: 'qingyun',
+        quote: '来源标题明确提到贵阳美食；青云路作为可替换的市区用餐落点。',
+      },
+      {
+        placeId: 'shuichun',
+        quote:
+          '来源标题提到漂流但未写明河段；水春河只作为待核验、可删除的户外候选。',
+      },
+    ],
+  },
+  {
+    id: 'hot-red-video',
+    theme: '多彩民族' as Theme,
+    bvid: 'BV1BmxLzdEfK',
+    title: '贵州美景美食｜小七孔、千户苗寨、黄果树、蜡染与红酸汤火锅',
+    author: '蓼汀非花溆',
+    cover:
+      'https://i1.hdslb.com/bfs/archive/0a5c797f4cb4b6117338b9fdc10f3db6365eb3a6.jpg',
+    publishedAt: '2025-10-06',
+    duration: '16:07',
+    intro:
+      '原视频同时覆盖自然景观、苗寨与蜡染、贵阳市区、博物馆，以及红酸汤火锅和贵州米粉。',
+    recommendation:
+      '适合从一条内容里生成山水、文化、城市和美食都完整的多日行程。',
+    mentions: [
+      {
+        placeId: 'huangguoshu',
+        quote: '来源标题与简介明确提到黄果树瀑布。',
+      },
+      {
+        placeId: 'xiaoqikong',
+        quote: '来源标题与简介明确提到荔波小七孔。',
+      },
+      { placeId: 'xijiang', quote: '来源标题与简介明确提到千户苗寨。' },
+      {
+        placeId: 'batik',
+        quote: '来源标题与简介明确提到蜡染、扎染体验；具体工坊需核验。',
+      },
+      { placeId: 'qingyun', quote: '来源标题明确提到青云市集。' },
+      { placeId: 'sourfish', quote: '来源标题明确提到红酸汤火锅。' },
+    ],
+  },
+].map(
+  (entry): ContentFixture => ({
+    ...entry,
+    kind: 'video',
+    likes: '',
+    sourceUrl: `https://www.bilibili.com/video/${entry.bvid}/`,
+    embedUrl: `https://player.bilibili.com/player.html?bvid=${entry.bvid}&page=1&high_quality=1&danmaku=0`,
+    sections: [
+      {
+        title: '一条视频里，同时有景色、在地体验与味道',
+        text: entry.intro,
+      },
+      {
+        title: '从公开内容生成可修改的行程',
+        text: `${entry.recommendation} 应用只提取来源页能够说明、且地点库能够对应的内容；短视频转场不代表实际距离，跨区域内容会分日安排。`,
+      },
+    ],
+    tips: [
+      '播放器与视频版权归原平台及原作者，页面只嵌入公开内容。',
+      '票务、开放、营业和交通需要按真实日期再次核验。',
+    ],
+  }),
+);
+
+const featuredContent = [
+  ...publicVideoContent,
+  ...content.filter((entry) => entry.kind === 'article'),
+];
+
+export const featuredPosts: SocialPost[] = featuredContent.map((entry) => ({
   id: entry.id,
-  platform: entry.kind === 'video' ? '抖音' : '小红书',
+  platform: entry.kind === 'video' ? 'B站' : '站内',
   kind: entry.kind,
   theme: entry.theme,
   featured: true,
   title: entry.title,
-  author: entry.author,
+  author: entry.kind === 'video' ? entry.author : 'AI 黔驴编辑部',
   cover: entry.cover,
-  likes: entry.likes,
+  likes: entry.kind === 'video' ? '' : entry.likes,
   intro: entry.intro,
   tags: [entry.theme, '贵州旅行'],
   recommendation: entry.recommendation,
   mentions: entry.mentions,
-  ...(entry.clip
+  ...(entry.sourceUrl
     ? {
-        media: `/videos/${entry.clip}.mp4`,
-        captions: `/videos/${entry.clip}.vtt`,
-        duration: '00:06',
+        sourceUrl: entry.sourceUrl,
+        embedUrl: entry.embedUrl,
+        publishedAt: entry.publishedAt,
+        duration: entry.duration,
       }
     : {}),
 }));
 
 export const featuredStories: Record<string, SocialStory> = Object.fromEntries(
-  content.map((entry) => [
+  featuredContent.map((entry) => [
     entry.id,
     {
       readTime:
-        entry.kind === 'video' ? '6 秒视频 · 2 分钟阅读' : '3 分钟阅读',
+        entry.kind === 'video'
+          ? `${entry.duration} 原视频 · 2 分钟阅读`
+          : '3 分钟阅读',
       sections: entry.sections,
       tips: entry.tips,
     },
