@@ -553,6 +553,54 @@ function hotelPlace(day: TripDay, settings: Required<DaySettings>): Place {
     description: '仅用于示意往返路线，非真实酒店供给。',
   };
 }
+
+const mealRecommendations: Record<
+  string,
+  Record<'breakfast' | 'lunch' | 'dinner', { area: string; dish: string }>
+> = {
+  贵阳: {
+    breakfast: { area: '住宿周边', dish: '肠旺面 / 花溪牛肉粉' },
+    lunch: { area: '景点周边', dish: '丝娃娃 / 贵州家常菜' },
+    dinner: { area: '青云路或当日住宿周边', dish: '酸汤鱼 / 贵阳小吃' },
+  },
+  安顺: {
+    breakfast: { area: '酒店周边', dish: '安顺裹卷 / 牛肉粉' },
+    lunch: { area: '黄果树景区周边', dish: '酸汤鱼 / 农家饭' },
+    dinner: { area: '安顺老城', dish: '烙锅 / 裹卷' },
+  },
+  荔波: {
+    breakfast: { area: '荔波县城', dish: '荔波米粉' },
+    lunch: { area: '小七孔东门周边', dish: '豆花烤鱼 / 野菜' },
+    dinner: { area: '荔波县城', dish: '豆花烤鱼 / 贵州家常菜' },
+  },
+  黔东南: {
+    breakfast: { area: '苗寨或凯里住宿周边', dish: '糯米饭 / 米粉' },
+    lunch: { area: '苗寨周边', dish: '苗家酸汤鱼' },
+    dinner: { area: '西江苗寨', dish: '长桌宴 / 苗家家常菜' },
+  },
+  铜仁: {
+    breakfast: { area: '梵净山周边', dish: '米粉 / 糍粑' },
+    lunch: { area: '景区出口周边', dish: '山野家常菜' },
+    dinner: { area: '铜仁或住宿周边', dish: '锅巴粉 / 贵州小炒' },
+  },
+  黔西南: {
+    breakfast: { area: '兴义住宿周边', dish: '羊肉粉' },
+    lunch: { area: '峡谷景区周边', dish: '酸汤鱼 / 农家菜' },
+    dinner: { area: '兴义市区', dish: '烙锅 / 羊肉粉' },
+  },
+};
+
+function mealRecommendation(
+  which: 'breakfast' | 'lunch' | 'dinner',
+  anchor: Place,
+) {
+  return (
+    mealRecommendations[anchor.region]?.[which] ?? {
+      area: '当前地点周边',
+      dish: '贵州地方菜 / 当地特色小吃',
+    }
+  );
+}
 export function transportForProfile(
   option: TransportOption,
   profile: TravelerProfile,
@@ -619,8 +667,16 @@ export function buildDayPlan(trip: Trip, index: number): DayPlan {
     });
     time = until;
   };
-  const meal = (which: 'breakfast' | 'lunch' | 'dinner', inline = false) => {
+  const meal = (
+    which: 'breakfast' | 'lunch' | 'dinner',
+    inline = false,
+    anchor?: Place,
+  ) => {
     if (!settings.includeMeals || doneMeals.has(which)) return undefined;
+    const recommendation = mealRecommendation(
+      which,
+      anchor ?? previous ?? (day.items[0] ? placeById(day.items[0].placeId) : hotel),
+    );
     const amount =
       which === 'breakfast'
         ? settings.breakfastPrice
@@ -633,11 +689,11 @@ export function buildDayPlan(trip: Trip, index: number): DayPlan {
       meal: which,
       title:
         which === 'breakfast'
-          ? '酒店周边早餐'
+          ? `早餐推荐 · ${recommendation.dish}`
           : which === 'lunch'
-            ? '午餐与休息'
-            : '晚餐与休息',
-      detail: `${inline ? '长时游览中途在允许的补给点' : '当前地点周边'}安排，具体门店待确认。先询问辣度、过敏原和份量；餐饮不计作主题景点。`,
+            ? `中餐推荐 · ${recommendation.dish}`
+            : `晚餐推荐 · ${recommendation.dish}`,
+      detail: `${recommendation.area}${inline ? '（游览中途补给）' : ''}安排；具体门店需现场核验。先询问辣度、过敏原和份量，餐饮不计作主题景点。`,
       start: time,
       end: time + (which === 'breakfast' ? 30 : settings.mealMinutes),
       costPerPerson: amount,
@@ -716,7 +772,7 @@ export function buildDayPlan(trip: Trip, index: number): DayPlan {
           10 * 60
       )
     )
-      meal('breakfast');
+      meal('breakfast', false, first);
   }
   for (let i = 0; i < day.items.length; i++) {
     const item = day.items[i],
@@ -738,11 +794,11 @@ export function buildDayPlan(trip: Trip, index: number): DayPlan {
       if (doneMeals.has(mealKind)) mealKind = undefined;
       if (mealKind === 'dinner' && !doneMeals.has('lunch')) {
         waitUntil(Math.max(time, 12 * 60));
-        meal('lunch');
+        meal('lunch', false, place);
       }
     } else {
-      if (!doneMeals.has('lunch') && time >= 12 * 60) meal('lunch');
-      if (!doneMeals.has('dinner') && time >= 18 * 60) meal('dinner');
+      if (!doneMeals.has('lunch') && time >= 12 * 60) meal('lunch', false, place);
+      if (!doneMeals.has('dinner') && time >= 18 * 60) meal('dinner', false, place);
     }
     const transit = travel(
       place,
@@ -756,8 +812,8 @@ export function buildDayPlan(trip: Trip, index: number): DayPlan {
     );
     // Check arrival, not only departure: a long drive must not defer lunch until after sightseeing.
     if (settings.includeMeals && place.category !== '舌尖黔味') {
-      if (time >= 12 * 60 && !doneMeals.has('lunch')) meal('lunch');
-      if (time >= 18 * 60 && !doneMeals.has('dinner')) meal('dinner');
+      if (time >= 12 * 60 && !doneMeals.has('lunch')) meal('lunch', false, place);
+      if (time >= 18 * 60 && !doneMeals.has('dinner')) meal('dinner', false, place);
     }
     // Consume long gaps with useful services, keeping the meal out of transit time.
     if (
@@ -767,7 +823,7 @@ export function buildDayPlan(trip: Trip, index: number): DayPlan {
       mealKind !== 'lunch'
     ) {
       waitUntil(Math.max(time, 12 * 60));
-      meal('lunch');
+      meal('lunch', false, place);
     }
     waitUntil(earliest, '游览前休息 / 等待开放');
     const start = time,
@@ -780,7 +836,7 @@ export function buildDayPlan(trip: Trip, index: number): DayPlan {
       start + item.duration > 14 * 60
     ) {
       time = Math.max(start + 30, 12 * 60 + 30);
-      const pause = meal('lunch', true);
+      const pause = meal('lunch', true, place);
       if (pause) breaks.push(pause);
       time = start + item.duration + settings.mealMinutes;
     } else time += item.duration;
@@ -830,11 +886,11 @@ export function buildDayPlan(trip: Trip, index: number): DayPlan {
   if (day.items.length) {
     if (settings.includeMeals && !doneMeals.has('lunch')) {
       waitUntil(Math.max(time, 12 * 60));
-      meal('lunch');
+      meal('lunch', false, previous ?? hotel);
     }
     if (settings.includeMeals && !doneMeals.has('dinner')) {
       waitUntil(Math.max(time, 18 * 60));
-      meal('dinner');
+      meal('dinner', false, previous ?? hotel);
     }
     if (settings.includeHotel) {
       travel(hotel, `${hotel.id}:return`, 'return');

@@ -54,7 +54,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { GuizhouRouteMap } from '@/components/guizhou-route-map';
+import { RouteMap } from '@/components/route-map';
 import type { PlanningContext } from '@/lib/planning-input';
 import { createTripFromPlanningMaterial } from '@/lib/planning-trip';
 import { PlaceDetail } from '@/components/place-detail';
@@ -72,7 +72,6 @@ import {
 } from '@/lib/day-plan';
 import { HomeCarousel } from '@/components/home-carousel';
 import { SocialInspiration } from '@/components/social-inspiration';
-import { rainPlanChanges } from '@/lib/guizhou-map';
 import {
   initialData,
   restore,
@@ -127,12 +126,61 @@ const themeImages: Record<Theme, string> = {
   古镇遗韵: '/images/qingyan.jpg',
   红色征程: '/images/theme-history.jpg',
 };
+const heroSlides = [
+  {
+    image: '/images/xiaoqikong.jpg',
+    alt: '荔波小七孔瀑布与碧水',
+    title: '把日子，交给山水',
+    place: '荔波 · 小七孔',
+    placeId: 'xiaoqikong',
+  },
+  {
+    image: '/images/huangguoshu.jpg',
+    alt: '黄果树瀑布山水风景',
+    title: '去看一场山河落幕',
+    place: '安顺 · 黄果树',
+    placeId: 'huangguoshu',
+  },
+  {
+    image: '/images/maling.jpg',
+    alt: '马岭河峡谷的溪流与峡谷风景',
+    title: '峡谷清溪，玩水入夏',
+    place: '兴义 · 马岭河峡谷',
+    placeId: 'xiaoqikong',
+  },
+  {
+    image: '/images/jiaxiu.jpg',
+    alt: '甲秀楼与贵阳城市夜景',
+    title: '灯火初上，逛贵阳',
+    place: '贵阳 · 甲秀楼',
+    placeId: 'jiaxiu',
+  },
+  {
+    image: '/images/xijiang.jpg',
+    alt: '西江千户苗寨夜景',
+    title: '在苗寨，听见烟火',
+    place: '黔东南 · 西江千户苗寨',
+    placeId: 'xijiang',
+  },
+  {
+    image: '/images/fanjing-view.jpg',
+    alt: '梵净山云海与山峰',
+    title: '登上云端看贵州',
+    place: '铜仁 · 梵净山',
+    placeId: 'fanjing-view',
+  },
+] as const;
 const pageLabels: Record<Page, string> = {
   home: '旅行灵感',
   trip: '我的行程',
   discover: '发现 · 约伴',
   profile: '我的旅行空间',
 };
+function durationLabel(minutes: number) {
+  if (minutes < 60) return `${minutes}分钟`;
+  const hours = minutes / 60;
+  return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}小时`;
+}
 function downloadFile(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const a = document.createElement('a');
@@ -175,9 +223,16 @@ export default function TravelApp() {
     [assistantInput, setAssistantInput] = useState(''),
     [answer, setAnswer] = useState(''),
     [dragId, setDragId] = useState<string | null>(null);
+  const [heroSlide, setHeroSlide] = useState(0);
   const [transportTo, setTransportTo] = useState<string | undefined>();
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setHeroSlide((current) => (current + 1) % heroSlides.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, []);
   const trip =
     data.trips.find((t) => t.id === data.activeTripId) || data.trips[0];
   const day = trip.days[Math.min(dayIndex, trip.days.length - 1)];
@@ -189,6 +244,15 @@ export default function TravelApp() {
     minutes: dayPlan.summary.trafficMinutes,
   };
   const scheduled = dayPlan.visits;
+  const firstVisit = scheduled[0];
+  const playSuggestion = firstVisit
+    ? `最佳时间 ${clock(firstVisit.start)} · 路线 ${firstVisit.place.name} 起步 · 时长 ${durationLabel(firstVisit.item.duration)}`
+    : '先添加地点，再生成今日游玩建议。';
+  const dailyTips = [
+    dayPlan.summary.weather.includes('雨') ? '带伞' : '防晒 / 带水',
+    dayPlan.summary.walkingKm >= 6 ? '运动鞋' : '舒适鞋',
+    firstVisit ? '提前购票' : '出发前核验开放',
+  ];
   const optimizationCandidate =
     modal === 'optimize' ? optimize(day.items, previous) : day.items;
   const candidatePlan =
@@ -713,19 +777,65 @@ export default function TravelApp() {
                     地图规划　·　今日游玩指数　·　在地文化体验
                   </div>
                 </div>
-                <button
-                  className="hero-image"
-                  onClick={() => showPlace('xiaoqikong')}
-                >
-                  <img src="/images/xiaoqikong.jpg" alt="荔波小七孔山水" />
-                  <span className="photo-label">
-                    <MapPin size={18} />
-                    <span>
-                      把日子，交给山水<small>荔波 · 小七孔</small>
-                    </span>
-                    <ArrowUpRight size={22} />
-                  </span>
-                </button>
+                <div className="hero-image hero-carousel">
+                  {heroSlides.map((slide, index) => (
+                    <button
+                      key={slide.title}
+                      type="button"
+                      className={'hero-slide' + (heroSlide === index ? ' active' : '')}
+                      onClick={() => showPlace(slide.placeId)}
+                      tabIndex={heroSlide === index ? 0 : -1}
+                      aria-label={`查看${slide.place}`}
+                    >
+                      <img src={slide.image} alt={slide.alt} />
+                      <span className="photo-label">
+                        <MapPin size={18} />
+                        <span>
+                          {slide.title}<small>{slide.place}</small>
+                        </span>
+                        <ArrowUpRight size={22} />
+                      </span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="hero-carousel-arrow hero-carousel-prev"
+                    aria-label="上一张贵州风景"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setHeroSlide((current) => (current - 1 + heroSlides.length) % heroSlides.length);
+                    }}
+                  >
+                    <ArrowRight size={19} />
+                  </button>
+                  <button
+                    type="button"
+                    className="hero-carousel-arrow hero-carousel-next"
+                    aria-label="下一张贵州风景"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setHeroSlide((current) => (current + 1) % heroSlides.length);
+                    }}
+                  >
+                    <ArrowRight size={19} />
+                  </button>
+                  <div className="hero-carousel-dots" role="tablist" aria-label="贵州风景轮播">
+                    {heroSlides.map((slide, index) => (
+                      <button
+                        key={slide.title + '-dot'}
+                        type="button"
+                        role="tab"
+                        aria-selected={heroSlide === index}
+                        aria-label={`第${index + 1}张：${slide.title}`}
+                        className={heroSlide === index ? 'active' : ''}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setHeroSlide(index);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
               </section>
               <SocialInspiration
                 savedPostIds={data.savedPostIds}
@@ -892,6 +1002,20 @@ export default function TravelApp() {
                         </button>
                       ))}
                     </div>
+                    <section className="itinerary-framework" aria-label="行程编排输出框架">
+                      <div className="itinerary-framework-heading">
+                        <div>
+                          <h2>行程概览</h2>
+                        </div>
+                      </div>
+                      <ol className="itinerary-framework-steps">
+                        <li className="active"><b>01</b><span><strong>行程概览</strong></span></li>
+                        <li><b>02</b><span><strong>行程时间轴</strong></span></li>
+                        <li><b>03</b><span><strong>地点详情</strong></span></li>
+                        <li><b>04</b><span><strong>服务衔接</strong></span></li>
+                        <li><b>05</b><span><strong>调整建议</strong></span></li>
+                      </ol>
+                    </section>
                     <DayBrief
                       plan={dayPlan}
                       onSettings={(settings) =>
@@ -907,7 +1031,7 @@ export default function TravelApp() {
                     <div className="day-heading">
                       <div>
                         <h2>{dateLabel(day.date)}</h2>
-                        <p>{day.title}</p>
+                        <p>行程计划：行程时间轴 · {day.title}</p>
                       </div>
                       <button
                         className="text-btn accent-text"
@@ -1020,9 +1144,14 @@ export default function TravelApp() {
                                 onClick={() => selectItem(item.id)}
                               >
                                 <div className="stop-copy">
-                                  <span className="stop-time">
-                                    {clock(start)} — {clock(end)}
-                                  </span>
+                                  <div className="timeline-standard-line">
+                                    <span className="stop-time">
+                                      {clock(start)} — {clock(end)}
+                                    </span>
+                                    <span className="timeline-standard-kind">
+                                      📍 景点
+                                    </span>
+                                  </div>
                                   <h3>{p.name}</h3>
                                   <p>{item.plan?.activity ?? p.description}</p>
                                   <span className="stop-tags">
@@ -1039,8 +1168,11 @@ export default function TravelApp() {
                                       </span>
                                     )}
                                     <span className="score-inline">
-                                      <Clock size={13} /> 游玩 {item.duration}{' '}
-                                      分钟
+                                      <Clock size={13} /> 建议游玩{' '}
+                                      {durationLabel(item.duration)}
+                                    </span>
+                                    <span className="score-inline timeline-goscore">
+                                      ⭐ GoScore {currentScore.total}
                                     </span>
                                   </span>
                                 </div>
@@ -1246,6 +1378,44 @@ export default function TravelApp() {
                         />
                       ))}
                     </div>
+                    <section className="timeline-support" aria-label="今日行程建议">
+                      <div className="timeline-support-block">
+                        <div className="timeline-support-heading">
+                          <b>🎯 游玩建议</b>
+                          <span>规划参考</span>
+                        </div>
+                        <p>{playSuggestion}</p>
+                      </div>
+                      <div className="timeline-support-block">
+                        <div className="timeline-support-heading">
+                          <b>💡 今日Tips</b>
+                          <span>{dayPlan.summary.intensity}节奏</span>
+                        </div>
+                        <div className="tip-chips">
+                          {dailyTips.map((tip) => (
+                            <span key={tip}>{tip}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <button
+                        className="timeline-plan-b"
+                        onClick={() => open('weather')}
+                        aria-label="打开下雨后的 Plan B 替代方案"
+                      >
+                        <span>
+                          <b>⚠️ Plan B</b>
+                          <small>下雨后的一键替代方案</small>
+                        </span>
+                        <ChevronRight size={17} />
+                      </button>
+                      <button
+                        className="timeline-replan-btn"
+                        onClick={() => open('weather')}
+                      >
+                        <Sparkles size={17} />
+                        AI重新规划行程
+                      </button>
+                    </section>
                     {!day.items.length && (
                       <div className="empty-itinerary">
                         <Empty
@@ -1277,11 +1447,14 @@ export default function TravelApp() {
                     </p>
                   </section>
                   <aside className="map-pane">
-                    <GuizhouRouteMap
+                    <RouteMap
                       items={day.items}
-                      summary={dayMetrics}
+                      previous={previous}
+                      summaryOverride={dayMetrics}
                       selected={selectedItem?.id || null}
                       dayIndex={dayIndex}
+                      onAddPlace={addPlace}
+                      hotel={dayPlan.segments.find((segment) => segment.boundary === 'outbound')?.from}
                       onSelect={(id) => {
                         selectItem(id, true);
                         if (typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches) {
@@ -1289,23 +1462,6 @@ export default function TravelApp() {
                           if (item) showPlace(item.placeId);
                         }
                       }}
-                      scenario={dayPlan.settings.scenario}
-                      onScenarioChange={(scenario) =>
-                        updateDay({
-                          ...day,
-                          settings: { ...day.settings, scenario },
-                        })
-                      }
-                      onApplyRain={() => {
-                        const result = rainPlanChanges(day.items);
-                        updateDay({
-                          ...day,
-                          items: result.items,
-                          settings: { ...day.settings, scenario: 'rain' },
-                        });
-                        notify('已应用雨天方案，并重新计算后续时间。');
-                      }}
-                      onTransport={() => showTransport()}
                     />
                     {selectedItem ? (
                       <PlaceDetail

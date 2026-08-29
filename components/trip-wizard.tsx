@@ -132,9 +132,9 @@ export function TripWizard({
       );
       return;
     }
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       setBuilding(i);
-      await new Promise((r) => setTimeout(r, 450));
+      await new Promise((r) => setTimeout(r, 520));
       if (!mounted.current) return;
     }
     onCreate({
@@ -149,13 +149,15 @@ export function TripWizard({
           <Sparkles size={18} /> 黔驴正在规划 · 规划参考
         </span>
         <h2>把心动，排进每一天。</h2>
-        <p>正在使用本地规则匹配地点和节奏，无真实 AI 请求。</p>
+        <p>正在使用本地规则检查地点、时间和预算，结果可继续编辑。</p>
         <div className="building-list">
           {[
-            '创建你的旅行',
-            '匹配旅行偏好',
-            '生成每日概览',
-            '计算时间轴与 GoScore',
+            '读取旅行约束',
+            '校验地点与玩法',
+            '检查开放时段与距离',
+            '排布酒店、交通与三餐',
+            '计算停留时长与 GoScore',
+            '输出统一时间轴',
           ].map((s, i) => (
             <div className={i > building ? 'pending' : ''} key={s}>
               <span className="feature-icon">
@@ -166,10 +168,12 @@ export function TripWizard({
                 <small>
                   {
                     [
-                      '设置日期与同行人',
-                      '保留你偏爱的体验',
-                      '补齐天气、人流、步行、消费与强度',
-                      '连接酒店、三餐、交通与逐站活动',
+                      '日期、天数、同行人和预算',
+                      '保留你确认的地点和体验偏好',
+                      '识别跨城交通、营业时间和冲突',
+                      '连接出发地、午餐、晚餐与返回酒店',
+                      '评估人流、天气、步行、消费与节奏',
+                      '整理为可编辑的 HH:mm 行程节点',
                     ][i]
                   }
                 </small>
@@ -184,7 +188,23 @@ export function TripWizard({
             </div>
           ))}
         </div>
-        <Progress value={(building + 1) * 25} aria-label="行程生成进度" />
+        <div className="building-live-status" aria-live="polite">
+          <span className="live-dot" />
+          当前阶段：
+          <b>
+            {
+              [
+                '读取旅行约束',
+                '校验地点与玩法',
+                '检查开放时段与距离',
+                '排布酒店、交通与三餐',
+                '计算停留时长与 GoScore',
+                '输出统一时间轴',
+              ][building]
+            }
+          </b>
+        </div>
+        <Progress value={(building + 1) * (100 / 6)} aria-label="行程生成进度" />
       </div>
     );
   const firstDay = new Date(year, month, 1).getDay(),

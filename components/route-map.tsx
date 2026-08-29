@@ -1,7 +1,7 @@
 'use client';
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- SVG point groups require role + keyboard handling; HTML buttons are not valid SVG children. */
-import { useState } from 'react';
-import { type TripItem, placeById, metrics } from '@/lib/travel';
+import { useEffect, useRef, useState } from 'react';
+import { type TripItem, type Place, placeById, places, metrics, score } from '@/lib/travel';
 import {
   MapPin,
   Plus,
@@ -18,6 +18,8 @@ export function RouteMap({
   label,
   previous,
   summaryOverride,
+  onAddPlace,
+  hotel,
 }: {
   items: TripItem[];
   selected: string | null;
@@ -26,10 +28,17 @@ export function RouteMap({
   label?: string;
   previous?: TripItem;
   summaryOverride?: { km: number; minutes: number };
+  onAddPlace?: (id: string) => void;
+  hotel?: Pick<Place, 'name' | 'lat' | 'lng'>;
 }) {
+  const realMapRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1),
     [labels, setLabels] = useState(true),
     [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [provider, setProvider] = useState<'baidu' | 'amap'>('baidu');
+  const [exploreId, setExploreId] = useState<string | null>(null);
+  const [realMapReady, setRealMapReady] = useState(false);
+  const [realMapError, setRealMapError] = useState(false);
   const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
   const coords = items.map((i) => placeById(i.placeId));
   const lngs = coords.map((p) => p.lng),
@@ -47,6 +56,88 @@ export function RouteMap({
   const summary = summaryOverride ?? metrics(items, previous);
   const colors = ['#dc7357', '#3f9387', '#79629f', '#b68e39'];
   const color = colors[dayIndex % colors.length];
+  const region = coords[0]?.region;
+  const hotelPoint = hotel
+    ? { x: 90 + ((hotel.lng - minLng) / width) * 410, y: 110 + ((maxLat - hotel.lat) / height) * 320 }
+    : null;
+  const routeIds = new Set(items.map((item) => item.placeId));
+  const nearby = places
+    .filter((place) => place.region === region && !routeIds.has(place.id))
+    .slice(0, 12);
+  const nearbyPoints = nearby.map((p) => ({
+    place: p,
+    x: 90 + ((p.lng - minLng) / width) * 410,
+    y: 110 + ((maxLat - p.lat) / height) * 320,
+  }));
+  const mapTarget = coords[0];
+  const mapUrl = mapTarget
+    ? provider === 'baidu'
+      ? `https://api.map.baidu.com/marker?location=${mapTarget.lat},${mapTarget.lng}&title=${encodeURIComponent(mapTarget.name)}&content=${encodeURIComponent(region || '贵州')}&output=html`
+      : `https://uri.amap.com/marker?position=${mapTarget.lng},${mapTarget.lat}&name=${encodeURIComponent(mapTarget.name)}&src=ai-qianlv`
+    : '#';
+  const explored = exploreId ? placeById(exploreId) : null;
+  const baiduAk = (import.meta as ImportMeta & { env?: Record<string, string> }).env?.VITE_BAIDU_MAP_AK;
+
+  useEffect(() => {
+    if (provider !== 'baidu' || !baiduAk || !realMapRef.current || !coords.length) {
+      setRealMapReady(false);
+      return;
+    }
+    let cancelled = false;
+    const mount = () => {
+      const BMapGL = (window as unknown as { BMapGL?: any }).BMapGL;
+      if (!BMapGL || !realMapRef.current || cancelled) return;
+      try {
+        const map = new BMapGL.Map(realMapRef.current);
+        const center = new BMapGL.Point(coords[0].lng, coords[0].lat);
+        map.centerAndZoom(center, coords.length > 1 ? 7 : 12);
+        map.enableScrollWheelZoom(true);
+        const routePoints = coords.map((place) => new BMapGL.Point(place.lng, place.lat));
+        if (routePoints.length > 1) map.addOverlay(new BMapGL.Polyline(routePoints, { strokeColor: color, strokeWeight: 5, strokeOpacity: 0.85 }));
+        coords.forEach((place, index) => {
+          const marker = new BMapGL.Marker(routePoints[index]);
+          marker.addEventListener('click', () => onSelect(items[index].id));
+          map.addOverlay(marker);
+          const label = new BMapGL.Label(String(index + 1), { offset: new BMapGL.Size(-5, -28) });
+          label.setStyle({ color: '#fff', background: color, border: '0', borderRadius: '12px', padding: '3px 7px', fontWeight: '700' });
+          map.addOverlay(label);
+          label.setPosition(routePoints[index]);
+        });
+        nearby.forEach((place) => {
+          const point = new BMapGL.Point(place.lng, place.lat);
+          const marker = new BMapGL.Marker(point);
+          marker.addEventListener('click', () => setExploreId(place.id));
+          map.addOverlay(marker);
+        });
+        if (hotel) {
+          const hotelMarker = new BMapGL.Marker(new BMapGL.Point(hotel.lng, hotel.lat));
+          hotelMarker.addEventListener('click', () => setExploreId(null));
+          map.addOverlay(hotelMarker);
+        }
+        if (!cancelled) setRealMapReady(true);
+      } catch {
+        if (!cancelled) setRealMapError(true);
+      }
+    };
+    if ((window as unknown as { BMapGL?: any }).BMapGL) mount();
+    else {
+      const existing = document.querySelector('script[data-qianlv-baidu]');
+      if (existing) existing.addEventListener('load', mount, { once: true });
+      else {
+        const script = document.createElement('script');
+        script.dataset.qianlvBaidu = 'true';
+        script.src = `https://api.map.baidu.com/api?v=1.0&type=webgl&ak=${encodeURIComponent(baiduAk)}`;
+        script.async = true;
+        script.onload = mount;
+        script.onerror = () => setRealMapError(true);
+        document.head.appendChild(script);
+      }
+    }
+    return () => {
+      cancelled = true;
+      setRealMapReady(false);
+    };
+  }, [provider, baiduAk, items, hotel, nearby, coords, color, onSelect]);
   return (
     <div className="route-map">
       <div className="map-topline">
@@ -54,9 +145,17 @@ export function RouteMap({
           <MapPin size={14} />
           {label || `${coords[0]?.region || '贵州'} · 第 ${dayIndex + 1} 天`}
         </span>
-        <span className="map-mock">地理示意图 · 非导航</span>
+        <div className="map-provider-tools">
+          <span className="map-mock">{realMapReady ? '百度地图底图 · 可缩放' : '地图探索 · ' + (region || '贵州')}</span>
+          <select aria-label="选择地图服务" value={provider} onChange={(e) => setProvider(e.target.value as 'baidu' | 'amap')}>
+            <option value="baidu">百度地图</option>
+            <option value="amap">高德地图</option>
+          </select>
+          <a href={mapUrl} target="_blank" rel="noreferrer">打开地图</a>
+        </div>
       </div>
-      <svg
+      {provider === 'baidu' && baiduAk && <div ref={realMapRef} className={'baidu-map-canvas' + (realMapReady ? ' is-ready' : '')} aria-label="百度地图路线与地点标记" />}
+      {!realMapReady && <svg
         viewBox="0 0 600 560"
         className="map-canvas"
         aria-label="行程点位地图，可点击地点与时间轴联动"
@@ -135,6 +234,13 @@ export function RouteMap({
             strokeWidth="8"
             strokeLinejoin="round"
           />
+          {hotelPoint && (
+            <g transform={`translate(${hotelPoint.x} ${hotelPoint.y})`} className="map-hotel-marker">
+              <circle r="15" fill="#fff8e8" stroke="#b68e39" strokeWidth="2" />
+              <text y="5" textAnchor="middle" fill="#8b6924" fontSize="13">住</text>
+              <title>{hotel?.name}</title>
+            </g>
+          )}
           <polyline
             points={points.map((p) => `${p.x},${p.y}`).join(' ')}
             fill="none"
@@ -143,6 +249,26 @@ export function RouteMap({
             strokeLinejoin="round"
             strokeDasharray="8 4"
           />
+          {nearbyPoints.map(({ place, x, y }) => (
+            <g
+              key={`nearby-${place.id}`}
+              transform={`translate(${x} ${y})`}
+              className="map-marker map-marker-nearby"
+              role="button"
+              tabIndex={0}
+              aria-label={`探索地点 ${place.name}`}
+              onClick={() => setExploreId(place.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setExploreId(place.id);
+                }
+              }}
+            >
+              <circle r="14" fill="white" stroke="#7d8c80" strokeWidth="2" />
+              <text y="5" textAnchor="middle" fill="#4f6759" fontSize="13" fontWeight="700">+</text>
+            </g>
+          ))}
           {points.map((point, i) => (
             <g
               key={items[i].id}
@@ -202,7 +328,7 @@ export function RouteMap({
             </g>
           ))}
         </g>
-      </svg>
+      </svg>}
       <div className="map-controls">
         <button
           aria-label="放大地图"
@@ -244,12 +370,30 @@ export function RouteMap({
         </span>
       </div>
       <div className="map-attribution">
-        {summaryOverride
+        {realMapReady
+          ? '百度地图 SDK 已加载；路线和标记来自当前行程，地点信息仍以现场与官方公告为准'
+          : realMapError
+            ? '百度地图 SDK 加载失败，已回退到本地交互地图；可继续使用标记和路线编辑'
+            : summaryOverride
           ? '汇总含所列酒店往返 / 跨城接续；连线仅示意景点，不是实际导航'
           : previous
             ? '汇总含跨城接续，连线仅示意当日地点 · 非导航'
             : '点位坐标与道路为近似示意 · 交通为估算'}
       </div>
+      {explored && (
+        <div className="map-explore-card">
+          <div>
+            <span className="map-explore-kicker">周边推荐 · {explored.category}</span>
+            <strong>{explored.name}</strong>
+            <p>{explored.description}</p>
+            <small>GoScore {score(explored, 'normal').total} · 约 {explored.duration} 分钟 · ¥{explored.price}/人</small>
+          </div>
+          <div className="map-explore-actions">
+            {onAddPlace && !routeIds.has(explored.id) && <button onClick={() => onAddPlace(explored.id)}>加入行程</button>}
+            <button aria-label="关闭地点卡片" onClick={() => setExploreId(null)}>关闭</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

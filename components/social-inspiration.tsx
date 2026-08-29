@@ -237,41 +237,6 @@ export function SocialInspiration({
           </article>
         ))}
       </HomeCarousel>
-      <div className="inspiration-basket">
-        <div>
-          <span className="feature-icon">
-            <Sparkles size={20} />
-          </span>
-          <div>
-            <b>
-              {chosen.length
-                ? `已收集 ${chosen.length} 篇灵感`
-                : '刷到喜欢的，就一起排进旅行'}
-            </b>
-            <p>
-              {chosen.length
-                ? '已保存在本机素材库，可随时合并整理。'
-                : '勾选视频或笔记，黔驴帮你提取地点与路线。'}
-            </p>
-          </div>
-        </div>
-        <div className="basket-actions">
-          {chosen.length > 0 && (
-            <button className="text-btn" onClick={() => onChangeSavedPosts([])}>
-              清空
-            </button>
-          )}
-          <Button
-            className="primary-btn"
-            disabled={!chosen.length}
-            onClick={() => void organize(chosen)}
-          >
-            <Sparkles size={17} />
-            整理所选{chosen.length > 0 ? ` ${chosen.length} 篇` : ''}
-            <ArrowRight size={16} />
-          </Button>
-        </div>
-      </div>
       <Dialog
         open={panel !== null}
         onOpenChange={(open) => {
@@ -576,6 +541,7 @@ export function SocialInspiration({
                           }))}
                           selected={selectedStop}
                           dayIndex={0}
+                          onAddPlace={(id) => setRoute((current) => current.includes(id) ? current : [...current, id])}
                           onSelect={(id) => {
                             setSelectedStop(id);
                             document
@@ -667,7 +633,7 @@ export function SocialInspiration({
                       <div>
                         <b>统一输出为详细行程</b>
                         <p>
-                          下一步选择日期、预算与同行人；生成后进入“今日概览 →
+                          下一步选择日期、预算与同行人；生成后进入“行程概览 →
                           完整时间轴 → 五项
                           GoScore”。支持排序、删除、替换、延时与加点，后续时间自动重算。
                         </p>

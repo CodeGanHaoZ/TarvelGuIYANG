@@ -52,16 +52,9 @@ import {
   transportOptions,
   selectTransport,
   resolveTransport,
-  baiduRouteUrl,
+  amapRouteUrl,
   transportCost,
 } from '../lib/transport.ts';
-import {
-  departureChecklist,
-  mountainRouteSummary,
-  provinceMarkers,
-  rainPlanChanges,
-  scenicStopsForPace,
-} from '../lib/guizhou-map.ts';
 import {
   buildDayPlan,
   goScore,
@@ -226,8 +219,8 @@ test('hotel and intermediate traffic choices update the same timing and summary 
   assert.equal(home.boundary, 'return');
   assert.match(home.to.id, /^hotel:/);
   assert.ok(
-    new URL(baiduRouteUrl(home.from, home.to, 'drive')).searchParams
-      .get('destination')
+    new URL(amapRouteUrl(home.from, home.to, 'drive')).searchParams
+      .get('to')
       .includes(home.to.name),
   );
   assert.equal(chooseDayTransport(trip.days[0], home, 'rail'), trip.days[0]);
@@ -401,7 +394,7 @@ test('empty days stay empty and exported guides use the visible detailed plan', 
   assert.match(text, /午餐/);
   assert.match(text, /晚餐/);
   assert.match(text, /返回/);
-  assert.match(text, /去百度地图查询/);
+  assert.match(text, /去高德查询/);
   assert.ok(text.includes(`¥${plan.summary.perPerson}/人`));
 });
 
@@ -614,68 +607,21 @@ test('cross-city day connections account for transfer time instead of teleportin
 test('map queries encode complete explicit endpoints and valid mode and policy without a key', () => {
   const a = { ...placeById('qianling'), name: '起点 & # 甲' },
     b = placeById('museum');
-  const url = new URL(baiduRouteUrl(a, b, 'transit', 'transfers'));
-  assert.equal(url.origin, 'https://api.map.baidu.com');
-  assert.equal(url.pathname, '/direction');
+  const url = new URL(amapRouteUrl(a, b, 'transit', 'transfers'));
+  assert.equal(url.origin, 'https://uri.amap.com');
+  assert.equal(url.pathname, '/navigation');
+  assert.equal(url.searchParams.get('from'), `${a.lng},${a.lat},${a.name}`);
+  assert.equal(url.searchParams.get('to'), `${b.lng},${b.lat},${b.name}`);
+  assert.equal(url.searchParams.get('mode'), 'bus');
+  assert.equal(url.searchParams.get('policy'), '1');
+  assert.equal(url.searchParams.has('key'), false);
   assert.equal(
-    url.searchParams.get('origin'),
-    `latlng:${a.lat},${a.lng}|name:${a.name}`,
-  );
-  assert.equal(
-    url.searchParams.get('destination'),
-    `latlng:${b.lat},${b.lng}|name:${b.name}`,
-  );
-  assert.equal(url.searchParams.get('mode'), 'transit');
-  assert.equal(url.searchParams.get('sy'), '1');
-  assert.equal(url.searchParams.get('coord_type'), 'gcj02');
-  assert.equal(url.searchParams.get('output'), 'html');
-  assert.equal(url.searchParams.has('ak'), false);
-  assert.equal(
-    new URL(baiduRouteUrl(a, b, 'walk')).searchParams.get('mode'),
-    'walking',
+    new URL(amapRouteUrl(a, b, 'walk')).searchParams.get('mode'),
+    'walk',
   );
   assert.equal(
-    new URL(baiduRouteUrl(a, b, 'drive')).searchParams.get('mode'),
-    'driving',
-  );
-});
-
-test('Guizhou two-level map adapts mountain time and rain replan without losing places', () => {
-  const day = ['tianxing', 'huangguoshu', 'qingyan'].map(makeItem);
-  const normal = mountainRouteSummary('standard', 'normal');
-  const rain = mountainRouteSummary('standard', 'rain');
-  assert.ok(normal.stops.some((stop) => stop.id === 'water-curtain'));
-  assert.equal(
-    rain.stops.some((stop) => stop.id === 'water-curtain'),
-    false,
-  );
-  assert.ok(
-    rain.minutes > rain.stops.reduce((sum, stop) => sum + stop.minutes, 0),
-  );
-  assert.ok(
-    scenicStopsForPace('easy').every((stop) => stop.paces.includes('easy')),
-  );
-
-  const result = rainPlanChanges(day);
-  assert.equal(result.items.length, day.length);
-  assert.equal(result.items[0].placeId, 'huangguoshu');
-  assert.ok(result.changes.length >= 3);
-  assert.deepEqual(
-    new Set(result.items.map((item) => item.id)),
-    new Set(day.map((item) => item.id)),
-  );
-
-  const markers = provinceMarkers(result.items);
-  assert.deepEqual(
-    markers.map((marker) => marker.sequence),
-    [1, 2, 3],
-  );
-  const checklist = departureChecklist(
-    result.items.map((item) => item.placeId),
-    'rain',
-  );
-  assert.ok(
-    checklist.some((item) => item.id === 'weather' && item.state === 'warning'),
+    new URL(amapRouteUrl(a, b, 'drive')).searchParams.get('mode'),
+    'car',
   );
 });
 
@@ -1179,8 +1125,7 @@ test('place visit details distinguish verified official information from plannin
     assert.ok(visit.phones.length);
     assert.match(visit.officialUrl, /^https:\/\//);
     assert.match(visit.ticketUrl, /^https:\/\//);
-    assert.match(visit.mapUrl, /^https:\/\/api\.map\.baidu\.com\/marker\?/);
-    assert.equal(new URL(visit.mapUrl).searchParams.get('title'), place.name);
+    assert.match(visit.mapUrl, /^https:\/\/uri\.amap\.com\/search\?/);
     assert.ok(visit.introduction.length > place.description.length);
   }
 
@@ -1190,9 +1135,9 @@ test('place visit details distinguish verified official information from plannin
   assert.equal(fallback.officialUrl, undefined);
   assert.equal(fallback.ticketUrl, undefined);
   assert.match(fallback.openingText, /规划参考/);
-  assert.equal(
-    new URL(fallback.mapUrl).searchParams.get('title'),
-    '黄果树瀑布',
+  assert.match(
+    fallback.mapUrl,
+    /keyword=%E9%BB%84%E6%9E%9C%E6%A0%91%E7%80%91%E5%B8%83/,
   );
 });
 

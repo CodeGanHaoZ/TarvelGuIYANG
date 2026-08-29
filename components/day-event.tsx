@@ -23,21 +23,29 @@ export function DayEvent({
         : event.kind === 'transport'
           ? Route
           : Clock;
+  const duration = event.end > event.start ? event.end - event.start : 0;
+  const metric =
+    event.kind === 'transport' && duration
+      ? `预计 ${Math.round(duration / 60)} 分钟`
+      : event.costPerPerson !== undefined
+        ? `人均 ¥${money(event.costPerPerson)}`
+        : undefined;
   const content = (
     <>
+      <span className="event-time-column">
+        <time>{clock(event.start)}</time>
+        {duration > 0 && <small>{clock(event.end)}</small>}
+      </span>
       <span className="event-icon">
         <Icon size={18} />
       </span>
       <span className="event-copy">
-        <time>
-          {clock(event.start)}
-          {event.end > event.start ? ` — ${clock(event.end)}` : ''}
-        </time>
-        <b>{event.title}</b>
+        <b>
+          {event.kind === 'visit' ? '📍 ' : ''}
+          {event.title}
+        </b>
         <small>{event.detail}</small>
-        {event.costPerPerson !== undefined && (
-          <em>预计 ¥{money(event.costPerPerson)}/人</em>
-        )}
+        {metric && <em>{metric}</em>}
       </span>
       {event.kind === 'transport' && (
         <span className="event-query">

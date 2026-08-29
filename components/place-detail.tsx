@@ -81,7 +81,7 @@ export function PlaceDetail({
       <GoScoreCard score={s} placeName={place.name} />
       {journeyScore ? (
         <p className="source-note">
-          已按当前时间轴、交通与同行类型计算。在“今日概览”调整后会同步更新。
+          已按当前时间轴、交通与同行类型计算。在“行程概览”调整后会同步更新。
         </p>
       ) : (
         <label className="score-scenario">

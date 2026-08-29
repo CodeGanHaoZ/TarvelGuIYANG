@@ -59,9 +59,9 @@ export function DayBrief({
     </label>
   );
   return (
-    <section className="day-overview" aria-label="今日概览">
+    <section className="day-overview" aria-label="行程概览">
       <div className="day-overview-heading">
-        <span className="eyebrow">今日概览</span>
+        <span className="eyebrow">行程概览</span>
         <span className="mini-tag">参考数据 · 非实时</span>
       </div>
       <h3>

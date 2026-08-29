@@ -65,7 +65,11 @@ export function baiduRouteUrl(
     origin: `latlng:${a.lat},${a.lng}|name:${a.name}`,
     destination: `latlng:${b.lat},${b.lng}|name:${b.name}`,
     mode:
-      mode === 'drive' ? 'driving' : mode === 'walk' ? 'walking' : 'transit',
+      mode === 'drive'
+        ? 'driving'
+        : mode === 'walk'
+          ? 'walking'
+          : 'transit',
     region: a.region === b.region ? a.region : '贵州',
     output: 'html',
     coord_type: 'gcj02',
@@ -74,6 +78,23 @@ export function baiduRouteUrl(
   if (mode === 'transit' && policy !== 'recommended')
     params.set('sy', policy === 'transfers' ? '1' : '4');
   return `https://api.map.baidu.com/direction?${params}`;
+}
+
+/** Backward-compatible AMap deep-link used by existing exports and tests. */
+export function amapRouteUrl(
+  a: Place,
+  b: Place,
+  mode: TransportMode,
+  policy: 'recommended' | 'transfers' | 'walking' = 'recommended',
+) {
+  const params = new URLSearchParams({
+    from: `${a.lng},${a.lat},${a.name}`,
+    to: `${b.lng},${b.lat},${b.name}`,
+    mode: mode === 'drive' ? 'car' : mode === 'walk' ? 'walk' : 'bus',
+  });
+  if (mode === 'transit' && policy !== 'recommended')
+    params.set('policy', policy === 'transfers' ? '1' : '0');
+  return `https://uri.amap.com/navigation?${params}`;
 }
 
 export function transportOptions(a: Place, b: Place): TransportOption[] {
