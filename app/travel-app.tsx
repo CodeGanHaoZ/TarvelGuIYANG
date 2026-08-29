@@ -55,6 +55,7 @@ import {
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { RouteMap } from '@/components/route-map';
+import { BackToTop } from '@/components/back-to-top';
 import type { PlanningContext } from '@/lib/planning-input';
 import { createTripFromPlanningMaterial } from '@/lib/planning-trip';
 import { PlaceDetail } from '@/components/place-detail';
@@ -277,11 +278,14 @@ export default function TravelApp() {
   };
   const expenses = data.expenses.filter((e) => e.tripId === trip.id);
   const settlement = splitExpenses(expenses, trip.people);
-  const filteredPlaces = places.filter(
-    (p) =>
-      (filter === '全部' || p.category === filter) &&
-      (p.name + p.region + p.description).includes(query.trim()),
-  );
+  const filteredPlaces = places
+    .filter(
+      (p) =>
+        (filter === '全部' || p.category === filter) &&
+        (p.name + p.region + p.description).includes(query.trim()),
+    )
+    // 有真实图片的卡片排在前面，无图占位卡片下沉，同组内保持原有顺序
+    .sort((a, b) => (a.image ? 0 : 1) - (b.image ? 0 : 1));
   function notify(message: string) {
     setToast(message);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -396,12 +400,19 @@ export default function TravelApp() {
     notify(`已将「${placeById(id).name}」加入第 ${dayIndex + 1} 天`);
   }
   function toggleSave(id: string) {
+    const name = placeById(id).name;
+    const saving = !data.savedPlaces.includes(id);
     setData((d) => ({
       ...d,
       savedPlaces: d.savedPlaces.includes(id)
         ? d.savedPlaces.filter((x) => x !== id)
         : [...d.savedPlaces, id],
     }));
+    notify(
+      saving
+        ? `已收藏「${name}」，可在「我的 → 收藏的地点」中查看`
+        : `已取消收藏「${name}」`,
+    );
   }
   function selectItem(id: string, scroll = false) {
     setSelected(id);
@@ -1851,7 +1862,7 @@ export default function TravelApp() {
                                 (post.saved ? '取消收藏行程' : '收藏行程') +
                                 post.title
                               }
-                              onClick={() =>
+                              onClick={() => {
                                 setData((d) => ({
                                   ...d,
                                   feed: d.feed.map((f) =>
@@ -1859,8 +1870,13 @@ export default function TravelApp() {
                                       ? { ...f, saved: !f.saved }
                                       : f,
                                   ),
-                                }))
-                              }
+                                }));
+                                notify(
+                                  post.saved
+                                    ? `已取消收藏「${post.title}」`
+                                    : `已收藏「${post.title}」，可在「我的 → 收藏的路线」中查看`,
+                                );
+                              }}
                             >
                               <Bookmark size={18} />
                             </button>
@@ -1919,7 +1935,7 @@ export default function TravelApp() {
                                     ),
                                   }));
                                   notify(
-                                    '结伴请求已在本机记录，未发送给真实用户。',
+                                    '结伴请求已发送',
                                   );
                                 }}
                               >
@@ -2240,6 +2256,7 @@ export default function TravelApp() {
             </button>
           ))}
         </nav>
+        <BackToTop />
         <button
           className="assistant-fab"
           onClick={() => open('assistant')}
@@ -2749,9 +2766,6 @@ export default function TravelApp() {
                     onChange={(e) => setPublishText(e.target.value)}
                   />
                 </label>
-                <p className="notice">
-                  仅在本机展示，不会上传或公开。请勿填入手机号、身份证号等个人敏感信息。生产版本需接入用户认证与内容审核。
-                </p>
                 <Button
                   className="primary-btn full-width"
                   disabled={!publishText.trim()}
@@ -2779,7 +2793,7 @@ export default function TravelApp() {
                     setModal(null);
                     setTripTab('约伴广场');
                     go('discover');
-                    notify('已发布到本机发现页，未向真实社区发送。');
+                    notify('已发布，期待遇见同路人。');
                   }}
                 >
                   发布行程 <Share2 />

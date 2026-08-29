@@ -241,7 +241,7 @@ export function transportOptions(a: Place, b: Place): TransportOption[] {
       cost: null,
       costUnit: '人',
       steps: [],
-      note: '不编造公交线路号、换乘站或发车时间。查询到可用路线后，请按实际交通时间调整行程。',
+      note: '暂无公交线路号、换乘站或发车时间。查询到可用路线后，请按实际交通时间调整行程。',
       sources: [],
     });
   }

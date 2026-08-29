@@ -26,6 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { GoScoreCard } from '@/components/go-score';
 import { goScore } from '@/lib/day-plan';
+import { BackToTop } from '@/components/back-to-top';
 
 export function SocialContentPage({ post }: { post: SocialPost }) {
   const story = socialStories[post.id];
@@ -276,6 +277,7 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
           </aside>
         </div>
       </main>
+      <BackToTop />
       <footer className="story-site-footer">
         AI 黔驴 ·
         内容是灵感，选择由你决定。指数、场次与供给信息均为规划参考，出发前请核验。

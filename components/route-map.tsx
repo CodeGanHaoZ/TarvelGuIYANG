@@ -10,6 +10,13 @@ import {
   Layers,
   Route,
 } from '@/components/travel-icons';
+
+// 生成带序号/字符的圆形 SVG 图标（用于天地图 T.Icon）
+function numberedIcon(bg: string, text: string, size = 38) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2 - 3}" fill="${bg}" stroke="#fff" stroke-width="3"/><text x="${size/2}" y="${size/2 + size*0.15}" text-anchor="middle" fill="#fff" font-size="${Math.round(size*0.4)}" font-weight="700" font-family="system-ui,sans-serif">${text}</text></svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
 export function RouteMap({
   items,
   selected,
@@ -31,11 +38,14 @@ export function RouteMap({
   onAddPlace?: (id: string) => void;
   hotel?: Pick<Place, 'name' | 'lat' | 'lng'>;
 }) {
+  const tiandituRef = useRef<HTMLDivElement>(null);
+  const tiandituMapRef = useRef<any>(null);
   const realMapRef = useRef<HTMLDivElement>(null);
+  const realMapInstanceRef = useRef<any>(null);
   const [zoom, setZoom] = useState(1),
     [labels, setLabels] = useState(true),
     [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [provider, setProvider] = useState<'baidu' | 'amap'>('baidu');
+  const [provider, setProvider] = useState<'tianditu' | 'baidu' | 'amap'>('tianditu');
   const [exploreId, setExploreId] = useState<string | null>(null);
   const [realMapReady, setRealMapReady] = useState(false);
   const [realMapError, setRealMapError] = useState(false);
@@ -77,6 +87,9 @@ export function RouteMap({
     : '#';
   const explored = exploreId ? placeById(exploreId) : null;
   const baiduAk = (import.meta as ImportMeta & { env?: Record<string, string> }).env?.VITE_BAIDU_MAP_AK;
+  const tiandituKey =
+    (import.meta as ImportMeta & { env?: Record<string, string> }).env?.VITE_TIANDITU_MAP_KEY ||
+    '768f017350f96d1ae53a702859c4388b';
 
   useEffect(() => {
     if (provider !== 'baidu' || !baiduAk || !realMapRef.current || !coords.length) {
@@ -138,6 +151,142 @@ export function RouteMap({
       setRealMapReady(false);
     };
   }, [provider, baiduAk, items, hotel, nearby, coords, color, onSelect]);
+
+  // 天地图：动态加载 SDK 并渲染真实地图（参考 LiFalxdMap.vue 的接入方式）
+  useEffect(() => {
+    if (provider !== 'tianditu' || !tiandituKey || !tiandituRef.current || !coords.length) {
+      setRealMapReady(false);
+      return;
+    }
+    let cancelled = false;
+    const mount = () => {
+      const T = (window as unknown as { T?: any }).T;
+      if (!T || !tiandituRef.current || cancelled) return;
+      try {
+        const map = new T.Map(tiandituRef.current);
+        tiandituMapRef.current = map;
+        map.centerAndZoom(
+          new T.LngLat(coords[0].lng, coords[0].lat),
+          coords.length > 1 ? 8 : 12,
+        );
+        // 桌面：滚轮缩放 + 鼠标拖拽；移动端：触摸拖拽 + 双指缩放
+        map.enableScrollWheelZoom();
+        map.enableDrag();
+        if (typeof map.enableTouchZoom === 'function') map.enableTouchZoom();
+        if (typeof map.enableDoubleClickZoom === 'function') map.enableDoubleClickZoom();
+        if (typeof map.enableKeyboard === 'function') map.enableKeyboard();
+        const routePoints = coords.map((place) => new T.LngLat(place.lng, place.lat));
+        if (routePoints.length > 1) {
+          map.addOverLay(new T.Polyline(routePoints, { color, weight: 5, opacity: 0.85 }));
+        }
+        coords.forEach((place, index) => {
+          const size = 38;
+          const marker = new T.Marker(routePoints[index], {
+            icon: new T.Icon({
+              iconUrl: numberedIcon(color, String(index + 1), size),
+              iconSize: new T.Point(size, size),
+              iconAnchor: new T.Point(size / 2, size / 2),
+            }),
+          });
+          marker.addEventListener('click', () => onSelect(items[index].id));
+          map.addOverLay(marker);
+        });
+        nearby.forEach((place) => {
+          const size = 30;
+          const marker = new T.Marker(new T.LngLat(place.lng, place.lat), {
+            icon: new T.Icon({
+              iconUrl: numberedIcon('#7d8c80', '+', size),
+              iconSize: new T.Point(size, size),
+              iconAnchor: new T.Point(size / 2, size / 2),
+            }),
+          });
+          marker.addEventListener('click', () => setExploreId(place.id));
+          map.addOverLay(marker);
+        });
+        if (hotel) {
+          const size = 32;
+          const hotelMarker = new T.Marker(new T.LngLat(hotel.lng, hotel.lat), {
+            icon: new T.Icon({
+              iconUrl: numberedIcon('#b68e39', '住', size),
+              iconSize: new T.Point(size, size),
+              iconAnchor: new T.Point(size / 2, size / 2),
+            }),
+          });
+          hotelMarker.addEventListener('click', () => setExploreId(null));
+          map.addOverLay(hotelMarker);
+        }
+        // 多点位时自动调整视野完整展示路线
+        if (routePoints.length > 1) {
+          const viewPoints = hotel
+            ? [...routePoints, new T.LngLat(hotel.lng, hotel.lat)]
+            : routePoints;
+          map.setViewport(viewPoints);
+        }
+        // 只隐藏天地图版权/logo 控件（精确类名，避免影响事件层导致拖拽失效）
+        setTimeout(() => {
+          if (cancelled || !tiandituRef.current) return;
+          tiandituRef.current
+            .querySelectorAll('.tdt-control-copyright, .tdt-copyright-container, .tdt-control-attribution, a[href*="tianditu.gov.cn"]')
+            .forEach((el) => {
+              (el as HTMLElement).style.display = 'none';
+            });
+        }, 200);
+        if (!cancelled) {
+          setRealMapReady(true);
+          // 容器从不可见→可见后必须 checkResize 重算尺寸，否则 marker 投影坐标错误导致缩放/拖拽后位置错位
+          setTimeout(() => {
+            if (!cancelled && map && typeof map.checkResize === 'function') {
+              map.checkResize();
+            }
+          }, 50);
+        }
+      } catch {
+        if (!cancelled) setRealMapError(true);
+      }
+    };
+    if ((window as unknown as { T?: any }).T) mount();
+    else {
+      const existing = document.querySelector('script[data-qianlv-tianditu]');
+      if (existing) existing.addEventListener('load', mount, { once: true });
+      else {
+        const script = document.createElement('script');
+        script.dataset.qianlvTianditu = 'true';
+        script.src = `https://api.tianditu.gov.cn/api?v=4.0&tk=${encodeURIComponent(tiandituKey)}`;
+        script.async = true;
+        // crossorigin 让跨域脚本报错时暴露真实错误详情（否则只显示 Script error）
+        script.crossOrigin = 'anonymous';
+        script.onload = mount;
+        script.onerror = () => setRealMapError(true);
+        document.head.appendChild(script);
+      }
+    }
+    return () => {
+      cancelled = true;
+      setRealMapReady(false);
+      tiandituMapRef.current = null;
+    };
+  }, [provider, tiandituKey, items, hotel, nearby, coords, color, onSelect]);
+
+  // 容器尺寸变化时（窗口 resize、手机旋转、布局切换）重算地图尺寸，防止 marker 位置错位
+  useEffect(() => {
+    if (provider !== 'tianditu' || !realMapReady || !tiandituRef.current) return;
+    const el = tiandituRef.current;
+    const resize = () => {
+      const map = tiandituMapRef.current;
+      if (map && typeof map.checkResize === 'function') {
+        map.checkResize();
+      }
+    };
+    const ro = new ResizeObserver(resize);
+    ro.observe(el);
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', resize);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('orientationchange', resize);
+    };
+  }, [provider, realMapReady]);
   return (
     <div className="route-map">
       <div className="map-topline">
@@ -145,15 +294,8 @@ export function RouteMap({
           <MapPin size={14} />
           {label || `${coords[0]?.region || '贵州'} · 第 ${dayIndex + 1} 天`}
         </span>
-        <div className="map-provider-tools">
-          <span className="map-mock">{realMapReady ? '百度地图底图 · 可缩放' : '地图探索 · ' + (region || '贵州')}</span>
-          <select aria-label="选择地图服务" value={provider} onChange={(e) => setProvider(e.target.value as 'baidu' | 'amap')}>
-            <option value="baidu">百度地图</option>
-            <option value="amap">高德地图</option>
-          </select>
-          <a href={mapUrl} target="_blank" rel="noreferrer">打开地图</a>
-        </div>
       </div>
+      {provider === 'tianditu' && tiandituKey && <div ref={tiandituRef} className={'tianditu-map-canvas' + (realMapReady ? ' is-ready' : '')} aria-label="天地图路线与地点标记" />}
       {provider === 'baidu' && baiduAk && <div ref={realMapRef} className={'baidu-map-canvas' + (realMapReady ? ' is-ready' : '')} aria-label="百度地图路线与地点标记" />}
       {!realMapReady && <svg
         viewBox="0 0 600 560"
@@ -329,7 +471,7 @@ export function RouteMap({
           ))}
         </g>
       </svg>}
-      <div className="map-controls">
+      <div className={'map-controls' + (provider === 'tianditu' && realMapReady ? ' is-hidden' : '')}>
         <button
           aria-label="放大地图"
           onClick={() => setZoom((z) => Math.min(2, z + 0.2))}
@@ -371,9 +513,9 @@ export function RouteMap({
       </div>
       <div className="map-attribution">
         {realMapReady
-          ? '百度地图 SDK 已加载；路线和标记来自当前行程，地点信息仍以现场与官方公告为准'
+          ? (provider === 'tianditu' ? '天地图 SDK 已加载；路线和标记来自当前行程，地点信息仍以现场与官方公告为准' : '百度地图 SDK 已加载；路线和标记来自当前行程，地点信息仍以现场与官方公告为准')
           : realMapError
-            ? '百度地图 SDK 加载失败，已回退到本地交互地图；可继续使用标记和路线编辑'
+            ? '地图 SDK 加载失败，已回退到本地交互地图；可继续使用标记和路线编辑'
             : summaryOverride
           ? '汇总含所列酒店往返 / 跨城接续；连线仅示意景点，不是实际导航'
           : previous

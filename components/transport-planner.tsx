@@ -19,7 +19,6 @@ import {
   TrainFront,
   Wallet,
   ArrowUpRight,
-  Info,
 } from '@/components/travel-icons';
 
 export function TransportPlanner({
@@ -144,13 +143,6 @@ export function TransportPlanner({
         </select>
         <small>按本地估算比较</small>
       </label>
-      <div className="transport-disclosure">
-        <Info size={17} />
-        <p>
-          下方数值是
-          规划参考，不是实时查询结果。百度地图按钮会带入起终点和交通方式；坐标为示意，务必在地图核对出入口和实际门店。地图结果不会自动回填。
-        </p>
-      </div>
       <div className="transport-options">
         {options.map((option) => {
           const cost = transportCost(option, people);
@@ -163,7 +155,7 @@ export function TransportPlanner({
               <div className="transport-option-heading">
                 <div>
                   <h3>{option.label}</h3>
-                  <p>{option.summary}</p>
+                  {option.available && option.summary && <p>{option.summary}</p>}
                 </div>
                 {active && (
                   <span className="route-selected">
@@ -210,12 +202,8 @@ export function TransportPlanner({
                     ))}
                   </ol>
                 </>
-              ) : (
-                <p className="transport-unavailable">
-                  路线、时间、费用待查询；不把未知数据当作可用方案。
-                </p>
-              )}
-              <p className="source-note">{option.note}</p>
+              ) : null}
+              {option.note && <p className="source-note">{option.note}</p>}
               {option.sources.length > 0 && (
                 <details className="transport-sources">
                   <summary>查看线路资料来源</summary>
@@ -246,7 +234,7 @@ export function TransportPlanner({
                     ? '已用于此路段'
                     : option.available
                       ? '用于此路段'
-                      : '待核验，暂不可应用'}
+                      : '暂不可用'}
                   {active ? <Check size={15} /> : <ArrowRight size={15} />}
                 </Button>
                 <a
@@ -273,20 +261,7 @@ export function TransportPlanner({
         {!options.length && (
           <div className="transport-empty">
             <Route size={26} />
-            <h3>此路段暂无这种方式的可靠样例</h3>
-            <p>
-              {mode === 'walk'
-                ? '较远路程不生成步行方案；山路与封闭路段不能用直线推断。'
-                : '未核验该路段的铁路与接驳，不生成未核验班次。'}
-            </p>
-            <a
-              className="outline-btn"
-              href={baiduRouteUrl(a, b, mode === 'all' ? 'drive' : mode)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              去百度地图核实路线 <ArrowUpRight size={15} />
-            </a>
+            <h3>暂无该路段的铁路与接驳数据</h3>
           </div>
         )}
       </div>

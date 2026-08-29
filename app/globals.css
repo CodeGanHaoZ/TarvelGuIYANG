@@ -1670,6 +1670,38 @@ h1 {
   box-shadow: 0 6px 24px #6b413329;
   font-size: 12px;
 }
+.back-to-top {
+  position: fixed;
+  z-index: 34;
+  right: 24px;
+  bottom: 86px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(200, 75, 54, 0.3);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(12px) scale(0.9);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease, box-shadow 0.2s ease;
+}
+.back-to-top:hover {
+  background: var(--primary-bright);
+  box-shadow: 0 6px 20px rgba(200, 75, 54, 0.4);
+}
+.back-to-top:active {
+  transform: scale(0.92);
+}
+.back-to-top.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
 .toast {
   position: fixed;
   bottom: 28px;
@@ -1966,44 +1998,58 @@ h1 {
   text-align: right;
 }
 .itinerary-framework-steps {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   margin: 16px 0 0;
   padding: 0;
   list-style: none;
 }
-.itinerary-framework-steps li {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  min-width: 0;
-  color: #7c8577;
-}
-.itinerary-framework-steps li:not(:last-child)::after {
+/* 背景轨道线：在所有步骤圆圈下方贯穿一条横线 */
+.itinerary-framework-steps::before {
   content: "";
   position: absolute;
   top: 12px;
-  right: -6px;
-  width: 10px;
-  height: 1px;
-  background: #d7ddd2;
+  left: 12px;
+  right: 12px;
+  height: 1.5px;
+  background: #e0e4db;
+  z-index: 0;
+}
+.itinerary-framework-steps li {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  text-align: center;
 }
 .itinerary-framework-steps li > b {
   display: grid;
   place-items: center;
-  width: 25px;
-  height: 25px;
-  border: 1px solid #d7ddd2;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid #d0d6cb;
   border-radius: 50%;
   background: #fff;
   color: #89927e;
   font-size: 10px;
+  font-weight: 600;
   line-height: 1;
   flex-shrink: 0;
+  transition: all 0.2s ease;
 }
 .itinerary-framework-steps li.active > b {
+  border-color: #5a7651;
+  background: #5a7651;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(90, 118, 81, 0.3);
+}
+.itinerary-framework-steps li.done > b {
   border-color: #5a7651;
   background: #5a7651;
   color: #fff;
@@ -2011,22 +2057,33 @@ h1 {
 .itinerary-framework-steps li > span {
   display: flex;
   flex-direction: column;
+  align-items: center;
   min-width: 0;
-  gap: 3px;
+  width: 100%;
+  gap: 1px;
 }
 .itinerary-framework-steps strong {
   color: #4b5747;
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 11px;
+  line-height: 1.3;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  max-width: 100%;
+}
+.itinerary-framework-steps li:not(.active):not(.done) strong {
+  color: #9aa194;
+  font-weight: 500;
 }
 .itinerary-framework-steps small {
   overflow: hidden;
-  color: #9aa194;
+  color: #b0b7aa;
   font-size: 10px;
-  line-height: 1.35;
+  line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 .day-heading {
   display: flex;
@@ -3028,21 +3085,43 @@ h1 {
   height: 100%;
   touch-action: none;
 }
-.baidu-map-canvas {
+.baidu-map-canvas,
+.tianditu-map-canvas {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   min-height: 360px;
   background: #eef2e5;
+  z-index: 1;
+  /* 关键：让触摸手势交给地图处理（单指拖拽、双指缩放），而不是浏览器页面滚动/缩放 */
+  touch-action: none;
+  -ms-touch-action: none;
 }
-.baidu-map-canvas:not(.is-ready) {
-  display: none;
+.baidu-map-canvas:not(.is-ready),
+.tianditu-map-canvas:not(.is-ready) {
+  /* 不能用 display:none —— Leaflet 系地图（天地图基于 Leaflet）在 display:none 容器中
+     无法获取正确尺寸，会导致缩放/平移后 marker 投影坐标错误、位置错位。
+     用 opacity 隐藏但保持真实尺寸，z-index 压到底部避免抢交互 */
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+/* 只隐藏天地图版权/logo 控件（精确类名，不碰事件层） */
+.tianditu-map-canvas .tdt-control-copyright,
+.tianditu-map-canvas .tdt-copyright-container,
+.tianditu-map-canvas .tdt-control-attribution {
+  display: none !important;
+}
+.tianditu-map-canvas canvas:focus {
+  outline: none;
 }
 .map-topline {
   position: absolute;
   top: 18px;
   left: 17px;
   right: 17px;
-  z-index: 2;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3192,6 +3271,10 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  z-index: 3;
+}
+.map-controls.is-hidden {
+  display: none;
 }
 .map-controls button {
   width: 38px;
@@ -3209,6 +3292,7 @@ h1 {
   bottom: 30px;
   left: 18px;
   right: 18px;
+  z-index: 3;
   background: #fffffff0;
   border: 1px solid #dfe5d6;
   border-radius: 12px;
@@ -3219,6 +3303,7 @@ h1 {
   font-size: 10px;
   color: #68765e;
   flex-wrap: wrap;
+  pointer-events: none;
 }
 .map-summary span {
   display: flex;
@@ -4784,11 +4869,22 @@ textarea {
     padding: 16px;
   }
   .itinerary-framework-steps {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    row-gap: 14px;
+    flex-wrap: wrap;
+    gap: 12px 8px;
   }
-  .itinerary-framework-steps li:nth-child(3)::after {
+  .itinerary-framework-steps::before {
     display: none;
+  }
+  .itinerary-framework-steps li {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    text-align: left;
+  }
+  .itinerary-framework-steps li > span {
+    align-items: flex-start;
+    width: auto;
   }
   .timeline-pane {
     padding-inline: 16px;
@@ -4932,6 +5028,12 @@ textarea {
   }
   .assistant-fab > span {
     display: none;
+  }
+  .back-to-top {
+    right: 16px;
+    bottom: 150px;
+    width: 42px;
+    height: 42px;
   }
   .toast {
     bottom: 89px;
