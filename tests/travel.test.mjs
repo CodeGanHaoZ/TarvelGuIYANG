@@ -6,6 +6,7 @@ import {
   emptyPlanningDraft,
   planningPostFromUrl,
   planningContext,
+  resolvePlanningChoice,
   validatePlanningImage,
 } from '../lib/planning-input.ts';
 import {
@@ -751,6 +752,39 @@ test('unqualified geographic names ask for activity choice instead of mixing cat
     removed.stops.map((stop) => stop.placeId),
     ['maling-rafting'],
   );
+});
+
+test('the last activity choice produces a standardized itinerary without another confirmation', () => {
+  const ambiguous = organizePlanningMaterial({
+    text: '梵净山和马岭河峡谷，2天，2人',
+    origin: plannerOrigin,
+  });
+  const withView = resolvePlanningChoice(ambiguous, '梵净山', 'fanjing-view');
+  assert.equal(withView.choices.length, 1);
+  const confirmed = resolvePlanningChoice(
+    withView,
+    '马岭河峡谷',
+    'maling-rafting',
+  );
+  assert.equal(confirmed.choices.length, 0);
+  assert.deepEqual(
+    confirmed.stops.map((stop) => stop.placeId),
+    ['fanjing-view', 'maling-rafting'],
+  );
+
+  const trip = createTripFromPlanningMaterial(
+    confirmed.stops.map((stop) => stop.placeId),
+    confirmed.postIds,
+    planningContext(confirmed),
+    '2026-09-01',
+  );
+  assert.equal(trip.days.length, 2);
+  for (let index = 0; index < trip.days.length; index++) {
+    const plan = buildDayPlan(trip, index);
+    assert.ok(plan.summary.evaluation);
+    assert.ok(plan.events.length);
+    assert.ok(plan.visits.every((visit) => visit.goScore.factors.length === 5));
+  }
 });
 
 test('unknown and spoofed links never manufacture an unrelated itinerary', () => {

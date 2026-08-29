@@ -254,6 +254,26 @@ export function planningContext(draft: PlanningDraft): PlanningContext {
   };
 }
 
+export function resolvePlanningChoice(
+  draft: PlanningDraft,
+  choiceName: string,
+  placeId?: string,
+): PlanningDraft {
+  const choice = draft.choices.find((item) => item.name === choiceName);
+  if (!choice || (placeId && !choice.ids.includes(placeId))) return draft;
+  const stops = draft.stops.map((stop) => ({
+    ...stop,
+    sources: [...stop.sources],
+  }));
+  if (placeId && !stops.some((stop) => stop.placeId === placeId))
+    stops.push({ placeId, sources: ['你确认的具体玩法'] });
+  return {
+    ...draft,
+    stops,
+    choices: draft.choices.filter((item) => item.name !== choiceName),
+  };
+}
+
 export function validatePlanningImage(file: { type: string; size: number }) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type))
     return '请使用 JPG、PNG 或 WebP 图片。';

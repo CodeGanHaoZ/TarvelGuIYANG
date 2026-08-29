@@ -27,6 +27,7 @@ import {
   organizePlanningMaterial,
   planningContext,
   planningThemes,
+  resolvePlanningChoice,
   validatePlanningImage,
   type ImageText,
   type PlanningContext,
@@ -252,6 +253,16 @@ export function InspirationPlanner({
       setError('请添加完整的 http:// 或 https:// 链接。');
     }
   }
+  function confirmChoice(choiceName: string, placeId?: string) {
+    const next = resolvePlanningChoice(draft, choiceName, placeId);
+    setDraft(next);
+    if (!next.choices.length && next.stops.length)
+      onCustomize(
+        next.stops.map((stop) => stop.placeId),
+        next.postIds,
+        planningContext(next),
+      );
+  }
   return (
     <section
       className="inspiration-planner"
@@ -326,22 +337,7 @@ export function InspirationPlanner({
                       key={id}
                       variant="outline"
                       disabled={busy}
-                      onClick={() =>
-                        setDraft((current) => ({
-                          ...current,
-                          choices: current.choices.filter(
-                            (item) => item.name !== choice.name,
-                          ),
-                          stops: current.stops.some(
-                            (stop) => stop.placeId === id,
-                          )
-                            ? current.stops
-                            : [
-                                ...current.stops,
-                                { placeId: id, sources: ['你确认的具体玩法'] },
-                              ],
-                        }))
-                      }
+                      onClick={() => confirmChoice(choice.name, id)}
                     >
                       {placeById(id).name}
                     </Button>
@@ -349,14 +345,7 @@ export function InspirationPlanner({
                   <Button
                     variant="ghost"
                     disabled={busy}
-                    onClick={() =>
-                      setDraft((current) => ({
-                        ...current,
-                        choices: current.choices.filter(
-                          (item) => item.name !== choice.name,
-                        ),
-                      }))
-                    }
+                    onClick={() => confirmChoice(choice.name)}
                   >
                     暂不加入
                   </Button>
