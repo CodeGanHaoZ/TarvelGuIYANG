@@ -1,137 +1,319 @@
-# AI 黔驴 · 贵州旅行规划 Demo
+<div align="center">
 
-基于用户提供的 **AI黔驴 PRD（2026-08-28）** 与 **DESIGN_PARADIGM** 实现。桌面为侧栏、时间轴、地图工作台；手机为四个底部入口及上地图、下行程布局。
+<img src="public/og.png" alt="AI 黔驴" width="100%" />
 
-## 技术栈
+# AI 黔驴 · 贵州智能旅行规划 Demo
 
-- Vite 8 + TypeScript 5.9 + React 19。
-- 使用 Sites 生成的 Vinext 路由外壳与 Cloudflare Worker 构建；底层开发服务器、HMR、打包均为 Vite，并非 Next.js 构建器。
-- shadcn / Base UI 提供按钮、输入框、进度条和对话框可访问性基础。
-- 本地 Mock 数据与规则服务，不需要 API Key，不包含数据库、支付或真实内容抓取。
-- localStorage 保存本机行程；按需启用 Service Worker 页面资源缓存。
+**把刷到的旅行灵感，整理成真正可编辑、可调整、可导出的贵州行程。**
 
-## 启动
+<p>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white&style=for-the-badge" alt="React 19" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white&style=for-the-badge" alt="TypeScript 5.9" /></a>
+  <a href="https://vite.dev/"><img src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white&style=for-the-badge" alt="Vite 8" /></a>
+  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white&style=for-the-badge" alt="Tailwind CSS 4" /></a>
+  <img src="https://img.shields.io/badge/Map-天地图_+_百度_JSAPI-2932E1?style=for-the-badge" alt="天地图 + 百度 JSAPI" />
+</p>
 
-建议 Node.js 22.13+（测试命令需要支持 TypeScript strip 的版本）与 pnpm。
+[GitHub 仓库](https://github.com/CodeGanHaoZ/TarvelGuIYANG) · [产品需求](docs/requirements.md) · [技术架构](docs/architecture.md) · [视觉规范](docs/design.md) · [交通资料边界](docs/TRANSPORT_SOURCES.md)
+
+</div>
+
+## 项目介绍
+
+AI 黔驴是一套面向贵州旅行场景的交互式行程规划 Demo。用户可以从旅行视频、图文攻略、链接、文字描述或截图开始，提取想去的地点，再生成标准化的每日行程；生成后不是一段静态攻略，而是一份可以继续拖动、删除、替换、延时、切换交通和按天气重排的旅行计划。
+
+产品重点解决贵州旅行中的四类典型问题：
+
+- **景区跨度大**：突出景区之间的交通时间，避免只看直线距离做决定。
+- **山地步行耗时**：同时展示步行距离、预计用时与休息建议。
+- **景区接驳复杂**：区分景区间交通、入口步行、观光车与内部步道，并提供真实地图入口。
+- **天气影响明显**：支持模拟天气变化后的路线确认与一键撤销。
+
+桌面端为侧栏 + 时间轴 + 地图工作台布局；手机端为四个底部入口 + 上地图、下行程布局，并对长列表、时间轴、弹窗做了专门的移动端适配。
+
+## 界面预览
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/home-desktop.png" alt="桌面端首页" />
+      <p align="center"><b>首页 · 社交灵感与主题入口</b><br/><sub>视频 / 图文轮播、六类主题 3×2 网格、AI 规划对话框</sub></p>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/trip-timeline.png" alt="行程时间轴" />
+      <p align="center"><b>行程页 · 时间轴与地图工作台</b><br/><sub>每日时间轴、拖拽排序、天地图路线、GoScore</sub></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/h5-home.png" alt="H5 首页" />
+      <p align="center"><b>H5 · 首页与底部导航</b><br/><sub>底部四入口、滚动揭示动效、分批加载</sub></p>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/h5-explore.png" alt="H5 探索列表" />
+      <p align="center"><b>H5 · 探索目的地</b><br/><sub>首屏 10 条，滚动到底部分批追加，新卡片逐张滑入</sub></p>
+    </td>
+  </tr>
+</table>
+
+## 贵州主题视觉
+
+<table>
+  <tr>
+    <td width="33%"><img src="public/images/huangguoshu.jpg" alt="黄果树瀑布" /></td>
+    <td width="33%"><img src="public/images/xiaoqikong.jpg" alt="荔波小七孔" /></td>
+    <td width="33%"><img src="public/images/xijiang.jpg" alt="西江千户苗寨" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>山水奇观</b><br/>瀑布、喀斯特与峡谷</td>
+    <td align="center"><b>山地路线</b><br/>步行、游船与天气方案</td>
+    <td align="center"><b>多彩民族</b><br/>村寨、歌舞与非遗体验</td>
+  </tr>
+</table>
+
+平台采用六类互斥主题组织内容，避免把同一地理名称下完全不同的玩法混在一起：
+
+| 主题     | 核心体验                   | 代表内容                           |
+| -------- | -------------------------- | ---------------------------------- |
+| 山水奇观 | 以观赏、摄影为主           | 黄果树、小七孔、天星桥             |
+| 舌尖黔味 | 以饮食场景为主             | 酸汤鱼、丝娃娃、肠旺面             |
+| 多彩民族 | 少数民族活态文化互动       | 西江苗寨、蜡染与银饰               |
+| 古镇遗韵 | 汉族历史、屯堡和商埠       | 青岩古镇、天龙屯堡                 |
+| 野趣户外 | 徒步、漂流等体力体验       | 梵净山徒步、马岭河峡谷             |
+| 红色征程 | 革命旧址和纪念场所         | 遵义会议会址                       |
+
+## 核心亮点
+
+### 1. 全站滚动动效体系（最新）
+
+新增 `ScrollReveal` 组件，基于 IntersectionObserver + MutationObserver 实现声明式滚动入场动画：
+
+- **三种揭示模式**：单元素淡入上滑、容器子项错落入场、长列表逐项观察（时间轴 / 探索列表）。
+- **弹窗三级动画**：遮罩淡入、面板弹入、内容错落滑入，替代原生的生硬出现。
+- **返回顶部联动**：点击返回顶部并滚动到位后自动重置动画，再次下滑时重新播放。
+- **兜底机制**：双 rAF 主动检测视口内元素，修复 tab 切换 / 条件渲染时 IO 回调不触发导致的“内容不显示”问题。
+- 全部动效尊重系统 `prefers-reduced-motion` 设置。
+
+### 2. H5 端体验优化（最新）
+
+- **探索列表滚动分批加载**：首屏 10 条，滚动到底部附近自动追加下一批，带加载指示器，新卡片逐张滑入。
+- 移动端底部四入口导航、上地图下行程布局。
+- 时间轴步骤条连接线在横向滚动下保持完整（每项独立绘制连接线）。
+- 收藏操作升级为按钮交互，并附带收藏 / 取消提示。
+
+### 3. 从内容生成行程
+
+- 首页横向轮播 6 条演示视频与 6 篇图文（六类主题各一），支持触摸滑动、触控板、方向键，不自动轮播。
+- 打开内容详情可保留地点、时间码、推荐依据与原始来源；多篇内容可加入灵感篮合并去重。
+- “成为我的出行规划”进入标准化规划流程，而不是生成一段不可编辑的文本。
+- 视频通过 B 站播放器嵌入原始页面，图文为站内编辑整理；账号与互动数为虚构演示数据。
+
+### 4. AI 规划对话框与本机 OCR
+
+- 支持输入文字、添加链接、选择 / 粘贴 / 拖入截图（每批 3 张、每张 8 MB，JPG/PNG/WebP）。
+- 截图使用 Tesseract.js 7 + 中英文语言包在浏览器本机识别，不上传图片字节、不依赖外部 CDN。
+- 识别结果可核对 OCR 全文、查看推荐指数、移除地点，并支持“再加甲秀楼”“不去青岩古镇”等规则指令继续修改。
+- 未知外链不抓取、不返回无关路线；天数 / 人数 / 预算 / 节奏等参数可从对话带入行程创建。
+
+### 5. 标准化每日行程
+
+- 内置贵阳、荔波、黔东南三套三日样例，合计 42 个地点、31 个停靠点；每站含建议时间、停留、具体玩法与提示，每天含用餐、住宿区域与预算分类。
+- 时间轴支持拖拽排序、上下移动、删除、替换、延长 30 分钟、添加地点；任意调整后自动重算后续时间、交通与费用汇总。
+- 空白行程有明确的“填入样例”入口，非空行程不会被自动覆盖。
+- 修改结果保存在浏览器 `localStorage`，刷新后可继续编辑，并支持一键撤销上一次修改。
+
+### 6. GoScore 可解释推荐指数
+
+每个地点展示可解释的推荐指数，展开可查看每个因子、品类特征与权重；闭园、到达过晚或天气不适合高风险户外时，推荐结果会被限制，不会被其他高分因素抵消。分数均为 Mock，不代表官方评价。
+
+### 7. 地图能力
+
+- **行程页地图（`route-map.tsx`）**：默认接入天地图真实底图（矢量 + 影像），展示编号标记、路线折线与缩放控件，未配置 Key 时回退内置演示 Key / 示意图；同时支持百度 BMapGL 底图与高德标记链接。
+- **两级地图组件（`guizhou-route-map.tsx`）**：基于百度地图 JSAPI 的省域 + 景区内部两级交互地图，含黄果树内部导览点位（入口、观光车、观景台、服务点）与逐站游览模式。
+- **外部路线入口**：交通方案提供带起终点、交通方式参数的高德 / 百度地图查询链接，由用户在官方 App 内核对，结果不自动回填。
+- 坐标统一声明为 GCJ-02 近似值；未接入实时路线 Web Service 前，本站里程与分钟数为规划估算。
+
+### 8. 交通方案比较
+
+点击时间轴两站之间的连线或「交通方案与线路查询」，可按路段比较步行、驾车 / 打车、公交地铁 / 高铁接驳参考，支持按时间、总费用、换乘和步行量排序；跨城日期自动把上日尾站至今日首站的接续交通纳入计算。选择方案会同步更新时间轴、地图摘要、当天费用与 Markdown 导出。未知公交不编造线路号、时间或换乘数。
+
+## 用户流程
+
+```mermaid
+flowchart TD
+  A[视频 / 图文 / 链接 / 文字 / 截图] --> B[提取地点与玩法]
+  B --> C{同地不同玩法?}
+  C -- 是 --> D[用户确认观光或户外]
+  C -- 否 --> E[路线草稿]
+  D --> E
+  E --> F[日期 / 人数 / 预算 / 主题 / 节奏]
+  F --> G[生成标准化每日行程]
+  G --> H[天地图路线与时间轴联动]
+  H --> I[排序 / 删除 / 替换 / 延时]
+  I --> J[天气动态重排与撤销]
+  J --> K[费用分摊 / 游记 / 导出攻略]
+```
+
+## 技术架构
+
+| 层级     | 技术与职责                                                         |
+| -------- | ------------------------------------------------------------------ |
+| 前端     | React 19、TypeScript 5.9、Vite 8、Vinext 路由外壳                 |
+| UI       | Tailwind CSS 4、Base UI / shadcn 风格组件、Lucide 图标、响应式 CSS |
+| 地图     | 天地图 JSAPI、百度地图 JSAPI、高德 / 百度 URI 链接、GCJ-02         |
+| 规划规则 | 本地数据模型、时间轴、GoScore、预算、优化与重排规则                |
+| 内容识别 | Tesseract.js 7 本机 OCR，中英文语言包，无 CDN、无上传              |
+| 动效     | ScrollReveal（IntersectionObserver + MutationObserver）、CSS 动画  |
+| 状态存储 | 浏览器 localStorage；Service Worker 按需缓存静态资源               |
+| 部署     | Docker + GHCR 工作流、CloudBase standalone、Cloudflare Worker      |
+| 质量     | Node Test Runner、TypeScript、Oxlint、Oxfmt                        |
+
+## 项目结构
+
+```text
+app/
+  travel-app.tsx                 页面、交互编排与设备本地状态
+  globals.css                    主题 tokens、桌面及移动布局、动效样式
+  layout.tsx                     根布局（挂载全局 ScrollReveal）
+components/
+  scroll-reveal.tsx              滚动揭示动效（三种模式 + 重置 + 兜底）
+  back-to-top.tsx                返回顶部（到位后重置揭示动画）
+  route-map.tsx                  行程页地图（天地图 / 百度 / 示意回退）
+  guizhou-route-map.tsx          省域 + 景区两级百度地图（黄果树导览）
+  social-inspiration.tsx         视频图文轮播、灵感篮与收藏
+  social-content-page.tsx        /inspiration/:id 独立内容页
+  inspiration-planner.tsx        首页 AI 规划对话框与 OCR 整理
+  trip-wizard.tsx                三步创建与生成状态
+  day-brief.tsx                  每日概览和同行设置
+  day-event.tsx                  时间轴交通 / 餐饮事件
+  go-score.tsx / recommendation-score.tsx  可解释推荐指数
+  place-detail.tsx               地点详情、图片、视频、票务与出行信息
+  transport-planner.tsx          分段交通方案与外部路线入口
+  itinerary-library.tsx          行程库管理
+  home-carousel.tsx              首页轮播
+  travel-icons.tsx               可切换的图标组件
+lib/
+  travel.ts                      核心数据模型、样例 POI、持久化规则
+  day-plan.ts                    标准化每日计划与 Markdown 导出
+  transport.ts                   交通估算、模式选择与地图 URI
+  guizhou-map.ts                 景区内部点位与天气重排
+  baidu-map.ts                   百度 JSAPI 公共加载与坐标配置
+  planning-*.ts / themed-fixtures.ts / itinerary-fixtures.ts  规划与内容集
+tests/
+  travel.test.mjs                规划、交通、内容与持久化回归测试
+docs/
+  requirements.md                PRD 功能与验收映射
+  architecture.md                技术架构和数据边界
+  design.md                      视觉规范落地说明
+  TRANSPORT_SOURCES.md           交通资料来源和核验范围
+public/
+  sw.js                          按需页面缓存，无上传行为
+  images/                        演示风景图与主题封面
+```
+
+## 本地运行
+
+### 环境要求
+
+- Node.js 22.13 或更高版本
+- pnpm
+
+### 安装与启动
 
 ```sh
 pnpm install
 pnpm dev
 ```
 
-开发地址以终端输出为准，本次默认 `http://localhost:3000/`。
+默认开发地址 `http://localhost:3000/`，以终端实际输出为准。
 
-### 本工作区 Windows 运行方式
-
-当前系统没有全局 npm/node，使用 Codex 提供的 Node。依赖已安装，`pnpm-workspace.yaml` 明确禁止 esbuild、sharp、workerd、tesseract.js 的安装脚本；本项目没有放开安装脚本策略，使用已分发的平台二进制与 OCR 运行文件。Tesseract 的募捐提示 postinstall 不参与功能。启动方式：
+Windows 工作区也可以使用（准备本地 OCR 资源并启动开发服务器，不修改系统策略）：
 
 ```powershell
 powershell -File scripts/dev.ps1
 ```
 
-此命令准备本地 OCR 静态资源并运行开发服务器，不修改系统策略或安装权限。如果你使用自己安装的 Node，可直接运行 `pnpm dev`。如重新安装受到依赖策略阻止，应由环境管理员审核，不能通过修改依赖版本规避。
+### 地图配置
 
-## 检查与构建
+复制环境变量示例并按需填写：
+
+```bash
+cp .env.example .env.local
+```
+
+```dotenv
+# 行程页天地图 Key（浏览器端）；留空时使用内置演示 Key，建议替换为自己的
+VITE_TIANDITU_MAP_KEY=
+
+# 百度地图浏览器端 AK（两级地图 / 百度底图）；留空时回退示意图，保留 URI 路线链接
+VITE_BAIDU_MAP_AK=
+```
+
+浏览器端 Key 请在对应开放平台配置域名白名单；实时路线 Web Service 应使用服务端保护的密钥，不能写入 `VITE_` 变量或提交到仓库。
+
+## 部署
+
+仓库内置多套部署路径：
+
+- **Docker / GHCR**：`.github/workflows/docker-publish.yml` 自动构建镜像并发布到 GHCR，Dockerfile 为 npm 安装 + Debian 基础镜像的最大兼容配置。
+- **CloudBase / Node 生产部署**：`pnpm build` 产出 standalone，`pnpm start` 直接运行 `dist/standalone/server.js`（已解决 SSR 下 `window is not defined` 的问题）。
+- **Cloudflare Worker**：`pnpm start:workers` 本地调试，`pnpm deploy:workers` 发布。
+
+## 质量检查
 
 ```sh
 pnpm typecheck
 pnpm test
 pnpm lint
 pnpm build
-pnpm start
 ```
 
-本工作区可用 `node_modules/.bin/tsc.cmd --noEmit`、`node_modules/.bin/oxlint.cmd`、`node_modules/.bin/vinext.cmd build`，测试为 `node --experimental-strip-types --test tests/travel.test.mjs`。这些命令需先把可用 Node 添加到 PATH。
+自动化测试（Node Test Runner）覆盖：
 
-## 首页社交灵感与轮播（新增）
+- 三日计划完整性与时间可行性、空白填入保护
+- 拖动、调序、删除、替换与延时后的重算
+- 交通模式选择持久化、跨日接续、未知线路、地图链接参数
+- GoScore 场景限制与同行类型
+- 文本 / 链接 / 截图 OCR 与玩法澄清
+- 内容来源、收藏和路线生成
+- 本地持久化、旧数据迁移与异常数据拒绝
 
-- 首页提供 6 条可播放 MP4 演示短片、6 篇可阅读图文，六类主题各一条视频、一篇帖子，账号、互动数与内容均为虚构。原有 5 篇内容保留用于已收藏素材与旧行程来源，不再作为首页热门卡片。视频由现有风景图合成，配中文分镜字幕，不冒充真实平台视频。
-- 点“成为我的出行规划”可处理单篇，也可勾选多篇加入灵感篮后合并。Mock 规则按样例分镜提取地点、合并重复项、保留来源与时间码。
-- 路线草稿支持地图点位联动、增删、上下调序、偏好推荐和手动搜索。进入定制后选择日期、预算与节奏，生成后继续沿用原有行程编辑。
-- 社交内容与今日景区推荐为单行横向轮播；支持触摸滑动、触控板、左右箭头以及轨道聚焦后的方向键/Home/End；不自动轮播。社交卡片宽度为同屏原版的 1/2，采用竖图、两行标题、作者与互动数，不显示平台筛选或平台/Mock 角标。分区 Mock 副标题已移除，能力说明保留在对话框折叠说明、内容页与页尾。
-- 六类主题在桌面和手机均使用 3 列 × 2 行图片网格，无轮播箭头。分类依次为山水奇观、舌尖黔味、多彩民族、古镇遗韵、野趣户外、红色征程，图片对应小七孔、丝娃娃、苗寨、青岩、登山步道和遵义会议旧址。点击后进入主题行程创建，预选主题、建议目的地与天数；确认日期、同行人、预算和节奏后，直接进入可编辑的每日路线与示意地图。
-- 图片文字识别使用 Tesseract.js 7 与中英文语言包；`scripts/prepare-ocr.mjs` 在开发/构建前复制已安装的 worker、WASM 与字库到静态目录，不使用外部 CDN，也不上传用户图片。`scripts/create-demo-videos.py` 仅供重新生成视频素材，所用 imageio-ffmpeg 不参与网站运行。
+> 当前 61 项用例中 59 项通过；2 项失败为历次代码合并遗留（导出攻略可见性、地点出行信息分类），待修复。浏览器交互暂未纳入自动化验收。
 
-### 首页 AI 规划对话框
+## 数据与安全边界
 
-支持输入文字、添加链接、选择/粘贴/拖入截图（每批 3 张、每张 8 MB，JPG/PNG/WebP）。截图先在本机识别文字，再以贵州地点词典整理；结果可核对 OCR 全文、查看推荐指数、移除地点，并通过“再加甲秀楼”“不去青岩古镇”等规则指令继续修改。只有地名、没有具体玩法的梵净山或马岭河峡谷会要求选择观光/户外，不自动混类。
+- 地点、天气、人流、开放、交通、价格和评分数据用于产品规划演示，不是实时安全判断或交易报价；门票价格仅展示，酒店 / 班次等未知信息显示“待补充”。
+- 门票、入园时段、索道、观光车与景区开放必须以官方系统及现场通知为准。
+- 地图可显示真实底图，但本站的里程和分钟数在实时路线 API 接入前仍为估算；示意地图不作为道路导航。
+- 截图 OCR 在浏览器本机执行，不会把用户图片上传到外部识别服务。
+- 收藏、约伴和费用记录保存在当前浏览器，不会公开、不联系真实用户、不产生付款。
+- 离线缓存只针对当前设备页面与静态资源；开发模块可能依赖网络，应在生产版本验证离线。
+- 文化体验推荐只描述活动类型，不对民族、文化群体或历史价值作排名。
 
-本站 `/inspiration/:id` 与精确匹配内置素材 ID 的演示平台链接可解析；未知外链不抓取，也不会返回无关路线，而是提示粘贴正文/截图。文本和已识别的其他素材仍可继续。数字或简单中文天数/人数、总预算与慢游/紧凑要求会带入行程创建；日期及全部参数仍需用户确认。原图和对话仅作为本次页面临时草稿；生成后本机行程保存地点与来源摘要，不保存图片字节。
+详细规则见 [架构说明](docs/architecture.md) 与 [交通资料说明](docs/TRANSPORT_SOURCES.md)。
 
-测试覆盖混合输入、去重与来源、追加/删除、玩法澄清、恶意/未知 URL、文件类型与大小、无文字图片和路线转换。另以用户提供的实际中文攻略截图运行本地 OCR 验证；未执行浏览器交互测试。Tesseract 及 API 使用参考 [官方文档](https://github.com/naptha/tesseract.js/blob/master/docs/api.md)，字库来源 [naptha/tessdata](https://github.com/naptha/tessdata)。
+## 视觉素材来源
 
-## 建议演示流程
+以下照片仅用于私有 Demo 视觉参考，不视为已取得商业授权；正式发布前需核验授权或替换为团队素材（使用 CSS 裁切展示，未修改原图）：
 
-### 详细三日行程与交通方案（2026-08-29）
+- `theme-food.jpg`：[Trip.com 丝恋红汤丝娃娃餐厅页面](https://hk.trip.com/restaurant/china/kaili/detail/silianhongtangsiwawa-30810956/)
+- `theme-hiking.jpg`：[程阅川 · 梵净山红云金顶步道（新浪）](https://k.sina.cn/article_1786653501_p6a7e2b3d02700bzzr.html)
+- `theme-history.jpg`：[携程 · 遵义会议旧址页面](https://gs.ctrip.com/html5/you/sight/zunyi204/17661.html)
+- `qingyan.jpg`：[新华社周远钢 / 国际在线 · 青岩古镇](https://city.cri.cn/20171212/25ff4ee6-a818-28a4-f711-1abbcc869b3b.html)，保留原照片署名水印
+- `fanjing-view.jpg`：[携程 · 梵净山蘑菇石](https://you.ctrip.com/sight/jiangkou2334/4747351.html)
+- `maling.jpg`：[携程 · 马岭河峡谷](https://you.ctrip.com/sight/xingyi519/17707.html)
+- `danzhai-batik.jpg`：[乐玩日志 / 搜狐 · 丹寨非遗文化体验](https://www.sohu.com/a/439876229_100195554)，保留原照片署名
+- `og.png` 为 AI 生成的品牌画面，不代表真实地点摄影。
 
-首页或行程页点击「详细三日样例 / 三日样例」，可预览贵阳、荔波、黔东南三套 3 天 2 晚行程，共 31 个停靠点；新加入 16 个地点，地点总数为 42。每站包含建议时间、停留、具体玩法与提示；每天包含用餐、住宿区域、准备事项和预算分类。空白页有直接入口，只有完全空白的三日行程允许明确点击填入，保留原日期和笔记；非空行程只能另建，不会自动覆盖。
+## 后续开发建议
 
-符合目的地、均衡节奏、预算且没有导入素材或限定主题的三日创建，会使用区域详细样例。普通素材导入会为后续日期保留地点，候选不足时明确提示，不擅自添加用户没有选择的景点；六类主题边界不变。
+- 接入路线规划 Web Service，区分实时返回与本地估算。
+- 补齐景区官方入口、接驳、步道与设施结构化数据。
+- 建立票务与预约中心，集中展示证件、时段和权益。
+- 增加离线行程包：缓存地图摘要、订单、二维码和紧急电话。
+- 接入天气、拥挤度与景区停运事件，触发可解释的动态重排。
+- 将 2 项合并遗留测试失败修复，并为动效与 H5 交互补充端到端验收。
 
-点击时间轴两站之间的连线，或「交通方案与线路查询」，可按路段比较步行、驾车/打车、已核验结构的公交地铁/高铁接驳参考，支持按时间、总费用、换乘和步行量排序。选择方案会更新时间轴、地图摘要、当天费用参考和 Markdown 导出，并本机保存。跨城日期将上日尾站至今日首站的接续交通纳入计算；未包含酒店绕行、到达/返程及园内交通。修改开始时间、停留或顺序后会继续检查营业时间冲突。
+## License
 
-**交通能力边界：**没有地图 Web Service API Key，不请求实时路线接口，也不把示意地图当作道路导航。已查阅高德 URI 文档并提供可带起终点、交通方式、公交偏好参数的实际高德查询入口；由用户在高德核对示意坐标、门店、入口及线路，结果不自动回填。未知公交不编造线路号、时间或换乘数，不可直接应用。全部分钟数、费用、步行距离仍为本地 Mock。贵阳—凯里南方向提供高铁加接驳思路及 12306 入口，不生成车次、余票或预订。
-
-资料与核验边界见 [交通资料说明](docs/TRANSPORT_SOURCES.md)。自动化回归包含样例完整性、时间可行性、空白填入保护、模式选择持久化、跨日接续、未知线路和地图链接参数；没有执行浏览器交互验收。
-
-分类内容集位于 `lib/themed-fixtures.ts`：12 条热门内容、11 个地点/玩法；加上原始地点和三日样例扩展，目前合计 42 个地点、17 个独立内容页。每条热门内容只提取所属类别的具体玩法；合并跨主题内容时仍保留各地点类别。
-
-梵净山索道/徒步、马岭河步道/漂流使用不同地点 ID；同地不同玩法不去重、不互换，默认分日安排并提示二选一。建议天数考虑区域、停留、模拟交通与每日数量；单项长距离徒步独立占日。用户仍可删改，真实通行、体力及开放需另行核验。旧的六类偏好在本机恢复时自动迁移，不删除行程、收藏或旧内容来源。
-
-新增 C / D：点击社交卡片标题进入独立的 `/inspiration/:id` 页面；封面打开快捷阅读/播放，支持继续阅读全文。可收藏为规划素材，日后在“我的 → 规划素材”重新定制；生成的行程在“概览”保留来源。地点推荐指数改为六类模型，展开评分依据可查看每个因子、品类特征和权重；详情可模拟天气、拥挤或闭园。分数均为 Mock，不代表官方评价或安全许可。
-
-1. 首页 AI 对话框输入“黄果树、天星桥，2个人，预算1500元”，或添加示例攻略链接/攻略截图，点击“整理为行程”后确认地点。也可以点开视频/笔记，或收藏多篇后点击“整理所选”。旧版助手的手动导入仍是域名样例，首页新对话框使用精确来源匹配，不抓取任意外链。
-2. 删除不想去的地点，创建旅行；选择日期、人数、预算、主题与节奏，查看四阶段生成状态。
-3. 行程页切换日期；点击点位或卡片；拖动排序、上下移动、修改停留、删除、添加；查看营业时间冲突提示。
-4. 打开优化路线，比较模拟时长和距离；打开天气变化，确认前后路线后应用，再试撤销。
-5. 打开费用，新增一笔支出，查看谁应补给谁；在游记写下感受并导出攻略。
-6. 发布约伴后在发现页查看，尝试收藏、复制及“一起玩”。全部只保存在当前浏览器。
-7. 我的页面切换五套主题和三种图标表现，查看本机旅行和收藏，准备离线资源。
-
-## 目录
-
-### 每日详细行程
-
-每天顶部展示天气、人流、交通、步行、人均预算、星级评价与行程强度。可切换亲子、长者或儿童同行，并调整出发时间、示例住宿和三餐。时间轴包含酒店往返、交通、餐饮、游览和休息；景点提供三段具体活动与五项 GoScore。
-
-支持拖动/上下移动、删除、替换、增加30分钟、添加地点；后续时间、路线和汇总自动重算。旧的单景点行程也会获得完整配套安排，不改变原有景点。所有估值为 Mock；外部地图查询不回填实时数据。
-
-```text
-app/page.tsx               页面入口
-app/travel-app.tsx         页面、交互编排与设备本地状态
-app/globals.css            主题 tokens、桌面及移动布局
-components/trip-wizard.tsx 三步创建与生成状态
-components/route-map.tsx   可选择、缩放和平移的示意地图
-components/place-detail.tsx 地点详情与评分解释
-components/travel-icons.tsx 可切换的图标组件
-lib/travel.ts              数据模型、样例 POI、规划/优化/费用/解析规则
-public/sw.js               按需页面缓存，无上传行为
-tests/travel.test.mjs      规则测试
-docs/requirements.md      PRD 功能映射与验收条件
-docs/architecture.md      数据、接口接入与演示边界
-docs/design.md            视觉规范落地说明
-```
-
-## 演示边界
-
-- 地图坐标为近似值，底图和连线为示意，不是高德/百度地图，不提供真实导航。
-- 评分、天气、开放、交通、价格和工坊为样例；无实时数据。门票价格仅展示，酒店/班次等未知信息显示“待补充”。
-- 生成与动态调整为确定性规则；不连接大模型。预算仅约束样例门票/体验，不保证住宿、交通后总费用可行。
-- 发现发布、收藏与申请在本机演示，不会公开、不联系任何真实用户。
-- 离线缓存只针对当前设备页面与访问资源。开发服务器的开发模块可能依赖网络，应在生产版本验证离线；恢复网络不进行云端同步。
-- 风景摄影仅作 Demo 参考，来源列于“我的 → 关于这个 Demo”；公开商业发布前需替换授权素材。`public/og.png` 是 AI 生成的品牌画面，不代表真实地点摄影。
-- 未绑定 GitHub 仓库：当前没有远程地址，GitHub 连接调用失败；没有向任何 GitHub 仓库推送。
-
-开发原始参考文件保持不变，未复制到公开目录。
-
-## 新增主题背景图来源
-
-以下照片仅用于私有 Demo 视觉参考，不视为已取得商业授权；正式发布前需核验授权或替换为团队素材。使用 CSS 裁切展示，没有修改原始图片。
-
-- `theme-food.jpg`：[Trip.com 丝恋红汤丝娃娃餐厅页面](https://hk.trip.com/restaurant/china/kaili/detail/silianhongtangsiwawa-30810956/)。
-- `theme-hiking.jpg`：[程阅川 · 梵净山红云金顶步道（新浪）](https://k.sina.cn/article_1786653501_p6a7e2b3d02700bzzr.html)。
-- `theme-history.jpg`：[携程 · 遵义会议旧址页面](https://gs.ctrip.com/html5/you/sight/zunyi204/17661.html)。
-- `qingyan.jpg`：[新华社周远钢 / 国际在线 · 青岩古镇](https://city.cri.cn/20171212/25ff4ee6-a818-28a4-f711-1abbcc869b3b.html)，保留原照片署名水印。
-- `fanjing-view.jpg`：[携程 · 梵净山蘑菇石](https://you.ctrip.com/sight/jiangkou2334/4747351.html)。
-- `maling.jpg`：[携程 · 马岭河峡谷](https://you.ctrip.com/sight/xingyi519/17707.html)，漂流条目中的配图仅展示峡谷地理场景，不代表实际运营。
-- `danzhai-batik.jpg`：[乐玩日志 / 搜狐 · 丹寨非遗文化体验](https://www.sohu.com/a/439876229_100195554)，保留原照片署名；不代表图中人物提供本 Demo 的虚构场次。
+当前仓库用于团队产品原型与内部开发。代码、第三方内容和视觉素材的最终开源或商业许可需由项目负责人统一确认。
