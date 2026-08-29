@@ -7,23 +7,26 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# 启用 corepack 使用 pnpm
-RUN corepack enable && corepack prepare pnpm@11.24.0 --activate
+# 复制依赖文件
+COPY package.json ./
+# 如果存在 lockfile 也复制（支持多种包管理器）
+COPY package-lock.json* pnpm-lock.yaml* yarn.lock* ./
 
-# 复制依赖文件并安装
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+# 使用 npm 安装依赖（最稳定，Docker 环境兼容性最好）
+RUN npm install
 
-# 复制源代码并构建
+# 复制源代码
 COPY . .
-RUN pnpm build
 
-# 生产环境
+# 构建
+RUN npm run build
+
+# 生产环境变量
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
 EXPOSE 3000
 
-# 使用 standalone 模式启动
+# 启动服务器
 CMD ["node", "dist/standalone/server.js"]
