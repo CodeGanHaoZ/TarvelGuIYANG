@@ -1,0 +1,16 @@
+node_modules
+dist
+.wrangler
+.git
+.github
+.vscode
+coverage
+outputs
+work
+debug.log
+*.log
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+.DS_Store
