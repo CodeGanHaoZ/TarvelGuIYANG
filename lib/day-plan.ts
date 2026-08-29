@@ -14,7 +14,7 @@ import {
   resolveTransport,
   transportCost,
   transportOptions,
-  amapRouteUrl,
+  baiduRouteUrl,
   type TransportMode,
   type TransportOption,
 } from './transport.ts';
@@ -1068,7 +1068,7 @@ export function dayPlanMarkdown(plan: DayPlan): string {
           (seg) => seg.key === event.segmentKey,
         );
         if (segment)
-          text += `\n  ${segment.option.steps.map((step) => `${step.title}：${step.detail}（${step.minutes}分钟）`).join('；')}\n  [去高德查询](${amapRouteUrl(segment.from, segment.to, segment.option.id)})`;
+          text += `\n  ${segment.option.steps.map((step) => `${step.title}：${step.detail}（${step.minutes}分钟）`).join('；')}\n  [去百度地图查询](${baiduRouteUrl(segment.from, segment.to, segment.option.id)})`;
         return text;
       })
       .join('\n\n') +

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { clock, money } from '@/lib/travel';
 import {
-  amapRouteUrl,
+  baiduRouteUrl,
   railQueryUrl,
   transportOptions,
   transportCost,
@@ -148,7 +148,7 @@ export function TransportPlanner({
         <Info size={17} />
         <p>
           下方数值是
-          规划参考，不是实时查询结果。高德按钮会带入起终点和交通方式；坐标为示意，务必在地图核对出入口和实际门店。地图结果不会自动回填。
+          规划参考，不是实时查询结果。百度地图按钮会带入起终点和交通方式；坐标为示意，务必在地图核对出入口和实际门店。地图结果不会自动回填。
         </p>
       </div>
       <div className="transport-options">
@@ -251,7 +251,7 @@ export function TransportPlanner({
                 </Button>
                 <a
                   className="outline-btn"
-                  href={amapRouteUrl(
+                  href={baiduRouteUrl(
                     a,
                     b,
                     option.id,
@@ -264,7 +264,7 @@ export function TransportPlanner({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  去高德查询 <ArrowUpRight size={15} />
+                  去百度地图查询 <ArrowUpRight size={15} />
                 </a>
               </div>
             </article>
@@ -281,11 +281,11 @@ export function TransportPlanner({
             </p>
             <a
               className="outline-btn"
-              href={amapRouteUrl(a, b, mode === 'all' ? 'drive' : mode)}
+              href={baiduRouteUrl(a, b, mode === 'all' ? 'drive' : mode)}
               target="_blank"
               rel="noopener noreferrer"
             >
-              去高德核实路线 <ArrowUpRight size={15} />
+              去百度地图核实路线 <ArrowUpRight size={15} />
             </a>
           </div>
         )}

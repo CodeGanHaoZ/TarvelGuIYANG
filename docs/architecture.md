@@ -4,7 +4,9 @@
 
 详细样例位于 `lib/itinerary-fixtures.ts`；`TripDay.guide` 保存当天摘要、用餐、住宿和准备，`TripItem.plan` 保存可修改的最早开始时间与游玩说明。`TripItem.transport` 以 `fromId + mode` 绑定相邻路段，调序后旧选择不适用于新前驱。可选字段保持旧 v1 数据可恢复，恢复时验证结构；不自动替换用户已有空白日或非空日。
 
-`lib/transport.ts` 为纯估算/链接模块，不发起网络请求。`metrics` 与 `timeline` 共用 `resolveTransport`；地图摘要和导出也使用同一计算。跨城日由 `previousDayConnection` 显式传入上日尾站，避免“瞬移”。`TransportPlanner` 提供模式筛选、排序、逐段说明、官方资料、高德与12306外链；未知公交禁用应用，估算不记入实际账本。见 `TRANSPORT_SOURCES.md`。
+`lib/transport.ts` 为纯估算/链接模块，不发起路线网络请求。`metrics` 与 `timeline` 共用 `resolveTransport`；地图摘要和导出也使用同一计算。跨城日由 `previousDayConnection` 显式传入上日尾站，避免“瞬移”。`TransportPlanner` 提供模式筛选、排序、逐段说明、官方资料、百度地图与12306外链；未知公交禁用应用，估算不记入实际账本。见 `TRANSPORT_SOURCES.md`。
+
+`GuizhouRouteMap` 实现省域行程与黄果树景区内部导览两级地图。配置 `VITE_BAIDU_MAP_AK` 时按需加载百度 JavaScript API 4.0，并绘制可点击标记和折线；未配置或加载失败时保留同一套交互导览底板。`lib/guizhou-map.ts` 维护山地时间、三档强度、雨天避险与出发前检查规则。景区内部坐标是导览参考，不冒充官方 GIS、实时接驳或开放状态。
 
 `AppData → trips[] → Trip.days[] → TripDay.items[]`。TripItem 只引用稳定 placeId，顺序直接取数组次序。地点统一放在 `places` 中，通过 category 区分景点、餐厅、体验等。
 

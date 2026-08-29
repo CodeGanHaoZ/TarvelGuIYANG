@@ -54,7 +54,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { RouteMap } from '@/components/route-map';
+import { GuizhouRouteMap } from '@/components/guizhou-route-map';
 import type { PlanningContext } from '@/lib/planning-input';
 import { createTripFromPlanningMaterial } from '@/lib/planning-trip';
 import { PlaceDetail } from '@/components/place-detail';
@@ -72,6 +72,7 @@ import {
 } from '@/lib/day-plan';
 import { HomeCarousel } from '@/components/home-carousel';
 import { SocialInspiration } from '@/components/social-inspiration';
+import { rainPlanChanges } from '@/lib/guizhou-map';
 import {
   initialData,
   restore,
@@ -1276,10 +1277,9 @@ export default function TravelApp() {
                     </p>
                   </section>
                   <aside className="map-pane">
-                    <RouteMap
+                    <GuizhouRouteMap
                       items={day.items}
-                      previous={previous}
-                      summaryOverride={dayMetrics}
+                      summary={dayMetrics}
                       selected={selectedItem?.id || null}
                       dayIndex={dayIndex}
                       onSelect={(id) => {
@@ -1289,6 +1289,23 @@ export default function TravelApp() {
                           if (item) showPlace(item.placeId);
                         }
                       }}
+                      scenario={dayPlan.settings.scenario}
+                      onScenarioChange={(scenario) =>
+                        updateDay({
+                          ...day,
+                          settings: { ...day.settings, scenario },
+                        })
+                      }
+                      onApplyRain={() => {
+                        const result = rainPlanChanges(day.items);
+                        updateDay({
+                          ...day,
+                          items: result.items,
+                          settings: { ...day.settings, scenario: 'rain' },
+                        });
+                        notify('已应用雨天方案，并重新计算后续时间。');
+                      }}
+                      onTransport={() => showTransport()}
                     />
                     {selectedItem ? (
                       <PlaceDetail

@@ -31,9 +31,9 @@ export const transportSources = {
     title: '西江景区 · 官方交通指引',
     url: 'https://www.xjqhmz.com/news/detail?id=914816047763267585&type=news-notice',
   },
-  amap: {
-    title: '高德地图 · 路径规划文档',
-    url: 'https://lbs.amap.com/api/uri-api/guide/travel/route',
+  baidu: {
+    title: '百度地图 · 地图调起 API',
+    url: 'https://lbs.baidu.com/docs/webapi?title=mapadjustment/uri/web',
   },
 };
 export const railQueryUrl = 'https://www.12306.cn/index/';
@@ -54,7 +54,7 @@ export function roadDistance(
   );
 }
 
-export function amapRouteUrl(
+export function baiduRouteUrl(
   a: Place,
   b: Place,
   mode: TransportMode,
@@ -62,21 +62,18 @@ export function amapRouteUrl(
 ) {
   // Both endpoints are explicit. Never request the user's current position.
   const params = new URLSearchParams({
-    from: `${a.lng},${a.lat},${a.name}`,
-    to: `${b.lng},${b.lat},${b.name}`,
-    mode: mode === 'drive' ? 'car' : mode === 'walk' ? 'walk' : 'bus',
-    policy:
-      mode === 'transit'
-        ? policy === 'transfers'
-          ? '1'
-          : policy === 'walking'
-            ? '2'
-            : '0'
-        : '0',
-    src: 'ai-qianlv-demo',
-    callnative: '0',
+    origin: `latlng:${a.lat},${a.lng}|name:${a.name}`,
+    destination: `latlng:${b.lat},${b.lng}|name:${b.name}`,
+    mode:
+      mode === 'drive' ? 'driving' : mode === 'walk' ? 'walking' : 'transit',
+    region: a.region === b.region ? a.region : '贵州',
+    output: 'html',
+    coord_type: 'gcj02',
+    src: 'webapp.openai.ai_qianlv',
   });
-  return `https://uri.amap.com/navigation?${params}`;
+  if (mode === 'transit' && policy !== 'recommended')
+    params.set('sy', policy === 'transfers' ? '1' : '4');
+  return `https://api.map.baidu.com/direction?${params}`;
 }
 
 export function transportOptions(a: Place, b: Place): TransportOption[] {
@@ -106,7 +103,7 @@ export function transportOptions(a: Place, b: Place): TransportOption[] {
       {
         title: '公路行驶',
         detail:
-          '道路、转弯和拥堵情况请打开高德查询；此处不生成未核验道路名称。',
+          '道路、转弯和拥堵情况请打开百度地图查询；此处不生成未核验道路名称。',
         minutes: driveMinutes - 5,
       },
       {
@@ -216,7 +213,7 @@ export function transportOptions(a: Place, b: Place): TransportOption[] {
       label: '公交 / 地铁',
       available: false,
       km,
-      summary: '尚无已核验的本地班线，去高德查询',
+      summary: '尚无已核验的本地班线，去百度地图查询',
       minutes: 0,
       walking: 0,
       transfers: 0,

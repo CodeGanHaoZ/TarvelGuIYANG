@@ -1319,11 +1319,12 @@ function hourLabel(hour: number) {
 export function placeVisitInfo(place: Place): PlaceVisitInfo {
   const verified = verifiedPlaceVisitInfo[place.id];
   const mapParams = new URLSearchParams({
-    keyword: place.name,
-    city: place.region,
-    view: 'map',
-    src: 'ai-qianlv',
-    callnative: '0',
+    location: `${place.lat},${place.lng}`,
+    title: place.name,
+    content: `${place.region} · ${place.category}`,
+    output: 'html',
+    coord_type: 'gcj02',
+    src: 'webapp.openai.ai_qianlv',
   });
   return {
     introduction:
@@ -1336,7 +1337,7 @@ export function placeVisitInfo(place: Place): PlaceVisitInfo {
       place.price > 0
         ? `参考 ¥${money(place.price)} / 人；官方票种、优惠与预约入口待核验。`
         : '参考为免费或免门票地点；预约要求与收费项目以官方公告为准。',
-    mapUrl: `https://uri.amap.com/search?${mapParams.toString()}`,
+    mapUrl: `https://api.map.baidu.com/marker?${mapParams.toString()}`,
     ...verified,
   };
 }

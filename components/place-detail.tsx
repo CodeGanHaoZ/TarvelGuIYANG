@@ -193,7 +193,7 @@ export function PlaceDetail({
                   {visit.address ?? `${place.region} · 搜索“${place.name}”`}
                 </p>
                 <a href={visit.mapUrl} target="_blank" rel="noreferrer">
-                  在高德地图查看 <ArrowUpRight size={13} />
+                  在百度地图查看 <ArrowUpRight size={13} />
                 </a>
               </div>
             </div>
