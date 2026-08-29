@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { socialPosts } from '@/lib/travel';
 import { SocialContentPage } from '@/components/social-content-page';
 
+export const dynamic = 'force-dynamic';
+
 type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;

@@ -1284,7 +1284,7 @@ export default function TravelApp() {
                       dayIndex={dayIndex}
                       onSelect={(id) => {
                         selectItem(id, true);
-                        if (window.matchMedia('(max-width: 760px)').matches) {
+                        if (typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches) {
                           const item = day.items.find((i) => i.id === id);
                           if (item) showPlace(item.placeId);
                         }
