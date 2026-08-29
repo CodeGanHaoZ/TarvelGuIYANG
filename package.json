@@ -8,7 +8,9 @@
   "scripts": {
     "dev": "node scripts/prepare-ocr.mjs && vinext dev",
     "build": "node scripts/prepare-ocr.mjs && vinext build",
-    "start": "wrangler dev --config dist/server/wrangler.json",
+    "start": "node dist/standalone/server.js",
+    "start:workers": "wrangler dev --config dist/server/wrangler.json",
+    "deploy:workers": "wrangler deploy --config dist/server/wrangler.json",
     "lint": "oxlint",
     "format": "oxfmt",
     "typecheck": "tsc --noEmit",
