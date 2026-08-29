@@ -1702,6 +1702,268 @@ h1 {
   transform: translateY(0) scale(1);
   pointer-events: auto;
 }
+/* ===== 页面切换 / 滚动揭示动效 ===== */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+/* 页面主体：切换 / 首次加载时淡入上滑（配合 key 重挂载触发） */
+.home-page,
+.trip-page,
+.story-page {
+  animation: page-enter 0.4s ease backwards;
+}
+
+/* ---------- 滚动揭示（Scroll Reveal） ----------
+   默认首屏内容直接可见；标记了 .reveal-on-scroll 的容器进入视口时再显示，
+   标记了 .reveal-stagger 的容器进入视口时其子项按顺序错落滑入。
+*/
+/* 用 keyframe 动画而非 transition：动画结束后回归自然样式，
+   不锁定 transform，避免覆盖卡片的 hover 位移 */
+.reveal-on-scroll,
+[data-reveal] {
+  opacity: 0;
+}
+.reveal-on-scroll.is-visible,
+[data-reveal].is-visible {
+  opacity: 1;
+  animation: rise-in 0.5s ease backwards;
+}
+/* 错落容器：默认子项隐藏，容器进入视口后为每个子项依次播放动画 */
+.reveal-stagger > *,
+.stagger-children > * {
+  opacity: 0;
+}
+.reveal-stagger.is-visible > *,
+.stagger-children.is-visible > *,
+.reveal-on-scroll.is-visible .reveal-stagger > * {
+  opacity: 1;
+  animation: rise-in 0.45s ease backwards;
+}
+/* 超过 8 项的子项统一延迟到最后 */
+.reveal-stagger.is-visible > *:nth-child(n+9),
+.stagger-children.is-visible > *:nth-child(n+9),
+.reveal-on-scroll.is-visible .reveal-stagger > *:nth-child(n+9) {
+  animation-delay: 0.48s;
+}
+.reveal-stagger.is-visible > *:nth-child(1),
+.stagger-children.is-visible > *:nth-child(1),
+.reveal-on-scroll.is-visible .reveal-stagger > *:nth-child(1) {
+  animation-delay: 0.04s;
+}
+.reveal-stagger.is-visible > *:nth-child(2),
+.stagger-children.is-visible > *:nth-child(2),
+.reveal-on-scroll.is-visible .reveal-stagger > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.reveal-stagger.is-visible > *:nth-child(3),
+.stagger-children.is-visible > *:nth-child(3),
+.reveal-on-scroll.is-visible .reveal-stagger > *:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.reveal-stagger.is-visible > *:nth-child(4),
+.stagger-children.is-visible > *:nth-child(4),
+.reveal-on-scroll.is-visible .reveal-stagger > *:nth-child(4) {
+  animation-delay: 0.22s;
+}
+.reveal-stagger.is-visible > *:nth-child(5),
+.stagger-children.is-visible > *:nth-child(5),
+.reveal-on-scroll.is-visible .reveal-stagger > *:nth-child(5) {
+  animation-delay: 0.28s;
+}
+.reveal-stagger.is-visible > *:nth-child(6),
+.stagger-children.is-visible > *:nth-child(6),
+.reveal-on-scroll.is-visible .reveal-stagger > *:nth-child(6) {
+  animation-delay: 0.34s;
+}
+.reveal-stagger.is-visible > *:nth-child(7),
+.stagger-children.is-visible > *:nth-child(7),
+.reveal-on-scroll.is-visible .reveal-stagger > *:nth-child(7) {
+  animation-delay: 0.4s;
+}
+.reveal-stagger.is-visible > *:nth-child(8),
+.stagger-children.is-visible > *:nth-child(8),
+.reveal-on-scroll.is-visible .reveal-stagger > *:nth-child(8) {
+  animation-delay: 0.46s;
+}
+/* 子项逐个揭示容器：子项默认隐藏，进入视口时单独出现（适合长列表/时间轴） */
+.reveal-children > * {
+  opacity: 0;
+}
+.reveal-children > *.is-visible {
+  opacity: 1;
+  animation: rise-in 0.4s ease backwards;
+}
+/* 减少动态效果偏好：直接展示 */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll,
+  [data-reveal],
+  .reveal-stagger > *,
+  .stagger-children > *,
+  .reveal-children > * {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ---------- 弹窗动效：遮罩淡入淡出 + 面板弹入弹出 + 内容错落滑入 ----------
+   面板居中依赖 Tailwind v4 的独立 translate 属性（-50% -50%），
+   keyframes 中需写完整值，动画期间才不会破坏居中定位。
+*/
+@keyframes dialog-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes dialog-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes dialog-panel-in {
+  from {
+    opacity: 0;
+    translate: -50% calc(-50% + 28px);
+    scale: 0.96;
+  }
+  to {
+    opacity: 1;
+    translate: -50% -50%;
+    scale: 1;
+  }
+}
+@keyframes dialog-panel-out {
+  from {
+    opacity: 1;
+    translate: -50% -50%;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    translate: -50% calc(-50% + 14px);
+    scale: 0.97;
+  }
+}
+@keyframes dialog-child-in {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* 遮罩 */
+[data-slot='dialog-overlay'] {
+  animation: dialog-overlay-in 0.24s ease both;
+}
+[data-slot='dialog-overlay'][data-closed] {
+  animation: dialog-overlay-out 0.2s ease both;
+}
+/* 面板本体 */
+[data-slot='dialog-content'] {
+  animation: dialog-panel-in 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+[data-slot='dialog-content'][data-closed] {
+  animation: dialog-panel-out 0.18s ease-in both;
+}
+/* 打开时内容错落滑入：第一层（弹窗内容根，如 .modal-body / .place-detail） */
+[data-slot='dialog-content'][data-open] > *:not([data-slot='dialog-close']) {
+  animation: dialog-child-in 0.42s ease backwards;
+  animation-delay: 0.06s;
+}
+/* 第二层：内容块（标题、说明、表单、列表等）依次进入，营造数据"加载出来"的观感 */
+[data-slot='dialog-content'][data-open]
+  > *:not([data-slot='dialog-close'])
+  > * {
+  animation: dialog-child-in 0.42s ease backwards;
+  animation-delay: 0.14s;
+}
+[data-slot='dialog-content'][data-open]
+  > *:not([data-slot='dialog-close'])
+  > *:nth-child(2) {
+  animation-delay: 0.19s;
+}
+[data-slot='dialog-content'][data-open]
+  > *:not([data-slot='dialog-close'])
+  > *:nth-child(3) {
+  animation-delay: 0.24s;
+}
+[data-slot='dialog-content'][data-open]
+  > *:not([data-slot='dialog-close'])
+  > *:nth-child(4) {
+  animation-delay: 0.29s;
+}
+[data-slot='dialog-content'][data-open]
+  > *:not([data-slot='dialog-close'])
+  > *:nth-child(5) {
+  animation-delay: 0.34s;
+}
+[data-slot='dialog-content'][data-open]
+  > *:not([data-slot='dialog-close'])
+  > *:nth-child(6) {
+  animation-delay: 0.39s;
+}
+[data-slot='dialog-content'][data-open]
+  > *:not([data-slot='dialog-close'])
+  > *:nth-child(n + 7) {
+  animation-delay: 0.44s;
+}
+
+/* 面板自带首屏动画：未进入视口前先取消，避免动画结束后闪现又隐藏 */
+.reveal-on-scroll.panel:not(.is-visible) {
+  animation: none;
+}
+
+/* ---------- 兼容保留：首屏顶部内容直接淡入（无滚动延迟） ---------- */
+.itinerary-framework-steps li {
+  animation: rise-in 0.35s ease backwards;
+}
+.itinerary-framework-steps li:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.itinerary-framework-steps li:nth-child(2) {
+  animation-delay: 0.11s;
+}
+.itinerary-framework-steps li:nth-child(3) {
+  animation-delay: 0.17s;
+}
+.itinerary-framework-steps li:nth-child(4) {
+  animation-delay: 0.23s;
+}
+.itinerary-framework-steps li:nth-child(5) {
+  animation-delay: 0.29s;
+}
+.panel {
+  animation: rise-in 0.5s ease backwards;
+  animation-delay: 0.12s;
+}
 .toast {
   position: fixed;
   bottom: 28px;
@@ -3942,6 +4204,20 @@ h1 {
 .explore-header .pill-group {
   margin-bottom: 0;
 }
+/* 探索列表滚动加载指示器（配合 LazyExploreGrid 分批追加） */
+.load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 0 8px;
+  color: #869778;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+}
+.load-more svg {
+  flex-shrink: 0;
+}
 .discover-banner {
   display: flex;
   align-items: center;
@@ -5181,12 +5457,22 @@ textarea {
     padding: 1px 4px 3px 0;
     scrollbar-width: thin;
   }
+  /* 轨道线只覆盖容器可视宽度，横向滚动后不延伸；改为逐项连线跟随内容滚动 */
+  .itinerary-framework-steps::before {
+    display: none;
+  }
   .itinerary-framework-steps li {
     flex: 0 0 142px;
   }
   .itinerary-framework-steps li:not(:last-child)::after {
-    right: -14px;
-    width: 16px;
+    content: "";
+    position: absolute;
+    top: 11px;
+    /* li 宽 142px、间距 18px，圆点居中：连线从一个圆点右缘接到下一个圆点左缘 */
+    right: -77px;
+    width: 136px;
+    height: 1.5px;
+    background: #e0e4db;
   }
   .day-heading h2 {
     font-size: 22px;
@@ -6351,18 +6637,39 @@ textarea {
   border-top: 1px solid var(--border);
   padding-top: 5px;
 }
-.social-card-actions label {
+.social-save-btn {
   display: flex;
   gap: 7px;
   align-items: center;
+  justify-content: center;
   min-height: 44px;
   cursor: pointer;
   font-size: 11px;
+  color: #6b7266;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  user-select: none;
 }
-.social-card-actions input {
-  width: 17px;
-  height: 17px;
-  accent-color: var(--primary);
+.social-save-btn:hover {
+  background: #f5f7f1;
+  color: #4a5243;
+}
+.social-save-btn:active {
+  transform: scale(0.97);
+}
+.social-save-btn svg {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), fill 0.25s ease;
+}
+.social-save-btn.is-saved {
+  color: var(--primary);
+  font-weight: 600;
+}
+.social-save-btn.is-saved svg {
+  fill: var(--primary);
+  color: #fff;
+  transform: scale(1.08);
 }
 .social-plan-button {
   color: var(--primary);

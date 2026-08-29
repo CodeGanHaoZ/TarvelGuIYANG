@@ -175,12 +175,12 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
             </p>
             <p className="story-lead">{post.intro}</p>
             {story.sections.map((section) => (
-              <section className="story-section" key={section.title}>
+              <section className="story-section reveal-on-scroll" key={section.title}>
                 <h2>{section.title}</h2>
                 <p>{section.text}</p>
               </section>
             ))}
-            <section className="story-section">
+            <section className="story-section reveal-on-scroll">
               <h2>
                 {post.kind === 'video'
                   ? '来源页明确提及的地点'
@@ -189,7 +189,7 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
               <p>
                 每个地点都可以作为规划候选，展开指数查看品类与文旅属性依据。
               </p>
-              <div className="story-places">
+              <div className="story-places reveal-children">
                 {post.mentions.map((mention, i) => {
                   const place = placeById(mention.placeId);
                   return (
@@ -214,7 +214,7 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
                 })}
               </div>
             </section>
-            <section className="story-checklist">
+            <section className="story-checklist reveal-on-scroll">
               <h2>留给定制的空间</h2>
               <ul>
                 {story.tips.map((tip) => (

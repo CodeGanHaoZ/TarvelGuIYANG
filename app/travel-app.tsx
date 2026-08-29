@@ -1,6 +1,6 @@
 'use client';
 /* oxlint-disable next/no-img-element -- Self-hosted demo photos use fixed CSS dimensions; keep the Vite demo independent of an image transformation service. */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   IconContext,
   Mountain,
@@ -96,6 +96,7 @@ import {
   attachTripSources,
   socialPosts,
   type AppData,
+  type Place,
   type Trip,
   type TripItem,
   type SharedTrip,
@@ -733,7 +734,7 @@ export default function TravelApp() {
             </div>
           </header>
           {page === 'home' && (
-            <main className="home-page">
+            <main key="home" className="home-page">
               <div className="page-heading">
                 <div>
                   <div className="eyebrow">HELLO, EXPLORER</div>
@@ -853,6 +854,7 @@ export default function TravelApp() {
                 onChangeSavedPosts={(ids) =>
                   setData((d) => ({ ...d, savedPostIds: ids }))
                 }
+                onNotify={notify}
                 onCustomize={(ids, sourceIds, context) => {
                   try {
                     createTrip(
@@ -893,7 +895,7 @@ export default function TravelApp() {
                 ].map(card)}
               </HomeCarousel>
               <section
-                className="theme-discovery"
+                className="theme-discovery reveal-on-scroll"
                 aria-labelledby="theme-discovery-title"
               >
                 <div className="section-heading">
@@ -902,7 +904,7 @@ export default function TravelApp() {
                     <p>点击喜欢的主题，生成你的专属行程路线。</p>
                   </div>
                 </div>
-                <div className="theme-image-grid">
+                <div className="theme-image-grid reveal-stagger">
                   {themes.map((t, i) => {
                     const C = categoryIcons[i];
                     return (
@@ -934,7 +936,7 @@ export default function TravelApp() {
             </main>
           )}
           {page === 'trip' && (
-            <main className="trip-page">
+            <main key="trip" className="trip-page">
               <div className="trip-header">
                 <div>
                   <div className="eyebrow">YOUR NEXT LITTLE ADVENTURE</div>
@@ -1109,7 +1111,7 @@ export default function TravelApp() {
                         部分地点超出营业时间，请减少停留或调整顺序。
                       </p>
                     )}
-                    <div className="timeline-list">
+                    <div className="timeline-list reveal-children">
                       {scheduled.map(
                         (
                           {
@@ -1389,7 +1391,7 @@ export default function TravelApp() {
                         />
                       ))}
                     </div>
-                    <section className="timeline-support" aria-label="今日行程建议">
+                    <section className="timeline-support reveal-on-scroll" aria-label="今日行程建议">
                       <div className="timeline-support-block">
                         <div className="timeline-support-heading">
                           <b>🎯 游玩建议</b>
@@ -1590,9 +1592,6 @@ export default function TravelApp() {
                       </button>
                     ))}
                   </div>
-                  <div className="notice">
-                    跨城交通、开放时间与价格为估算。示意路线不含酒店接送和真实导航，请在正式出发前核验。
-                  </div>
                 </section>
               )}
               {tripTab === '探索' && (
@@ -1603,9 +1602,7 @@ export default function TravelApp() {
                     filter={filter}
                     setFilter={setFilter}
                   />
-                  <div className="destination-grid">
-                    {filteredPlaces.map((p) => card(p.id))}
-                  </div>
+                  <LazyExploreGrid items={filteredPlaces} renderCard={card} />
                   {!filteredPlaces.length && (
                     <Empty
                       title="还没找到这处风景"
@@ -1772,7 +1769,7 @@ export default function TravelApp() {
             </main>
           )}
           {page === 'discover' && (
-            <main className="home-page">
+            <main key="discover" className="home-page">
               <div className="page-heading">
                 <div>
                   <div className="eyebrow">GOOD PLACES, GOOD COMPANY</div>
@@ -1811,7 +1808,7 @@ export default function TravelApp() {
                     filter={filter}
                     setFilter={setFilter}
                   />
-                  <div className="destination-grid">
+                  <div className="destination-grid reveal-stagger">
                     {filteredPlaces.map((p) => card(p.id))}
                   </div>
                   {!filteredPlaces.length && (
@@ -1832,7 +1829,7 @@ export default function TravelApp() {
                       </p>
                     </div>
                   </div>
-                  <div className="feed-grid">
+                  <div className="feed-grid reveal-stagger">
                     {[...data.feed]
                       .sort(
                         (a, b) =>
@@ -1962,7 +1959,7 @@ export default function TravelApp() {
             </main>
           )}
           {page === 'profile' && (
-            <main className="home-page profile-page">
+            <main key="profile" className="home-page profile-page">
               <div className="page-heading">
                 <div>
                   <div className="eyebrow">YOUR TRAVEL CORNER</div>
@@ -2001,7 +1998,7 @@ export default function TravelApp() {
                   新建旅行
                 </button>
               </div>
-              <div className="my-trips">
+              <div className="my-trips reveal-stagger">
                 {data.trips.map((t) => (
                   <button key={t.id} onClick={() => activateTrip(t.id)}>
                     <span className="feature-icon">
@@ -2017,10 +2014,10 @@ export default function TravelApp() {
                   </button>
                 ))}
               </div>
-              <div className="section-heading profile-section-heading">
+              <div className="section-heading profile-section-heading reveal-on-scroll">
                 <h2>规划素材</h2>
               </div>
-              <div className="my-trips material-library">
+              <div className="my-trips material-library reveal-stagger">
                 {data.savedPostIds.map((id) => {
                   const p = socialPosts.find((post) => post.id === id)!;
                   return (
@@ -2072,10 +2069,10 @@ export default function TravelApp() {
                   首页收藏视频或笔记后，会保存在这里，随时用于后续规划。
                 </p>
               )}
-              <div className="section-heading profile-section-heading">
+              <div className="section-heading profile-section-heading reveal-on-scroll">
                 <h2>收藏的地点</h2>
               </div>
-              <div className="destination-grid">
+              <div className="destination-grid reveal-stagger">
                 {data.savedPlaces.map(card)}
               </div>
               {!data.savedPlaces.length && (
@@ -2084,10 +2081,10 @@ export default function TravelApp() {
                   text="在探索页点击书签，即可收进这里。"
                 />
               )}
-              <div className="section-heading profile-section-heading">
+              <div className="section-heading profile-section-heading reveal-on-scroll">
                 <h2>收藏的路线</h2>
               </div>
-              <div className="my-trips saved-routes">
+              <div className="my-trips saved-routes reveal-stagger">
                 {data.feed
                   .filter((f) => f.saved)
                   .map((f) => (
@@ -2106,7 +2103,7 @@ export default function TravelApp() {
                   还没有收藏路线，去发现页遇见下一段旅行。
                 </p>
               )}
-              <section className="panel offline-panel">
+              <section className="panel offline-panel reveal-on-scroll">
                 <h3>山里没信号，也不慌</h3>
                 <p className="panel-sub">
                   本机保存行程与修改。缓存页面后，生产版本可离线读取；云端同步尚未接入。
@@ -2646,7 +2643,7 @@ export default function TravelApp() {
                   </div>
                 </div>
                 <p className="notice">
-                  本次为规则重排。费用与交通不保证真实可行，应用后请检查时间轴警告；不向同行人发送真实通知。
+                  本次为规则重排。费用与交通需要参考真实需求，应用后请检查时间轴警告；不向同行人发送真实通知。
                 </p>
                 <Button
                   className="primary-btn full-width"
@@ -2990,5 +2987,95 @@ function ExploreHeader({
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * 探索列表滚动加载：H5 端先出 10 条，滚到底部附近再分批追加（每批 10 条）。
+ * 新一批卡片挂载后由全局 ScrollReveal 逐个观察，进入视口时上滑淡入。
+ * 桌面端保持一次性展示全部。
+ */
+function LazyExploreGrid({
+  items,
+  renderCard,
+}: {
+  items: Place[];
+  renderCard: (id: string) => ReactNode;
+}) {
+  const batch = 10;
+  const [isMobile, setIsMobile] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(max-width: 760px)').matches,
+  );
+  const [count, setCount] = useState(batch);
+  const [loading, setLoading] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const timerRef = useRef<number | undefined>(undefined);
+
+  // 搜索 / 筛选结果变化时回到首批（渲染期间调整，避免 effect 里级联 setState）
+  const [prevLength, setPrevLength] = useState(items.length);
+  if (prevLength !== items.length) {
+    setPrevLength(items.length);
+    setCount(batch);
+  }
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 760px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => {
+      mq.removeEventListener('change', update);
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const hasMore = isMobile && count < items.length;
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore || loading) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        setLoading(true);
+        // 本地数据即时可得，留一点节奏让「加载中」可见，贴近真实滚动加载体验
+        timerRef.current = window.setTimeout(() => {
+          setCount((c) => Math.min(c + batch, items.length));
+          setLoading(false);
+        }, 420);
+      },
+      { rootMargin: '0px 0px 260px 0px' },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, loading, count, items.length]);
+
+  return (
+    <>
+      <div
+        className={
+          'destination-grid ' +
+          (isMobile ? 'reveal-children' : 'reveal-stagger')
+        }
+      >
+        {(isMobile ? items.slice(0, count) : items).map((p) =>
+          renderCard(p.id),
+        )}
+      </div>
+      {hasMore && (
+        <div ref={sentinelRef} className="load-more" aria-live="polite">
+          {loading ? (
+            <>
+              <LoaderCircle size={16} className="spin" />
+              正在加载更多目的地…
+            </>
+          ) : (
+            '继续下滑，探索更多贵州风景'
+          )}
+        </div>
+      )}
+    </>
   );
 }

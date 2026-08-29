@@ -28,6 +28,7 @@ import {
   Trash2,
   LoaderCircle,
   NotebookPen,
+  Bookmark,
 } from '@/components/travel-icons';
 import {
   socialPosts,
@@ -46,6 +47,7 @@ export function SocialInspiration({
   onCustomize,
   savedPostIds,
   onChangeSavedPosts,
+  onNotify,
 }: {
   onCustomize: (
     ids: string[],
@@ -54,6 +56,7 @@ export function SocialInspiration({
   ) => void;
   savedPostIds: string[];
   onChangeSavedPosts: (ids: string[]) => void;
+  onNotify?: (message: string) => void;
 }) {
   const chosen = savedPostIds;
   const [panel, setPanel] = useState<'post' | 'route' | null>(null);
@@ -115,9 +118,18 @@ export function SocialInspiration({
     : [];
   const regions = [...new Set(route.map((id) => placeById(id).region))];
   function toggle(id: string) {
+    const willSave = !chosen.includes(id);
     onChangeSavedPosts(
-      chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id],
+      willSave ? [...chosen, id] : chosen.filter((x) => x !== id),
     );
+    if (onNotify) {
+      const title = socialPosts.find((p) => p.id === id)?.title;
+      onNotify(
+        willSave
+          ? `已收藏「${title}」到我的素材`
+          : `已取消收藏${title ? `「${title}」` : ''}`,
+      );
+    }
   }
   function close() {
     request.current++;
@@ -217,18 +229,36 @@ export function SocialInspiration({
                 </span>
               </div>
               <div className="social-card-actions">
-                <label>
-                  <input
-                    type="checkbox"
-                    aria-label={`收藏为规划素材：${p.title}`}
-                    checked={chosen.includes(p.id)}
-                    onChange={() => toggle(p.id)}
-                  />
-                  <span>收藏为素材</span>
-                </label>
+                <button
+                  type="button"
+                  className={
+                    'social-save-btn' +
+                    (chosen.includes(p.id) ? ' is-saved' : '')
+                  }
+                  aria-pressed={chosen.includes(p.id)}
+                  aria-label={
+                    chosen.includes(p.id)
+                      ? `取消收藏：${p.title}`
+                      : `收藏为规划素材：${p.title}`
+                  }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    toggle(p.id);
+                  }}
+                >
+                  <Bookmark size={15} />
+                  <span>
+                    {chosen.includes(p.id) ? '已收藏' : '收藏为素材'}
+                  </span>
+                </button>
                 <button
                   className="social-plan-button"
-                  onClick={() => void organize([p.id])}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    void organize([p.id]);
+                  }}
                 >
                   成为我的出行规划
                 </button>

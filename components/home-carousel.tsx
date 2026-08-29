@@ -65,7 +65,7 @@ export function HomeCarousel({
   return (
     <section
       className={
-        'home-carousel' + (variant === 'social' ? ' social-feed-carousel' : '')
+        'home-carousel reveal-on-scroll' + (variant === 'social' ? ' social-feed-carousel' : '')
       }
       aria-label={title}
       aria-roledescription="轮播区"
