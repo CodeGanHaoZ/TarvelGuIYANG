@@ -1,7 +1,15 @@
 'use client';
 /* oxlint-disable next/no-img-element -- Self-hosted demo photos use fixed CSS dimensions; no Next image service is required by this Vite app. */
 import { useState } from 'react';
-import { type Place, score, type Theme, money, places } from '@/lib/travel';
+import {
+  type Place,
+  score,
+  type Theme,
+  money,
+  places,
+  placeAttributes,
+  placeMedia,
+} from '@/lib/travel';
 import {
   MapPin,
   Clock,
@@ -13,6 +21,9 @@ import {
   TrainFront,
   Ticket,
   Mountain,
+  ImagePlus,
+  Play,
+  ArrowUpRight,
 } from '@/components/travel-icons';
 import { Button } from '@/components/ui/button';
 import { GoScoreCard } from '@/components/go-score';
@@ -34,9 +45,11 @@ export function PlaceDetail({
   preferences?: Theme[];
   journeyScore?: GoScore;
 }) {
-  const [tab, setTab] = useState('推荐');
+  const [tab, setTab] = useState('介绍');
   const [scenario, setScenario] = useState('normal');
   const s = journeyScore ?? goScore(place, { scenario, preferences });
+  const media = placeMedia(place.id);
+  const attributes = placeAttributes[place.id];
   return (
     <div className={'place-detail ' + (compact ? 'compact' : '')}>
       <div className="detail-title-row">
@@ -103,7 +116,7 @@ export function PlaceDetail({
         </span>
       </div>
       <div className="tab-row">
-        {['推荐', '评分依据', '出行信息'].map((t) => (
+        {['介绍', '图片', '视频', '评分依据', '出行信息'].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -113,9 +126,24 @@ export function PlaceDetail({
           </button>
         ))}
       </div>
-      {tab === '推荐' && (
+      {tab === '介绍' && (
         <div className="detail-tab-body">
+          <h3>景点介绍</h3>
           <p>{place.description}</p>
+          <div className="place-intro-facts">
+            <div>
+              <small>体验类型</small>
+              <b>{attributes.nature}</b>
+            </div>
+            <div>
+              <small>游览方式</small>
+              <b>{attributes.effort}</b>
+            </div>
+            <div>
+              <small>建议停留</small>
+              <b>{place.duration} 分钟</b>
+            </div>
+          </div>
           {place.culture && (
             <div className="culture-note">
               <Mountain size={19} />
@@ -143,6 +171,84 @@ export function PlaceDetail({
                 </button>
               ))}
           </div>
+        </div>
+      )}
+      {tab === '图片' && (
+        <div className="detail-tab-body">
+          <div className="detail-section-heading">
+            <div>
+              <h3>地点图片</h3>
+              <p>地点素材及明确提到该地点的内容封面。</p>
+            </div>
+            <ImagePlus size={19} />
+          </div>
+          {media.images.length ? (
+            <div className="place-photo-grid">
+              {media.images.map((image, index) => (
+                <figure key={image.src}>
+                  <img
+                    src={image.src}
+                    alt={`${place.name}图片 ${index + 1}`}
+                    loading="lazy"
+                  />
+                  <figcaption>{image.source}</figcaption>
+                </figure>
+              ))}
+            </div>
+          ) : (
+            <div className="place-media-empty">
+              <ImagePlus size={24} />
+              <b>暂无可展示图片</b>
+              <p>后续可补充明确属于该地点的图片素材。</p>
+            </div>
+          )}
+        </div>
+      )}
+      {tab === '视频' && (
+        <div className="detail-tab-body">
+          <div className="detail-section-heading">
+            <div>
+              <h3>相关视频</h3>
+              <p>仅展示明确提到该地点的原平台公开内容。</p>
+            </div>
+            <Play size={19} />
+          </div>
+          {media.videos.length ? (
+            <div className="place-video-list">
+              {media.videos.map((video) => (
+                <article key={video.id}>
+                  <div className="place-video-frame">
+                    <iframe
+                      src={video.embedUrl}
+                      title={`${place.name}相关视频：${video.title}`}
+                      loading="lazy"
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                    />
+                  </div>
+                  <div className="place-video-copy">
+                    <div>
+                      <b>{video.title}</b>
+                      <small>
+                        {video.author}
+                        {video.publishedAt ? ` · ${video.publishedAt}` : ''}
+                      </small>
+                    </div>
+                    <a href={video.sourceUrl} target="_blank" rel="noreferrer">
+                      原视频 <ArrowUpRight size={14} />
+                    </a>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="place-media-empty">
+              <Play size={24} />
+              <b>暂无可核验的相关视频</b>
+              <p>不使用无来源片段，也不把相似景观冒充为该地点。</p>
+            </div>
+          )}
         </div>
       )}
       {tab === '评分依据' && (
@@ -186,7 +292,7 @@ export function PlaceDetail({
         </div>
       )}
       <p className="source-note">
-        <Info size={13} /> 来源：贵州 Demo 数据集 · 2026-08-28
+        <Info size={13} /> 来源：贵州规划参考数据集 · 2026-08-28
         <br />
         开放时间、位置、评分与价格均未核验。
       </p>

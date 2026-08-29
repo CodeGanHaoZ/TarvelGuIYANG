@@ -40,6 +40,7 @@ import {
   previousDayConnection,
   placeById,
   copyTripWithNewIds,
+  placeMedia,
 } from '../lib/travel.ts';
 import { createTripFromPlanningMaterial } from '../lib/planning-trip.ts';
 import {
@@ -1093,6 +1094,24 @@ test('featured feed combines six sourced multi-theme videos with six themed edit
       assert.ok([...categories].some((category) => category !== '舌尖黔味'));
     }
   }
+});
+
+test('place details only surface images and sourced videos that mention that place', () => {
+  const media = placeMedia('huangguoshu');
+  assert.ok(media.images.length);
+  assert.equal(
+    new Set(media.images.map((image) => image.src)).size,
+    media.images.length,
+  );
+  assert.ok(media.videos.length);
+  for (const video of media.videos) {
+    assert.ok(video.embedUrl.startsWith('https://player.bilibili.com/'));
+    assert.ok(video.sourceUrl.startsWith('https://www.bilibili.com/video/'));
+    assert.ok(
+      video.mentions.some((mention) => mention.placeId === 'huangguoshu'),
+    );
+  }
+  assert.deepEqual(placeMedia('not-a-place'), { images: [], videos: [] });
 });
 
 test('same geographic location keeps sightseeing and outdoor activities separate through extraction and planning', () => {

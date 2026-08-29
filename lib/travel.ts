@@ -1215,6 +1215,30 @@ export type SocialStory = {
 };
 /** Public videos are embedded from their original pages; editorial articles are maintained in-app. */
 export const socialPosts: SocialPost[] = [...featuredPosts];
+export function placeMedia(placeId: string) {
+  const place = places.find((item) => item.id === placeId);
+  const related = socialPosts.filter((post) =>
+    post.mentions.some((mention) => mention.placeId === placeId),
+  );
+  const images = [
+    ...(place?.image
+      ? [{ src: place.image, source: `${place.name}地点素材` }]
+      : []),
+    ...related.map((post) => ({
+      src: post.cover,
+      source: `相关内容《${post.title}》`,
+    })),
+  ].filter(
+    (image, index, all) =>
+      image.src && all.findIndex((item) => item.src === image.src) === index,
+  );
+  return {
+    images,
+    videos: related.filter(
+      (post) => post.kind === 'video' && post.embedUrl && post.sourceUrl,
+    ),
+  };
+}
 export function organizeSocialPosts(postIds: string[]) {
   const selected = [...new Set(postIds)]
     .map((id) => socialPosts.find((p) => p.id === id))
