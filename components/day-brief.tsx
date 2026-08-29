@@ -69,7 +69,7 @@ export function DayBrief({
         {plan.title}
       </h3>
       <div className="overview-stats">
-        <div>
+        <div className="overview-metric">
           <CloudSun size={18} />
           <span>
             <b>
@@ -78,28 +78,28 @@ export function DayBrief({
             <small>{s.weather} · 模拟天气</small>
           </span>
         </div>
-        <div>
+        <div className="overview-metric">
           <Users size={18} />
           <span>
             <b>人流：{s.crowd}</b>
             <small>模拟客流舒适度</small>
           </span>
         </div>
-        <div>
+        <div className="overview-metric">
           <Route size={18} />
           <span>
             <b>交通：{(s.trafficMinutes / 60).toFixed(1)}h</b>
             <small>含所列酒店往返与接续</small>
           </span>
         </div>
-        <div>
+        <div className="overview-metric">
           <Footprints size={18} />
           <span>
             <b>步行：{s.walkingKm}km</b>
             <small>含景区内与换乘步行</small>
           </span>
         </div>
-        <div className="overview-cost">
+        <div className="overview-metric overview-cost">
           <Wallet size={18} />
           <span>
             <b>

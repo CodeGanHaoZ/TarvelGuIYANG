@@ -24,43 +24,65 @@
 .day-overview h3 > span {
   color: #a1a796;
 }
-.overview-stats {
+.day-overview .overview-stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 19px 14px;
+  grid-template-columns: repeat(5, minmax(126px, 1fr));
+  gap: 9px;
+  margin: 0;
+  overflow-x: auto;
+  padding: 2px 0 8px;
+  scrollbar-width: thin;
+  scroll-snap-type: x proximity;
 }
-.overview-stats > div {
+.day-overview .overview-stats > .overview-metric {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
   min-width: 0;
+  min-height: 92px;
+  padding: 12px 10px;
+  border: 1px solid #e1e5da;
+  border-radius: 14px;
+  background: #fff;
+  scroll-snap-align: start;
 }
-.overview-stats svg {
+.day-overview .overview-stats svg {
+  grid-column: auto;
+  grid-row: auto;
+  width: 17px;
+  height: 17px;
   color: #74846a;
+  margin: 0;
+}
+.day-overview .overview-stats span {
+  min-width: 0;
+  color: var(--foreground);
+}
+.day-overview .overview-stats b {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.day-overview .overview-stats small {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  line-height: 1.5;
   margin-top: 3px;
 }
-.overview-stats b {
-  display: block;
-  font-size: 16px;
-  font-weight: 650;
-}
-.overview-stats small {
-  color: var(--muted-foreground);
-  font-size: 11px;
-  line-height: 1.6;
-  margin-top: 4px;
-}
-.overview-stats b small {
+.day-overview .overview-stats b small {
   display: inline;
   margin-left: 4px;
 }
-.overview-stats .overview-cost {
-  grid-column: 1 / -1;
-  padding-top: 14px;
-  border-top: 1px solid #e2e7da;
+.day-overview .overview-stats .overview-cost {
+  grid-column: auto;
+  padding: 12px 10px;
+  border-top: 1px solid #e1e5da;
 }
-.overview-cost b {
-  font-size: 21px;
+.day-overview .overview-cost b {
+  font-size: 13px;
 }
 .day-evaluation {
   background: #fff;
@@ -454,14 +476,17 @@
   .day-overview {
     padding: 17px;
   }
-  .overview-stats {
-    gap: 16px 8px;
+  .day-overview .overview-stats {
+    grid-template-columns: repeat(5, 126px);
+    gap: 8px;
   }
-  .overview-stats b {
-    font-size: 14px;
+  .day-overview .overview-stats > .overview-metric {
+    min-height: 86px;
+    padding: 10px 9px;
   }
-  .overview-cost b {
-    font-size: 19px;
+  .day-overview .overview-stats b,
+  .day-overview .overview-cost b {
+    font-size: 12px;
   }
   .day-overview .eyebrow {
     font-size: 11px;
