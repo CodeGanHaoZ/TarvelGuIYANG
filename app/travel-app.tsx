@@ -686,7 +686,7 @@ export default function TravelApp() {
             <p>把想去的地方，变成走得通的行程。</p>
           </div>
           <button className="user-row" onClick={() => go('profile')}>
-            <span className="avatar">旅</span>
+            <img className="avatar avatar-img" src="/qianlv-avatar.png" alt="AI 黔驴" />
             <span>
               你好，{data.profile}
               <small>开始你的贵州故事</small>
@@ -1953,7 +1953,7 @@ export default function TravelApp() {
                   <h1>你好，{data.profile}。</h1>
                   <p>想去的远方，和已经开始的故事，都在这里。</p>
                 </div>
-                <span className="profile-avatar">旅</span>
+                <img className="profile-avatar profile-avatar-img" src="/qianlv-avatar.png" alt="AI 黔驴" />
               </div>
               <div className="overview-stats">
                 <div>
@@ -2924,7 +2924,7 @@ export default function TravelApp() {
 function DataFootnote() {
   return (
     <p className="data-footnote">
-      评分、天气、路线与价格为规划参考，未接入实时运营数据；出发前请核验。
+      评分、天气、路线与价格为规划参考，数据来自AI黔驴。
     </p>
   );
 }

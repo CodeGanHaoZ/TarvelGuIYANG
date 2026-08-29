@@ -1509,6 +1509,11 @@ h1 {
   color: #786448;
   flex-shrink: 0;
 }
+.avatar.avatar-img {
+  background: none;
+  border-radius: 10px;
+  object-fit: cover;
+}
 .avatar.small {
   width: 30px;
   height: 30px;
@@ -2423,6 +2428,13 @@ h1 {
 .itinerary-library,
 .transport-planner {
   min-width: 0;
+  padding: 35px;
+}
+@media (max-width: 640px) {
+  .itinerary-library,
+  .transport-planner {
+    padding: 24px 18px;
+  }
 }
 .itinerary-library > h2,
 .transport-planner > h2 {
@@ -4076,6 +4088,11 @@ h1 {
   place-items: center;
   font-size: 27px;
 }
+.profile-avatar.profile-avatar-img {
+  background: none;
+  border-radius: 18px;
+  object-fit: cover;
+}
 .theme-picker {
   display: flex;
   flex-wrap: wrap;
@@ -4150,6 +4167,11 @@ h1 {
   overflow-y: auto;
   display: block !important;
   background: #fff !important;
+}
+.travel-dialog.route-dialog {
+  width: min(1080px, calc(100vw - 32px)) !important;
+  max-width: 1080px !important;
+  max-height: calc(100dvh - 24px) !important;
 }
 .travel-dialog > [data-slot='dialog-close'] {
   width: 44px;
@@ -5284,7 +5306,9 @@ textarea {
   }
   .modal-body,
   .wizard,
-  .travel-dialog > .place-detail {
+  .travel-dialog > .place-detail,
+  .itinerary-library,
+  .transport-planner {
     padding: 29px 23px;
   }
   .modal-body > h2,
