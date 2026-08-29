@@ -1,28 +1,29 @@
-# ---------- 基础镜像：Node 22（满足 engines >=22.13.0） ----------
-FROM node:22.13-alpine AS base
-RUN npm install -g pnpm@11.24.0
+FROM node:22.13-bookworm-slim
+
 WORKDIR /app
 
-# ---------- 安装全量依赖（构建用） ----------
-FROM base AS deps
-COPY package.json pnpm-lock.yaml ./
+# 安装系统依赖
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# 启用 corepack 使用 pnpm
+RUN corepack enable && corepack prepare pnpm@11.24.0 --activate
+
+# 复制依赖文件并安装
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
-# ---------- 构建 ----------
-FROM base AS build
-COPY --from=deps /app/node_modules ./node_modules
+# 复制源代码并构建
 COPY . .
 RUN pnpm build
 
-# ---------- 运行镜像（使用 standalone 输出） ----------
-FROM node:22.13-alpine AS runner
-WORKDIR /app
+# 生产环境
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# 复制 standalone 构建产物
-COPY --from=build /app/dist/standalone/ ./
-
 EXPOSE 3000
-CMD ["node", "server.js"]
+
+# 使用 standalone 模式启动
+CMD ["node", "dist/standalone/server.js"]
