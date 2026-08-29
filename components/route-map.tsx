@@ -240,7 +240,7 @@ export function RouteMap({
         </span>
       </div>
       <div className="map-attribution">
-        点位坐标与道路为演示近似 · 交通为模型估算
+        点位坐标与道路为近似示意 · 交通为估算
       </div>
     </div>
   );

@@ -242,7 +242,7 @@ export const places: Place[] = [
     indoor: true,
     hours: [9, 18],
     factors: [100, 98, 100, 92, 90, 96, 90, 100],
-    tip: '这是虚构的体验供给，用于演示。真实主理人、地址与场次待核验。',
+    tip: '这是虚构的体验供给。真实主理人、地址与场次待核验。',
     culture: '体验前了解纹样含义；人物拍摄、图样传播与商用应先征得授权。',
   },
   {
@@ -259,7 +259,7 @@ export const places: Place[] = [
     image: '/images/huangguoshu.jpg',
     hours: [7, 18],
     factors: [95, 82, 100, 88, 96, 94, 80, 95],
-    tip: '模拟建议 08:30—09:30 入园。步道湿滑，真实天气与开放情况待核验。',
+    tip: '建议 08:30—09:30 入园。步道湿滑，真实天气与开放情况待核验。',
   },
   {
     id: 'tianxing',
@@ -289,7 +289,7 @@ export const places: Place[] = [
     indoor: false,
     hours: [8, 18],
     factors: [92, 94, 100, 84, 88, 90, 90, 96],
-    tip: '地戏场次待核验，请勿将演示排期当作真实演出安排。',
+    tip: '地戏场次待核验，请勿将排期当作真实演出安排。',
     culture: '尊重当地服饰与民俗，不擅自进入居民院落；拍摄人物请先询问。',
   },
   {
@@ -338,7 +338,7 @@ export const places: Place[] = [
     indoor: true,
     hours: [11, 21],
     factors: [100, 90, 100, 90, 92, 90, 85, 98],
-    tip: '餐厅为演示供给。用餐前询问鱼类、辣椒及其他过敏原。',
+    tip: '餐厅信息待核验。用餐前询问鱼类、辣椒及其他过敏原。',
   },
   {
     id: 'xiaoqikong',
@@ -407,7 +407,7 @@ export function planningWarnings(ids: string[]) {
   });
   if (selected.some((p) => p.category === '野趣户外'))
     warnings.push(
-      '户外挑战需先核验天气、开放、运营与个人能力；Mock 推荐指数不代表安全许可。',
+      '户外挑战需先核验天气、开放、运营与个人能力；推荐指数不代表安全许可。',
     );
   return warnings;
 }
@@ -640,17 +640,17 @@ export function score(
   let total = Math.round(rawTotal);
   if (factors[2] === 0) {
     total = 0;
-    warnings.push('模拟闭园：不推荐安排，其他高分不能抵消未开放。');
+    warnings.push('闭园：不推荐安排，其他高分不能抵消未开放。');
   } else if (
     scenario === 'rain' &&
     p.category === '野趣户外' &&
     attributes.weatherSensitive
   ) {
     total = Math.min(total, 35);
-    warnings.push('模拟降雨：户外挑战项目暂缓，需核验运营方、体力与天气条件。');
+    warnings.push('降雨：户外挑战项目暂缓，需核验运营方、体力与天气条件。');
   } else if (scenario === 'rain' && attributes.weatherSensitive) {
     total = Math.min(total, 60);
-    warnings.push('模拟降雨：天气敏感景观降级推荐，步道与开放情况需核验。');
+    warnings.push('降雨：天气敏感景观降级推荐，步道与开放情况需核验。');
   }
   return {
     factors,
@@ -779,7 +779,7 @@ export function makeTrip(
         ? `另有 ${remaining.length} 个地点未排入，请在添加地点中补充或延长旅行。`
         : '',
       budgetSkipped
-        ? `有 ${budgetSkipped} 个地点因模拟门票/体验费用超出预算未排入。预算未计入交通和住宿，请继续核验。`
+        ? `有 ${budgetSkipped} 个地点因门票/体验费用超出预算未排入。预算未计入交通和住宿，请继续核验。`
         : '',
     ]
       .filter(Boolean)
@@ -1006,7 +1006,7 @@ export type SocialStory = {
   sections: { title: string; text: string }[];
   tips: string[];
 };
-/** All creators, engagement counts, copy and media are fictional demo fixtures. */
+/** All creators, engagement counts, copy and media are fictional fixtures. */
 export const socialPosts: SocialPost[] = [
   ...featuredPosts,
   {
@@ -1020,8 +1020,8 @@ export const socialPosts: SocialPost[] = [
     tags: ['山水漫游', '贵州三站'],
     intro:
       '从小七孔的绿，到苗寨的灯，再到甲秀楼的晚风。这份跨城灵感，请留出交通时间，别赶在一天走完。',
-    media: '/videos/guizhou-demo.mp4',
-    captions: '/videos/guizhou-demo.vtt',
+    media: '/videos/guizhou.mp4',
+    captions: '/videos/guizhou.vtt',
     duration: '00:09',
     mentions: [
       {
@@ -1078,8 +1078,8 @@ export const socialPosts: SocialPost[] = [
     tags: ['瀑布', '山水奇观'],
     intro:
       '两处山水、两段慢时光。安顺与荔波之间需要单独安排交通，不是一条当日步行路线。',
-    media: '/videos/waterfall-demo.mp4',
-    captions: '/videos/waterfall-demo.vtt',
+    media: '/videos/waterfall.mp4',
+    captions: '/videos/waterfall.vtt',
     duration: '00:06',
     mentions: [
       {
@@ -1104,7 +1104,7 @@ export const socialPosts: SocialPost[] = [
     likes: '5,082',
     tags: ['多彩民族', '在地体验'],
     intro:
-      '把拍照之外的时间留给文化与餐桌。体验项目和店铺均为演示样例，没有真实预约入口。',
+      '把拍照之外的时间留给文化与餐桌。体验项目和店铺均为样例，没有真实预约入口。',
     mentions: [
       {
         placeId: 'xijiang',
@@ -1148,7 +1148,7 @@ export function organizeSocialPosts(postIds: string[]) {
   const selected = [...new Set(postIds)]
     .map((id) => socialPosts.find((p) => p.id === id))
     .filter((p): p is SocialPost => Boolean(p));
-  if (!selected.length) throw new Error('请先选择至少一篇演示内容。');
+  if (!selected.length) throw new Error('请先选择至少一篇灵感内容。');
   const stops: {
     placeId: string;
     sources: { postId: string; quote: string; at?: string }[];
@@ -1207,7 +1207,7 @@ export const socialStories: Record<string, SocialStory> = {
       },
       {
         title: '02｜把口味也写进攻略',
-        text: '青云路美食街可以作为吃饭的候选，不需要把每家都尝遍。先决定辣度、折耳根和食物过敏限制，再选择合适的小吃。演示中的“饮食适配”分数不是对商家卫生或过敏原的认证。',
+        text: '青云路美食街可以作为吃饭的候选，不需要把每家都尝遍。先决定辣度、折耳根和食物过敏限制，再选择合适的小吃。“饮食适配”分数不是对商家卫生或过敏原的认证。',
       },
       {
         title: '03｜想慢下来，就加一点手作',
@@ -1229,7 +1229,7 @@ export const socialStories: Record<string, SocialStory> = {
       },
       {
         title: '山水奇观，要看当天条件',
-        text: '水系景区的天气与步道状况比视频里的观感更重要。推荐指数使用山水奇观模型，天气、季节和步道体验会参与计算。模拟降雨时会下调建议，真实出行仍需查看景区公告。',
+        text: '水系景区的天气与步道状况比视频里的观感更重要。推荐指数使用山水奇观模型，天气、季节和步道体验会参与计算。降雨时会下调建议，真实出行仍需查看景区公告。',
       },
       {
         title: '先选最想去的一处',
@@ -1238,7 +1238,7 @@ export const socialStories: Record<string, SocialStory> = {
     ],
     tips: [
       '雨具与防滑装备按实际情况准备。',
-      '不要把演示评分当作安全许可。',
+      '不要把评分当作安全许可。',
       '留出接驳和休息时间，避免按视频节奏赶路。',
     ],
   },
@@ -1260,7 +1260,7 @@ export const socialStories: Record<string, SocialStory> = {
     ],
     tips: [
       '尊重居民作息与私人空间。',
-      '工坊、餐厅和价格都是 Mock。',
+      '工坊、餐厅和价格都待核验。',
       '文化体验评分不代表对群体或文化优劣的评价。',
     ],
   },
@@ -1269,7 +1269,7 @@ export const socialStories: Record<string, SocialStory> = {
     sections: [
       {
         title: '第一段：给自然足够的时间',
-        text: '黄果树与天星桥可以成为安顺路线的山水奇观候选。是否安排在同一天，要结合体力、接驳和实际开放情况；演示不会替你判断真实道路是否可通行。',
+        text: '黄果树与天星桥可以成为安顺路线的山水奇观候选。是否安排在同一天，要结合体力、接驳和实际开放情况；系统不会替你判断真实道路是否可通行。',
       },
       {
         title: '第二段：从山水转向故事',
@@ -1287,7 +1287,7 @@ export const socialStories: Record<string, SocialStory> = {
     ],
   },
 };
-export const storageKey = 'qianlv-demo-v1';
+export const storageKey = 'qianlv-v1';
 export function attachTripSources(trip: Trip, postIds: string[]): Trip {
   return {
     ...trip,
@@ -1317,7 +1317,7 @@ export function recommendSocialPlaces(
     .slice(0, 4)
     .map((p) => ({
       placeId: p.id,
-      reason: `${p.region}同区域 · ${placeAttributes[p.id].nature} · 模拟推荐指数 ${score(p, 'normal', preferences).total}`,
+      reason: `${p.region}同区域 · ${placeAttributes[p.id].nature} · 推荐指数 ${score(p, 'normal', preferences).total}`,
     }));
 }
 export async function parseGuide(input: string): Promise<string[]> {
@@ -1361,7 +1361,7 @@ export function replan(
     const optimized = optimize([...items].reverse());
     return {
       items: optimized,
-      reason: '模拟拥堵：调整访问顺序以避开原定到达窗口。道路实况尚未接入。',
+      reason: '拥堵：调整访问顺序以避开原定到达窗口。道路实况尚未接入。',
     };
   }
   const outdoor = items.find((i) => !placeById(i.placeId).indoor);

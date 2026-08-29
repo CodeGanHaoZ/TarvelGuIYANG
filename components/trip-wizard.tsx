@@ -146,7 +146,7 @@ export function TripWizard({
     return (
       <div className="wizard building">
         <span className="hero-kicker">
-          <Sparkles size={18} /> 黔驴正在规划 · Mock
+          <Sparkles size={18} /> 黔驴正在规划
         </span>
         <h2>把心动，排进每一天。</h2>
         <p>正在使用本地规则匹配地点和节奏，无真实 AI 请求。</p>
@@ -169,7 +169,7 @@ export function TripWizard({
                       '设置日期与同行人',
                       '保留你偏爱的体验',
                       '按区域分组，减少跨城奔波',
-                      '计算模拟交通与停留时间',
+                      '计算交通与停留时间',
                     ][i]
                   }
                 </small>
@@ -381,7 +381,7 @@ export function TripWizard({
             />
           </label>
           <p className="notice">
-            预算为全体同行人合计。演示价格不含真实订单，后续可在费用页记录实际开销。
+            预算为全体同行人合计。价格不含真实订单，后续可在费用页记录实际开销。
           </p>
         </>
       )}

@@ -49,8 +49,7 @@ export function PlaceDetail({
           <h2>{place.name}</h2>
           <p>
             <MapPin size={13} />
-            {place.region} · {place.category}{' '}
-            <span className="mini-tag">Mock</span>
+            {place.region} · {place.category}
           </p>
         </div>
         <button
@@ -67,7 +66,7 @@ export function PlaceDetail({
       <div className="score-panel">
         <div>
           <div className="score-caption">
-            品类推荐指数 <span>Mock</span>
+            品类推荐指数
           </div>
           <strong>
             {s.total}
@@ -90,7 +89,7 @@ export function PlaceDetail({
         </div>
       </div>
       <label className="score-scenario">
-        模拟情景
+        情景
         <select value={scenario} onChange={(e) => setScenario(e.target.value)}>
           <option value="normal">常规场景</option>
           <option value="rain">降雨</option>
@@ -155,7 +154,7 @@ export function PlaceDetail({
                     {p.name}
                     <small>
                       {p.category} · 推荐指数{' '}
-                      {score(p, 'normal', preferences).total} · Mock
+                      {score(p, 'normal', preferences).total}
                     </small>
                   </span>
                   <Plus size={17} />
@@ -179,7 +178,7 @@ export function PlaceDetail({
           <div className="transport-row">
             <Ticket />
             <span>
-              门票 / 体验<small>参考 ¥{place.price} / 人 · Mock 样例价</small>
+              门票 / 体验<small>参考 ¥{place.price} / 人</small>
             </span>
           </div>
           <div className="transport-row">
@@ -199,7 +198,7 @@ export function PlaceDetail({
         </div>
       )}
       <p className="source-note">
-        <Info size={13} /> 来源：贵州 Demo 数据集 · 2026-08-28
+        <Info size={13} /> 来源：贵州数据集 · 2026-08-28
         <br />
         开放时间、位置、评分与价格均未核验。
       </p>

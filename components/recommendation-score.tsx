@@ -64,8 +64,7 @@ export function RecommendationScore({
         </p>
       ))}
       <p className="score-disclaimer">
-        以上因素、品类属性和权重均为可配置
-        Mock；不是官方评价、实时安全判断或行业标准。数据集：2026-08-28。
+        以上因素、品类属性和权重均为可配置规则；不是官方评价、实时安全判断或行业标准。数据集：2026-08-28。
       </p>
     </div>
   );

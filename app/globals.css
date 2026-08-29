@@ -404,6 +404,18 @@ h1 {
   justify-content: space-between;
   margin: 30px 0 18px;
 }
+.profile-page .section-heading {
+  margin: 22px 0 14px;
+}
+.profile-page .section-heading:first-of-type {
+  margin-top: 18px;
+}
+.saved-routes {
+  margin-bottom: 8px;
+}
+.offline-panel {
+  margin-top: 22px;
+}
 .section-heading h2 {
   font-size: 20px;
   font-weight: 700;

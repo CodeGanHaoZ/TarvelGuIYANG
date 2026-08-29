@@ -100,13 +100,13 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
           <Mountain size={23} />
           AI 黔驴
         </a>
-        <span className="mini-tag">灵感内容库 · Mock</span>
+        <span className="mini-tag">灵感内容库</span>
       </header>
       <main>
         <div className="story-heading">
           <div className="eyebrow">
             {post.theme || '综合灵感'} ·{' '}
-            {post.kind === 'video' ? '演示视频' : '图文笔记'}
+            {post.kind === 'video' ? '视频' : '图文笔记'}
           </div>
           <h1>{post.title}</h1>
           <p>
@@ -162,8 +162,8 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
             <p className="story-media-note">
               {post.kind === 'video'
                 ? '本地风景图合成的无声短片，非真实平台视频。'
-                : '原创演示文案与风景图，非真实平台转载。'}
-              账号、互动量和地点供给信息均为 Mock。
+                : '原创文案与风景图，非真实平台转载。'}
+              账号、互动量和地点供给信息仅供参考。
             </p>
             <p className="story-lead">{post.intro}</p>
             {story.sections.map((section) => (
@@ -278,7 +278,7 @@ export function SocialContentPage({ post }: { post: SocialPost }) {
         </div>
       </main>
       <footer className="story-site-footer">
-        AI 黔驴 · 内容是灵感，选择由你决定。所有指数、场次与供给信息仅作演示。
+        AI 黔驴 · 内容是灵感，选择由你决定。所有指数、场次与供给信息仅供参考。
       </footer>
     </div>
   );

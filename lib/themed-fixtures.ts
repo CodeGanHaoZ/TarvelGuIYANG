@@ -1,6 +1,6 @@
 import type { Place, SocialPost, SocialStory, Theme } from './travel';
 
-// User-provided taxonomy; all coordinates, prices, schedules and scores below are Mock.
+// User-provided taxonomy; all coordinates, prices, schedules and scores below are fixtures.
 // Activities, not geographic names, are the unit of classification and route extraction.
 export const additionalPlaces: Place[] = [
   {
@@ -37,7 +37,7 @@ export const additionalPlaces: Place[] = [
     image: '/images/theme-hiking.jpg',
     hours: [7, 17],
     factors: [75, 85, 100, 75, 94, 85, 80, 90],
-    tip: '不是低强度观光。需提前核实路线开放、天气和个人能力，安排合适装备与休息；不凭此 Mock 开展登山。',
+    tip: '不是低强度观光。需提前核实路线开放、天气和个人能力，安排合适装备与休息；不凭此评分开展登山。',
   },
   {
     id: 'maling-view',
@@ -118,7 +118,7 @@ export const additionalPlaces: Place[] = [
     indoor: true,
     hours: [8, 20],
     factors: [100, 85, 100, 82, 92, 94, 80, 95],
-    tip: '餐饮场景为 Mock，不指定或背书真实商家；贵阳市区到花溪需要另留交通时间。',
+    tip: '餐饮场景为样例，不指定或背书真实商家；贵阳市区到花溪需要另留交通时间。',
   },
   {
     id: 'danzhai-batik',
@@ -150,7 +150,7 @@ export const additionalPlaces: Place[] = [
     indoor: true,
     hours: [9, 17],
     factors: [100, 94, 100, 78, 90, 92, 90, 98],
-    tip: '体验供给为 Mock；请以居民意愿和实际接待安排为准。',
+    tip: '体验供给为样例；请以居民意愿和实际接待安排为准。',
     culture: '村寨是居民的日常生活空间，不擅自进入住家或使用工具。',
   },
   {
@@ -227,12 +227,12 @@ export const additionalAttributes = {
     effort: '坐姿用餐',
   },
   'danzhai-batik': {
-    nature: '苗族手艺人交流 · Mock',
+    nature: '苗族手艺人交流',
     values: [96, 98, 88],
     effort: '坐姿手作与交流',
   },
   kala: {
-    nature: '苗族村寨手艺交流 · Mock',
+    nature: '苗族村寨手艺交流',
     values: [95, 95, 86],
     effort: '村落慢行与手作',
   },
@@ -301,7 +301,7 @@ const content: ContentFixture[] = [
     ],
     tips: [
       '观光不等于没有台阶，按体力选择步道长度。',
-      '视频、互动数和推荐均为 Mock，不代表实时热门榜。',
+      '视频、互动数和推荐均为样例，不代表实时热门榜。',
     ],
   },
   {
@@ -326,7 +326,7 @@ const content: ContentFixture[] = [
     sections: [
       {
         title: '先选口味，再选这一餐',
-        text: '把喜欢的蔬菜包进薄饼，蘸水、辣度与折耳根由你决定。图中为丝娃娃菜品参考，演示地点不是已核验的真实门店，也不代表该店在贵阳的地址。',
+        text: '把喜欢的蔬菜包进薄饼，蘸水、辣度与折耳根由你决定。图中为丝娃娃菜品参考，地点不是已核验的真实门店，也不代表该店在贵阳的地址。',
       },
       {
         title: '一条视频，也能从一个地点开始',
@@ -335,7 +335,7 @@ const content: ContentFixture[] = [
     ],
     tips: [
       '不根据推荐分数判断食物过敏或卫生状况。',
-      '片中为菜品照片合成的无声演示，不是真实探店视频。',
+      '片中为菜品照片合成的无声短片，不是真实探店视频。',
     ],
   },
   {
@@ -369,12 +369,12 @@ const content: ContentFixture[] = [
       },
       {
         title: '把吃饭与文化分开记录',
-        text: '西江的村寨交流和银饰手作属于文化体验。若想吃酸汤鱼或长桌宴，请另加餐饮地点，系统会归入舌尖黔味。照片仅展示苗寨，工坊、主理人与场次均为 Mock。',
+        text: '西江的村寨交流和银饰手作属于文化体验。若想吃酸汤鱼或长桌宴，请另加餐饮地点，系统会归入舌尖黔味。照片仅展示苗寨，工坊、主理人与场次均为样例。',
       },
     ],
     tips: [
       '先征得居民、手艺人的拍摄与传播同意。',
-      '不擅入住家，不把演示供给视作已预约项目。',
+      '不擅入住家，不把样例供给视作已预约项目。',
     ],
   },
   {
@@ -444,7 +444,7 @@ const content: ContentFixture[] = [
       },
       {
         title: '让挑战有准备，也能取消',
-        text: '出行前核实路线开放、天气和个人能力，安排装备、休息和退出方案。Mock 会在降雨场景下压低户外推荐分；它不替代官方公告、运营指导或专业安全判断。你可以在草稿删去这项。',
+        text: '出行前核实路线开放、天气和个人能力，安排装备、休息和退出方案。规则会在降雨场景下压低户外推荐分；它不替代官方公告、运营指导或专业安全判断。你可以在草稿删去这项。',
       },
     ],
     tips: [
@@ -462,7 +462,7 @@ const content: ContentFixture[] = [
     likes: '1.2万',
     clip: 'red-hot',
     intro:
-      '以革命历史的阅读与缅怀为核心，给展陈与讲解留出时间。图文与排期为演示样例。',
+      '以革命历史的阅读与缅怀为核心，给展陈与讲解留出时间。图文与排期为样例。',
     recommendation: '适合以历史学习为目的的遵义行程，可补充附近红色纪念地点。',
     mentions: [
       {
@@ -516,7 +516,7 @@ const content: ContentFixture[] = [
       },
       {
         title: '马岭河：观景步道不是漂流票',
-        text: '本条目只记录成熟游览步道，不包含水上体验。铜仁与黔西南应分天并预留长途交通，也可以只保留一处。季节、水位与开放均会影响体验，不以这份 Mock 作通行判断。',
+        text: '本条目只记录成熟游览步道，不包含水上体验。铜仁与黔西南应分天并预留长途交通，也可以只保留一处。季节、水位与开放均会影响体验，不以这份样例作通行判断。',
       },
     ],
     tips: [
@@ -556,7 +556,7 @@ const content: ContentFixture[] = [
       },
       {
         title: '吃饭是地点，也是时间',
-        text: '早餐、午餐和夜间小吃不必每站都吃满。地图中的坐标、营业和价格用于演示，真实门店与交通须核实。生成草稿后可以调整停留，或将花溪留到另一日。',
+        text: '早餐、午餐和夜间小吃不必每站都吃满。地图中的坐标、营业和价格用于参考，真实门店与交通须核实。生成草稿后可以调整停留，或将花溪留到另一日。',
       },
     ],
     tips: [
@@ -573,7 +573,7 @@ const content: ContentFixture[] = [
     cover: '/images/danzhai-batik.jpg',
     likes: '4,892',
     intro:
-      '把与苗族手艺人的交流放在前面。蜡染与鸟笼编制是两个独立文化体验；封面为丹寨蜡染场景参考，具体体验供给为 Mock。',
+      '把与苗族手艺人的交流放在前面。蜡染与鸟笼编制是两个独立文化体验；封面为丹寨蜡染场景参考，具体体验供给为样例。',
     recommendation: '同在丹寨周边，适合喜欢手艺、交流与慢节奏的人。',
     mentions: [
       {
@@ -630,7 +630,7 @@ const content: ContentFixture[] = [
       },
       {
         title: '两地分开留白',
-        text: '贵阳与安顺之间需要交通，演示建议分日停留。地戏演出是待核验的场次信息，不能保证抵达即有演出；没有合适场次时仍可按开放范围参观历史建筑。',
+        text: '贵阳与安顺之间需要交通，建议分日停留。地戏演出是待核验的场次信息，不能保证抵达即有演出；没有合适场次时仍可按开放范围参观历史建筑。',
       },
     ],
     tips: [
@@ -664,7 +664,7 @@ const content: ContentFixture[] = [
       {
         placeId: 'shuichun',
         quote:
-          '水春河漂流是另一个区域的户外候选，可与前两项择一，不依据 Mock 承诺开漂。',
+          '水春河漂流是另一个区域的户外候选，可与前两项择一，不依据样例承诺开漂。',
       },
     ],
     sections: [
@@ -674,7 +674,7 @@ const content: ContentFixture[] = [
       },
       {
         title: '高分不能代替安全核验',
-        text: '漂流需合格运营方提供装备与指导，登山需核实路线、天气和个人能力。闭园会使模拟指数归零，降雨会压低户外建议；这些规则仍不构成真实安全许可，也不指导进入未开发路线。',
+        text: '漂流需合格运营方提供装备与指导，登山需核实路线、天气和个人能力。闭园会使指数归零，降雨会压低户外建议；这些规则仍不构成真实安全许可，也不指导进入未开发路线。',
       },
     ],
     tips: [
@@ -714,7 +714,7 @@ const content: ContentFixture[] = [
       },
       {
         title: '给纪念地一段安静时间',
-        text: '在展陈前停留、阅读，在纪念地遵守礼仪。演示按同城点位生成路线，真实预约、闭馆日、交通和开放规则仍需核验。可以删去一站，把时间留给讲解。',
+        text: '在展陈前停留、阅读，在纪念地遵守礼仪。按同城点位生成路线，真实预约、闭馆日、交通和开放规则仍需核验。可以删去一站，把时间留给讲解。',
       },
     ],
     tips: [
@@ -752,7 +752,7 @@ export const featuredStories: Record<string, SocialStory> = Object.fromEntries(
     entry.id,
     {
       readTime:
-        entry.kind === 'video' ? '6 秒演示视频 · 2 分钟阅读' : '3 分钟阅读',
+        entry.kind === 'video' ? '6 秒视频 · 2 分钟阅读' : '3 分钟阅读',
       sections: entry.sections,
       tips: entry.tips,
     },

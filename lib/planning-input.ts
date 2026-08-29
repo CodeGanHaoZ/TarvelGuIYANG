@@ -181,7 +181,7 @@ export function organizePlanningMaterial(
       if (post) {
         if (!draft.postIds.includes(post.id)) draft.postIds.push(post.id);
         for (const mention of post.mentions)
-          add(mention.placeId, `演示内容《${post.title}》`);
+          add(mention.placeId, `灵感内容《${post.title}》`);
       } else
         draft.warnings.push(
           '有链接暂时无法读取。请粘贴正文或添加攻略截图；已识别的其他内容仍可规划。',

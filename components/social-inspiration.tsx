@@ -176,7 +176,7 @@ export function SocialInspiration({
           >
             <button
               className="social-cover"
-              aria-label={`${p.kind === 'video' ? '播放演示视频' : '阅读演示笔记'}：${p.title}`}
+              aria-label={`${p.kind === 'video' ? '播放视频' : '阅读笔记'}：${p.title}`}
               onClick={() => {
                 setPostId(p.id);
                 setPanel('post');
@@ -206,7 +206,7 @@ export function SocialInspiration({
                 </span>
                 <span
                   className="social-likes"
-                  aria-label={`${p.likes} 次喜欢，演示数据`}
+                  aria-label={`${p.likes} 次喜欢`}
                 >
                   <Heart size={12} /> {p.likes}
                 </span>
@@ -285,7 +285,7 @@ export function SocialInspiration({
             {panel === 'post' ? post.title : 'AI 整理与定制路线'}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            虚构社交内容与本地规则演示。所有路线都可修改，不会抓取真实平台内容。
+            所有路线都可修改，不会抓取真实平台内容。
           </DialogDescription>
           {panel === 'post' ? (
             <div className="post-reader">
@@ -297,7 +297,7 @@ export function SocialInspiration({
                     playsInline
                     preload="metadata"
                     poster={post.cover}
-                    aria-label={post.title + '，无声演示短片'}
+                    aria-label={post.title + '，无声短片'}
                   >
                     <source src={post.media} type="video/mp4" />
                     <track
@@ -314,14 +314,14 @@ export function SocialInspiration({
                 )}
                 <p>
                   {post.kind === 'video'
-                    ? '由风景图合成的无声演示短片，非真实平台视频。'
-                    : '演示图文，非真实平台博文。'}
+                    ? '由风景图合成的无声短片，非真实平台视频。'
+                    : '图文灵感，非真实平台博文。'}
                 </p>
               </div>
               <div className="post-article">
                 <span className="eyebrow">
                   {post.theme || '综合灵感'} ·{' '}
-                  {post.kind === 'video' ? '视频分镜' : '图文笔记'} · MOCK
+                  {post.kind === 'video' ? '视频分镜' : '图文笔记'}
                 </span>
                 <h2>{post.title}</h2>
                 <p className="post-byline">{post.author} · 虚构创作者</p>
@@ -374,7 +374,7 @@ export function SocialInspiration({
                   : '路线已整理，你来决定怎么走。'}
               </h2>
               <p className="planner-intro">
-                AI 整理为本地规则模拟，不抓取真实视频，不调用大模型。
+                AI 整理为本地规则，不抓取真实视频，不调用大模型。
               </p>
               {busy ? (
                 <div className="social-loading">
@@ -620,8 +620,7 @@ export function SocialInspiration({
                                   <b>{p.name}</b>
                                   <small>
                                     {p.region} · 推荐指数{' '}
-                                    {score(p, 'normal', preferences).total} ·
-                                    Mock
+                                    {score(p, 'normal', preferences).total}
                                   </small>
                                 </span>
                                 <Plus size={18} />
