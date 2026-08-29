@@ -9,10 +9,14 @@ import {
   places,
   placeAttributes,
   placeMedia,
+  placeVisitInfo,
 } from '@/lib/travel';
 import {
+  Map,
   MapPin,
   Clock,
+  Globe,
+  Phone,
   Heart,
   Plus,
   Sparkles,
@@ -49,6 +53,7 @@ export function PlaceDetail({
   const [scenario, setScenario] = useState('normal');
   const s = journeyScore ?? goScore(place, { scenario, preferences });
   const media = placeMedia(place.id);
+  const visit = placeVisitInfo(place);
   const attributes = placeAttributes[place.id];
   return (
     <div className={'place-detail ' + (compact ? 'compact' : '')}>
@@ -116,7 +121,7 @@ export function PlaceDetail({
         </span>
       </div>
       <div className="tab-row">
-        {['介绍', '图片', '视频', '评分依据', '出行信息'].map((t) => (
+        {['介绍', '出行信息', '图片', '视频', '评分依据'].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -129,7 +134,7 @@ export function PlaceDetail({
       {tab === '介绍' && (
         <div className="detail-tab-body">
           <h3>景点介绍</h3>
-          <p>{place.description}</p>
+          <p>{visit.introduction}</p>
           <div className="place-intro-facts">
             <div>
               <small>体验类型</small>
@@ -153,6 +158,100 @@ export function PlaceDetail({
               </div>
             </div>
           )}
+          <h4>访问与预约</h4>
+          <div className="visit-info-list">
+            <div className="visit-info-card">
+              <span className="visit-info-icon">
+                <Clock size={18} />
+              </span>
+              <div className="visit-info-copy">
+                <div className="visit-info-title">
+                  <b>访问时间</b>
+                  <span
+                    className={
+                      'verification-badge ' +
+                      (visit.openingStatus === 'official'
+                        ? 'verified'
+                        : 'reference')
+                    }
+                  >
+                    {visit.openingStatus === 'official'
+                      ? '官方信息'
+                      : '规划参考'}
+                  </span>
+                </div>
+                <p>{visit.openingText}</p>
+              </div>
+            </div>
+            <div className="visit-info-card">
+              <span className="visit-info-icon">
+                <Map size={18} />
+              </span>
+              <div className="visit-info-copy">
+                <b>地图与地址</b>
+                <p>
+                  {visit.address ?? `${place.region} · 搜索“${place.name}”`}
+                </p>
+                <a href={visit.mapUrl} target="_blank" rel="noreferrer">
+                  在高德地图查看 <ArrowUpRight size={13} />
+                </a>
+              </div>
+            </div>
+            <div className="visit-info-card">
+              <span className="visit-info-icon">
+                <Phone size={18} />
+              </span>
+              <div className="visit-info-copy">
+                <b>咨询电话</b>
+                {visit.phones.length ? (
+                  <div className="visit-phone-list">
+                    {visit.phones.map((phone) => (
+                      <a key={phone} href={`tel:${phone}`}>
+                        {phone}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p>暂无已核验的官方联系电话</p>
+                )}
+              </div>
+            </div>
+            <div className="visit-info-card">
+              <span className="visit-info-icon">
+                <Ticket size={18} />
+              </span>
+              <div className="visit-info-copy">
+                <b>票务与预约</b>
+                <p>{visit.ticketNote}</p>
+                {visit.ticketUrl && (
+                  <a href={visit.ticketUrl} target="_blank" rel="noreferrer">
+                    {visit.ticketLinkLabel ?? '查看官方说明'}{' '}
+                    <ArrowUpRight size={13} />
+                  </a>
+                )}
+              </div>
+            </div>
+            {visit.officialUrl && (
+              <div className="visit-info-card visit-info-wide">
+                <span className="visit-info-icon">
+                  <Globe size={18} />
+                </span>
+                <div className="visit-info-copy">
+                  <b>官方网站</b>
+                  <p>出发前再次确认临时闭园、预约规则与票务政策。</p>
+                  <a href={visit.officialUrl} target="_blank" rel="noreferrer">
+                    访问官方网站 <ArrowUpRight size={13} />
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+          <p className="visit-source-note">
+            <Info size={13} />
+            {visit.sourceTitle
+              ? `${visit.sourceTitle} · 核验于 ${visit.verifiedAt}`
+              : '该地点暂无已核验官方访问资料，时间与价格仅作规划参考。'}
+          </p>
           <h4>附近，也值得遇见</h4>
           <div className="nearby-list">
             {places
@@ -292,9 +391,11 @@ export function PlaceDetail({
         </div>
       )}
       <p className="source-note">
-        <Info size={13} /> 来源：贵州规划参考数据集 · 2026-08-28
+        <Info size={13} /> 来源：贵州规划参考数据集
         <br />
-        开放时间、位置、评分与价格均未核验。
+        {visit.sourceTitle
+          ? `开放、联系方式与预约说明来自${visit.sourceTitle}；评分、价格和交通估算仍为规划参考。`
+          : '开放时间、联系方式、票务、评分与价格尚未获得官方核验。'}
       </p>
       <Button
         className="primary-btn full-width"

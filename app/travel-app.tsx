@@ -489,8 +489,8 @@ export default function TravelApp() {
   }
   const navEntries: { id: Page; label: string; Icon: typeof Compass }[] = [
     { id: 'home', label: '首页', Icon: Compass },
-    { id: 'trip', label: '行程', Icon: Map },
     { id: 'discover', label: '发现', Icon: Heart },
+    { id: 'trip', label: '行程', Icon: Map },
     { id: 'profile', label: '我的', Icon: UserRound },
   ];
   const card = (id: string) => {

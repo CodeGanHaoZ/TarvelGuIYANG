@@ -28,6 +28,8 @@ function icon(Component: L.LucideIcon, emoji: string) {
 export const Mountain = icon(L.Mountain, '⛰️'),
   Compass = icon(L.Compass, '🧭'),
   Map = icon(L.Map, '🗺️'),
+  Globe = icon(L.Globe2, '🌐'),
+  Phone = icon(L.Phone, '📞'),
   Heart = icon(L.Heart, '💛'),
   UserRound = icon(L.UserRound, '👤'),
   Sparkles = icon(L.Sparkles, '✨'),

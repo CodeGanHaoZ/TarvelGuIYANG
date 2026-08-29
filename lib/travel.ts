@@ -1239,6 +1239,107 @@ export function placeMedia(placeId: string) {
     ),
   };
 }
+
+export type PlaceVisitInfo = {
+  introduction: string;
+  openingText: string;
+  openingStatus: 'official' | 'reference';
+  address?: string;
+  phones: string[];
+  officialUrl?: string;
+  ticketUrl?: string;
+  ticketNote: string;
+  ticketLinkLabel?: string;
+  sourceTitle?: string;
+  verifiedAt?: string;
+  mapUrl: string;
+};
+
+const placeIntroductions: Partial<Record<string, string>> = {
+  qianling:
+    '黔灵山公园把山林、湖泊、寺庙与城市生活连在一起。适合从山门步道慢慢上行，在黔灵湖与林荫路之间安排一段轻松散步；园内野生猕猴较多，请保持距离、不投喂，也不要展示食物。',
+  museum:
+    '贵州省博物馆适合用一座馆建立对贵州历史、考古与多民族文化的整体认识。室内展陈适合作为雨天或亲子行程，建议先看常设展，再按兴趣选择专题展，给重点展厅预留充足阅读时间。',
+  jiaxiu:
+    '甲秀楼坐落在南明河上，是认识贵阳城市文脉的一处轻量停靠点。白天适合观察楼阁、石桥与河岸空间，傍晚可连同翠微园、南明河步道和周边街区一起慢游。',
+  huangguoshu:
+    '黄果树以瀑布群为核心看点，主瀑、水帘洞与多段观瀑步道带来不同距离和角度的水景。景区范围较大，游览时要把接驳、排队与湿滑步道计入时间，雨季尤其需要关注当日开放提示。',
+  xijiang:
+    '西江千户苗寨沿山谷层叠展开，吊脚楼、风雨桥、田园与夜景共同构成村寨景观。这里也是居民持续生活的社区，建议把观景台之外的时间留给村寨步行、文化讲解与合规的手工体验，并在拍摄人物前先征得同意。',
+  xiaoqikong:
+    '荔波小七孔以碧水、古桥、瀑布与水上森林串成一条山水游线。经典游览会经过小七孔古桥、拉雅瀑布、六十八级跌水瀑布等区域，景点之间通常需要观光车衔接，建议按入园时段预留半天。',
+};
+
+const verifiedPlaceVisitInfo: Partial<
+  Record<string, Omit<PlaceVisitInfo, 'introduction' | 'mapUrl'>>
+> = {
+  museum: {
+    openingText:
+      '2026 年暑期 09:00–18:00，周六延长至 21:00；周一闭馆（8 月 31 日后以常规公告为准）',
+    openingStatus: 'official',
+    address: '贵阳市观山湖区林城东路 107 号',
+    phones: ['0851-84811809', '0851-84811830'],
+    officialUrl: 'https://www.gzmuseum.com/',
+    ticketUrl: 'https://gzmuseum.com/gbgg/202606/1406.html',
+    ticketNote: '免费参观，须通过官方微信公众号或小程序预约。',
+    ticketLinkLabel: '查看官方开放与预约公告',
+    sourceTitle: '贵州省博物馆官方公告',
+    verifiedAt: '2026-08-29',
+  },
+  xiaoqikong: {
+    openingText: '08:00 开始入园；16:00 停止售票；16:30 停止入园',
+    openingStatus: 'official',
+    phones: ['0854-3516115', '0854-3516116'],
+    officialUrl: 'https://www.liboxiaoqikong.com/',
+    ticketUrl: 'https://www.gzstv.com/a/55fd2986cf6c4f168ffc1786a7f47901',
+    ticketNote: '须按预约时段入园，票种、优惠与当日余票以景区官方平台为准。',
+    ticketLinkLabel: '查看官方开放与预约通告',
+    sourceTitle: '荔波樟江风景名胜区管理处通告',
+    verifiedAt: '2026-08-29',
+  },
+  xijiang: {
+    openingText: '开放与预约时段以景区官方当日公告为准',
+    openingStatus: 'official',
+    phones: ['400-153-8866'],
+    officialUrl: 'https://www.xjqhmz.com/',
+    ticketUrl:
+      'https://www.xjqhmz.com/news/detail?id=695976352326721538&type=news-notice',
+    ticketNote:
+      '官方购票渠道为“西江千户苗寨景区”微信公众号，观光车票另行购买。',
+    ticketLinkLabel: '查看官方票务说明',
+    sourceTitle: '西江千户苗寨官方网站',
+    verifiedAt: '2026-08-29',
+  },
+};
+
+function hourLabel(hour: number) {
+  return `${String(hour).padStart(2, '0')}:00`;
+}
+
+export function placeVisitInfo(place: Place): PlaceVisitInfo {
+  const verified = verifiedPlaceVisitInfo[place.id];
+  const mapParams = new URLSearchParams({
+    keyword: place.name,
+    city: place.region,
+    view: 'map',
+    src: 'ai-qianlv',
+    callnative: '0',
+  });
+  return {
+    introduction:
+      placeIntroductions[place.id] ??
+      `${place.description} 这里以“${place.category}”体验为主，建议结合停留时长、体力与当日现场信息安排访问。`,
+    openingText: `${hourLabel(place.hours[0])}–${hourLabel(place.hours[1])}（规划参考，以现场公告为准）`,
+    openingStatus: 'reference',
+    phones: [],
+    ticketNote:
+      place.price > 0
+        ? `参考 ¥${money(place.price)} / 人；官方票种、优惠与预约入口待核验。`
+        : '参考为免费或免门票地点；预约要求与收费项目以官方公告为准。',
+    mapUrl: `https://uri.amap.com/search?${mapParams.toString()}`,
+    ...verified,
+  };
+}
 export function organizeSocialPosts(postIds: string[]) {
   const selected = [...new Set(postIds)]
     .map((id) => socialPosts.find((p) => p.id === id))

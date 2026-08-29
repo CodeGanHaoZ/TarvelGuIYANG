@@ -41,6 +41,7 @@ import {
   placeById,
   copyTripWithNewIds,
   placeMedia,
+  placeVisitInfo,
 } from '../lib/travel.ts';
 import { createTripFromPlanningMaterial } from '../lib/planning-trip.ts';
 import {
@@ -1112,6 +1113,32 @@ test('place details only surface images and sourced videos that mention that pla
     );
   }
   assert.deepEqual(placeMedia('not-a-place'), { images: [], videos: [] });
+});
+
+test('place visit details distinguish verified official information from planning references', () => {
+  for (const id of ['museum', 'xiaoqikong', 'xijiang']) {
+    const place = placeById(id);
+    const visit = placeVisitInfo(place);
+    assert.equal(visit.openingStatus, 'official');
+    assert.ok(visit.sourceTitle);
+    assert.match(visit.verifiedAt, /^20\d{2}-\d{2}-\d{2}$/);
+    assert.ok(visit.phones.length);
+    assert.match(visit.officialUrl, /^https:\/\//);
+    assert.match(visit.ticketUrl, /^https:\/\//);
+    assert.match(visit.mapUrl, /^https:\/\/uri\.amap\.com\/search\?/);
+    assert.ok(visit.introduction.length > place.description.length);
+  }
+
+  const fallback = placeVisitInfo(placeById('huangguoshu'));
+  assert.equal(fallback.openingStatus, 'reference');
+  assert.deepEqual(fallback.phones, []);
+  assert.equal(fallback.officialUrl, undefined);
+  assert.equal(fallback.ticketUrl, undefined);
+  assert.match(fallback.openingText, /规划参考/);
+  assert.match(
+    fallback.mapUrl,
+    /keyword=%E9%BB%84%E6%9E%9C%E6%A0%91%E7%80%91%E5%B8%83/,
+  );
 });
 
 test('same geographic location keeps sightseeing and outdoor activities separate through extraction and planning', () => {

@@ -3162,6 +3162,111 @@ h1 {
   color: #959c8a;
   margin-top: 6px;
 }
+.visit-info-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.visit-info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid #e4e8de;
+  border-radius: 12px;
+  background: #fafbf8;
+}
+.visit-info-card.visit-info-wide {
+  grid-column: 1 / -1;
+}
+.visit-info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  flex: 0 0 auto;
+  color: #6b825d;
+  background: #edf2e8;
+}
+.visit-info-copy {
+  min-width: 0;
+  flex: 1;
+}
+.visit-info-copy > b,
+.visit-info-title b {
+  display: block;
+  color: #3f4b3d;
+  font-size: 11px;
+}
+.visit-info-copy p {
+  color: #7d8676;
+  font-size: 9px;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+.visit-info-copy a,
+.visit-phone-list {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  color: var(--primary);
+  font-size: 9px;
+  line-height: 1.5;
+  margin-top: 7px;
+}
+.visit-phone-list a {
+  margin-top: 0;
+  padding: 3px 7px;
+  border: 1px solid #dce4d5;
+  border-radius: 999px;
+  background: #fff;
+}
+.visit-info-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.verification-badge {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 999px;
+  font-size: 8px;
+  line-height: 1;
+}
+.verification-badge.verified {
+  color: #3f7340;
+  background: #e7f3e4;
+}
+.verification-badge.reference {
+  color: #8a7554;
+  background: #f4efe5;
+}
+.visit-source-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: #87907e;
+  font-size: 9px;
+  line-height: 1.6;
+  margin-top: 10px;
+}
+.visit-source-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+@media (max-width: 600px) {
+  .visit-info-list {
+    grid-template-columns: 1fr;
+  }
+  .visit-info-card.visit-info-wide {
+    grid-column: auto;
+  }
+}
 .compact .source-note {
   font-size: 9px;
 }
