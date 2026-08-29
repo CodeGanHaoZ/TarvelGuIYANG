@@ -62,7 +62,7 @@ export function DayBrief({
     <section className="day-overview" aria-label="今日概览">
       <div className="day-overview-heading">
         <span className="eyebrow">今日概览</span>
-        <span className="mini-tag">模拟数据 · 非实时</span>
+        <span className="mini-tag">参考数据 · 非实时</span>
       </div>
       <h3>
         Day {plan.dayNumber} <span>｜</span>
@@ -75,14 +75,14 @@ export function DayBrief({
             <b>
               {s.low}–{s.high}°C
             </b>
-            <small>{s.weather} · 模拟天气</small>
+            <small>{s.weather} · 参考天气</small>
           </span>
         </div>
         <div className="overview-metric">
           <Users size={18} />
           <span>
             <b>人流：{s.crowd}</b>
-            <small>模拟客流舒适度</small>
+            <small>客流舒适度参考</small>
           </span>
         </div>
         <div className="overview-metric">
@@ -176,7 +176,7 @@ export function DayBrief({
             />
           </label>
           <label>
-            模拟情景
+            情景
             <select
               value={settings.scenario}
               onChange={(e) =>

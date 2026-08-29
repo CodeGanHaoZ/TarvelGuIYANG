@@ -232,7 +232,7 @@ export default function TravelApp() {
         if (raw) {
           const restored = restore(raw);
           if (restored) setData(restored);
-          else notify('本地数据格式已变化，已恢复初始演示。');
+          else notify('本地数据格式已变化，已恢复初始数据。');
         }
       } catch {
         notify('浏览器存储不可用，本次内容仅保留在当前页面。');
@@ -931,7 +931,7 @@ export default function TravelApp() {
                         <Clock size={13} />
                         {dayMetrics.minutes} 分钟交通
                       </span>
-                      <small>模拟估算</small>
+                      <small>估算</small>
                     </div>
                     <div className="day-route-tools">
                       <button
@@ -964,14 +964,14 @@ export default function TravelApp() {
                       </span>
                       <span>
                         <b>天气会变，好心情不变</b>
-                        <small>模拟下雨 / 拥堵 / 闭园，看看黔驴怎么调整</small>
+                        <small>天气 / 拥堵 / 闭园变化，看看黔驴怎么调整</small>
                       </span>
                       <ChevronRight size={18} />
                     </button>
                     {scheduled.some((t) => t.warning) && (
                       <p className="warning-message">
                         <Info size={16} />
-                        部分地点超出模拟营业时间，请减少停留或调整顺序。
+                        部分地点超出营业时间，请减少停留或调整顺序。
                       </p>
                     )}
                     <div className="timeline-list">
@@ -1080,7 +1080,7 @@ export default function TravelApp() {
                                   <p key={tip}>{tip}</p>
                                 ))}
                                 <p>
-                                  模拟开放 {p.hours[0]}:00—{p.hours[1]}:00 ·
+                                  开放 {p.hours[0]}:00—{p.hours[1]}:00 ·
                                   参考费用 ¥{money(p.price)}/人 · 出发前核验
                                 </p>
                                 <label>
@@ -1230,7 +1230,7 @@ export default function TravelApp() {
                               </div>
                               {warning && (
                                 <div className="stop-warning">
-                                  超出模拟营业时间 {p.hours[0]}:00—{p.hours[1]}
+                                  超出营业时间 {p.hours[0]}:00—{p.hours[1]}
                                   :00
                                 </div>
                               )}
@@ -1661,7 +1661,7 @@ export default function TravelApp() {
                     <div>
                       <h3>一条好路线，值得一起走。</h3>
                       <p>
-                        收藏灵感、复制行程，或者说一句“一起玩”。约伴互动仅在本机演示。
+                        收藏灵感、复制行程，或者说一句“一起玩”。约伴互动仅在本机。
                       </p>
                     </div>
                   </div>
@@ -1715,7 +1715,7 @@ export default function TravelApp() {
                                 {post.author[0]}
                               </span>
                               {post.author}
-                              <small>发布了旅行 · 演示</small>
+                              <small>发布了旅行</small>
                             </span>
                             <h2>{post.title}</h2>
                             <p>{post.description}</p>
@@ -1770,7 +1770,7 @@ export default function TravelApp() {
                                 {post.requested ? (
                                   <>
                                     <Check size={16} />
-                                    已申请 · 模拟
+                                    已申请
                                   </>
                                 ) : (
                                   <>
@@ -1813,97 +1813,10 @@ export default function TravelApp() {
                 <div>
                   <Users />
                   <strong>{data.feed.filter((f) => f.requested).length}</strong>
-                  <span>条模拟约伴请求</span>
+                  <span>条约伴请求</span>
                 </div>
               </div>
-              <div className="profile-grid">
-                <section className="panel">
-                  <h3>旅行偏好与外观</h3>
-                  <label className="field-label" htmlFor="travel-app-field-2">
-                    <span>我的称呼</span>
-                    <Input
-                      id="travel-app-field-2"
-                      maxLength={20}
-                      value={data.profile}
-                      onChange={(e) =>
-                        setData((d) => ({ ...d, profile: e.target.value }))
-                      }
-                    />
-                  </label>
-                  <h4>旅行的颜色</h4>
-                  <div className="theme-picker">
-                    {[
-                      ['coral', '珊瑚', '#ee735d'],
-                      ['ocean', '海洋', '#3874d0'],
-                      ['forest', '森林', '#2b8860'],
-                      ['lavender', '薰衣草', '#7959c3'],
-                      ['mono', '黑白', '#292929'],
-                    ].map(([id, label, color]) => (
-                      <button
-                        key={id}
-                        className={data.theme === id ? 'selected' : ''}
-                        onClick={() => setData((d) => ({ ...d, theme: id }))}
-                        aria-pressed={data.theme === id}
-                      >
-                        <i style={{ background: color }} />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  <h4>图标风格</h4>
-                  <div className="pill-group">
-                    {[
-                      ['line', '线性'],
-                      ['solid', '加粗'],
-                      ['emoji', 'Emoji'],
-                    ].map(([id, label]) => (
-                      <button
-                        key={id}
-                        className={
-                          'pill ' + (data.iconSet === id ? 'selected' : '')
-                        }
-                        onClick={() => setData((d) => ({ ...d, iconSet: id }))}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </section>
-                <section className="panel">
-                  <h3>山里没信号，也不慌</h3>
-                  <p className="panel-sub">
-                    本机保存行程与修改。缓存页面后，生产版本可离线读取；云端同步尚未接入。
-                  </p>
-                  <div className="offline-state">
-                    <WifiOff size={28} />
-                    <span>
-                      {data.offlineReady
-                        ? '已完成页面资源缓存'
-                        : '离线资源尚未准备'}
-                      <small>不会请求位置、相册或通讯录权限</small>
-                    </span>
-                  </div>
-                  <Button
-                    className="outline-btn"
-                    disabled={busy}
-                    onClick={() => void enableOffline()}
-                  >
-                    {busy ? (
-                      <LoaderCircle className="spin" size={16} />
-                    ) : (
-                      <Download size={16} />
-                    )}
-                    准备离线访问
-                  </Button>
-                  <button className="text-btn" onClick={exportTrip}>
-                    导出行程备份 <ArrowRight size={14} />
-                  </button>
-                  <div className="notice">
-                    开发服务器依赖开发模块，完整离线体验请使用生产构建。清除浏览器数据会移除本机内容。
-                  </div>
-                </section>
-              </div>
-              <div className="section-heading">
+              <div className="section-heading profile-section-heading">
                 <h2>我的旅行</h2>
                 <button
                   className="text-btn"
@@ -1932,7 +1845,7 @@ export default function TravelApp() {
                   </button>
                 ))}
               </div>
-              <div className="section-heading">
+              <div className="section-heading profile-section-heading">
                 <h2>规划素材</h2>
               </div>
               <div className="my-trips material-library">
@@ -1987,7 +1900,7 @@ export default function TravelApp() {
                   首页收藏视频或笔记后，会保存在这里，随时用于后续规划。
                 </p>
               )}
-              <div className="section-heading">
+              <div className="section-heading profile-section-heading">
                 <h2>收藏的地点</h2>
               </div>
               <div className="destination-grid">
@@ -1999,10 +1912,10 @@ export default function TravelApp() {
                   text="在探索页点击书签，即可收进这里。"
                 />
               )}
-              <div className="section-heading">
+              <div className="section-heading profile-section-heading">
                 <h2>收藏的路线</h2>
               </div>
-              <div className="my-trips">
+              <div className="my-trips saved-routes">
                 {data.feed
                   .filter((f) => f.saved)
                   .map((f) => (
@@ -2021,7 +1934,40 @@ export default function TravelApp() {
                   还没有收藏路线，去发现页遇见下一段旅行。
                 </p>
               )}
-              <div className="about-demo">
+              <section className="panel offline-panel">
+                <h3>山里没信号，也不慌</h3>
+                <p className="panel-sub">
+                  本机保存行程与修改。缓存页面后，生产版本可离线读取；云端同步尚未接入。
+                </p>
+                <div className="offline-state">
+                  <WifiOff size={28} />
+                  <span>
+                    {data.offlineReady
+                      ? '已完成页面资源缓存'
+                      : '离线资源尚未准备'}
+                    <small>不会请求位置、相册或通讯录权限</small>
+                  </span>
+                </div>
+                <Button
+                  className="outline-btn"
+                  disabled={busy}
+                  onClick={() => void enableOffline()}
+                >
+                  {busy ? (
+                    <LoaderCircle className="spin" size={16} />
+                  ) : (
+                    <Download size={16} />
+                  )}
+                  准备离线访问
+                </Button>
+                <button className="text-btn" onClick={exportTrip}>
+                  导出行程备份 <ArrowRight size={14} />
+                </button>
+                <div className="notice">
+                  开发服务器依赖开发模块，完整离线体验请使用生产构建。清除浏览器数据会移除本机内容。
+                </div>
+              </section>
+              {/* <div className="about-demo">
                 <h3>关于规划数据</h3>
                 <p>
                   Vite + TypeScript · 本地规划服务 ·
@@ -2121,7 +2067,7 @@ export default function TravelApp() {
                     丹寨蜡染（乐玩日志）
                   </a>
                 </details>
-              </div>
+              </div> */}
             </main>
           )}
         </div>
@@ -2184,7 +2130,7 @@ export default function TravelApp() {
               )[modal || ''] || '旅行工具'}
             </DialogTitle>
             <DialogDescription className="sr-only">
-              AI 黔驴交互演示，数据保存在当前浏览器。
+              AI 黔驴交互，数据保存在当前浏览器。
             </DialogDescription>
             {modal === 'presets' && (
               <ItineraryLibrary
@@ -2265,11 +2211,11 @@ export default function TravelApp() {
                       className="text-btn"
                       onClick={() =>
                         setLink(
-                          'https://www.xiaohongshu.com/explore/qianlv-demo',
+                          'https://www.xiaohongshu.com/explore/qianlv',
                         )
                       }
                     >
-                      填入演示链接
+                      填入链接
                     </button>
                     <Button
                       type="submit"
@@ -2457,7 +2403,7 @@ export default function TravelApp() {
                 </div>
                 <div className="notice">
                   {dayMetrics.minutes === optimizedMetrics.minutes
-                    ? '当前顺序已是此模拟模型下的较优路线，无需调整。'
+                    ? '当前顺序已是此模型下的较优路线，无需调整。'
                     : `预计减少 ${dayMetrics.minutes - optimizedMetrics.minutes} 分钟交通。`}
                 </div>
                 <div className="route-preview">
@@ -2473,7 +2419,7 @@ export default function TravelApp() {
                   onClick={() => {
                     updateItems(optimizedItems);
                     setModal(null);
-                    notify('已应用模拟优化路线，地图与时间轴同步更新。');
+                    notify('已应用优化路线，地图与时间轴同步更新。');
                   }}
                 >
                   应用这个顺序 <Check />
@@ -2489,7 +2435,7 @@ export default function TravelApp() {
                   <CloudRain />
                 </span>
                 <h2>计划有变，故事继续。</h2>
-                <p>选择一个模拟事件，先看调整，再由你决定。</p>
+                <p>选择一个事件，先看调整，再由你决定。</p>
                 <div className="pill-group">
                   {[
                     ['rain', '突然下雨'],
@@ -2630,7 +2576,7 @@ export default function TravelApp() {
                   <Users />
                 </span>
                 <h2>好风景，想和你一起看。</h2>
-                <p>把这份行程发布到本机的发现页，演示寻找同路人的过程。</p>
+                <p>把这份行程发布到本机的发现页，寻找同路人。</p>
                 <div className="publish-preview">
                   <h3>{trip.title}</h3>
                   <p>
@@ -2680,7 +2626,7 @@ export default function TravelApp() {
                     notify('已发布到本机发现页，未向真实社区发送。');
                   }}
                 >
-                  发布演示行程 <Share2 />
+                  发布行程 <Share2 />
                 </Button>
               </div>
             )}
@@ -2705,10 +2651,10 @@ export default function TravelApp() {
                           setAssistantInput(q);
                           setAnswer(
                             q.includes('下雨')
-                              ? '可以将户外地点替换为同区域室内体验。点击下方“模拟旅途变化”查看具体调整，确认后才会修改。'
+                              ? '可以将户外地点替换为同区域室内体验。点击下方“旅途变化”查看具体调整，确认后才会修改。'
                               : q.includes('预算')
                                 ? `当前记录花费 ¥${money(settlement.total)}，总预算 ¥${money(trip.budget)}，${settlement.total > trip.budget ? '已超出' : '还剩'} ¥${money(Math.abs(trip.budget - settlement.total))}。费用页可以查看每人应付与补款。`
-                                : '建议从贵州省博物馆理解文化背景，再选择蜡染或银饰体验。演示工坊未经过真实核验，正式出行需先确认主理人、场次与授权。',
+                                : '建议从贵州省博物馆理解文化背景，再选择蜡染或银饰体验。工坊未经过真实核验，正式出行需先确认主理人、场次与授权。',
                           );
                         }}
                       >
@@ -2731,7 +2677,7 @@ export default function TravelApp() {
                     setAnswer(
                       assistantInput.includes('雨') ||
                         assistantInput.includes('闭')
-                        ? '天气与开放可能变化，可以使用“模拟旅途变化”查看替代路线。此 Demo 没有真实天气与闭园通知。'
+                        ? '天气与开放可能变化，可以使用“旅途变化”查看替代路线。此处没有真实天气与闭园通知。'
                         : assistantInput.includes('钱') ||
                             assistantInput.includes('预算')
                           ? `当前花费 ¥${money(settlement.total)}，预算 ¥${money(trip.budget)}，请在费用页查看完整分摊。`
@@ -2756,7 +2702,7 @@ export default function TravelApp() {
                 <div className="row-between">
                   <button className="text-btn" onClick={() => open('weather')}>
                     <CloudRain size={16} />
-                    模拟旅途变化
+                    旅途变化
                   </button>
                   <button
                     className="text-btn"
@@ -2782,7 +2728,7 @@ export default function TravelApp() {
                   <NotebookPen />
                   <span>
                     <b>导出旅行攻略</b>
-                    <small>Markdown · 每日路线、模拟交通、地点建议与游记</small>
+                    <small>Markdown · 每日路线、交通、地点建议与游记</small>
                   </span>
                   <Download size={18} />
                 </button>

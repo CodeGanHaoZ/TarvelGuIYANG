@@ -1,6 +1,6 @@
 import type { Place, Theme } from './travel';
 
-// Demo POIs: approximate coordinates, hours, admission, services and scores are not live data.
+// Fixture POIs: approximate coordinates, hours, admission, services and scores are not live data.
 const fixture = (
   id: string,
   name: string,
@@ -487,7 +487,7 @@ export const itineraryPresets: ItineraryPreset[] = [
           '早餐酒店周边自理；东门午餐与补水；晚餐回县城自理。自理餐费另计。',
           '继续住荔波县城，提前确认景区末班接驳。',
           [
-            '票价按组合票演示，大七孔不重复计费。',
+            '票价按组合票计算，大七孔不重复计费。',
             '游览方向、摆渡车和开放路段以景区当日安排为准。',
           ],
         ),
@@ -540,7 +540,7 @@ export const itineraryPresets: ItineraryPreset[] = [
             '11:30',
             60,
             '午饭与午间休息，选适合自己的食材与辣度。',
-            '餐饮场景为演示供给。',
+            '餐饮场景为参考供给。',
           ),
           stop(
             'libo-weaving',
@@ -569,7 +569,7 @@ export const itineraryPresets: ItineraryPreset[] = [
           '建议西江周边住一晚，核实上下坡、行李接驳与夜间进出。',
           [
             '凯里南到西江可查景区直通车或出租车；时刻票价另查。',
-            '进寨门票和住宿不是同一订单，本 Demo 不预订。',
+            '进寨门票和住宿不是同一订单，此处不含预订。',
           ],
         ),
         stops: [

@@ -150,7 +150,7 @@ const visitActivities: Record<string, string[]> = {
   'fanjing-hike': [
     '运营方核验天气、开放、装备与个人能力',
     '按核定路线和折返时间徒步，中途安排补给',
-    '预留足够下撤时间，不凭此演示决定攀登',
+    '预留足够下撤时间，不凭此评分决定攀登',
   ],
   'maling-view': [
     '入口确认两岸步道开放与水位情况',
@@ -388,7 +388,7 @@ export function goScore(
   if (base.total === 0) total = 0;
   if (timeFit === 20) {
     total = Math.min(45, total);
-    warnings.push('计划结束时间超出模拟开放时段，请调整顺序或停留。');
+    warnings.push('计划结束时间超出开放时段，请调整顺序或停留。');
   }
   if (profile !== 'standard' && place.category === '野趣户外') {
     total = Math.min(total, 60);
@@ -414,7 +414,7 @@ export function goScore(
       {
         name: '天气',
         value: base.factors[0],
-        note: '当前模拟天气下的适宜程度，高分表示较适宜。',
+        note: '当前天气下的适宜程度，高分表示较适宜。',
       },
       {
         name: '人流',
@@ -550,7 +550,7 @@ function hotelPlace(day: TripDay, settings: Required<DaySettings>): Place {
     price: 0,
     hours: [0, 24],
     indoor: true,
-    description: '仅用于演示往返路线，非真实酒店供给。',
+    description: '仅用于示意往返路线，非真实酒店供给。',
   };
 }
 export function transportForProfile(
@@ -972,7 +972,7 @@ export function buildDayPlan(trip: Trip, index: number): DayPlan {
         hotel: hotelAmount,
       },
       intensity,
-      intensityReason: `游览${(visitMinutes / 60).toFixed(1)}h · 交通${(trafficMinutes / 60).toFixed(1)}h · 步行约${walkingKm}km。按${travelerProfiles[profile]}的模拟阈值评估，含景区内步行。`,
+      intensityReason: `游览${(visitMinutes / 60).toFixed(1)}h · 交通${(trafficMinutes / 60).toFixed(1)}h · 步行约${walkingKm}km。按${travelerProfiles[profile]}的阈值评估，含景区内步行。`,
       stars,
       evaluation: !visits.length
         ? '添加地点后生成评价'

@@ -278,7 +278,7 @@ export const places: Place[] = [
     indoor: true,
     hours: [9, 18],
     factors: [100, 98, 100, 92, 90, 96, 90, 100],
-    tip: '这是未核验的体验供给，用于演示。真实主理人、地址与场次待核验。',
+    tip: '这是未核验的体验供给。真实主理人、地址与场次待核验。',
     culture: '体验前了解纹样含义；人物拍摄、图样传播与商用应先征得授权。',
   },
   {
@@ -295,7 +295,7 @@ export const places: Place[] = [
     image: '/images/huangguoshu.jpg',
     hours: [7, 18],
     factors: [95, 82, 100, 88, 96, 94, 80, 95],
-    tip: '模拟建议 08:30—09:30 入园。步道湿滑，真实天气与开放情况待核验。',
+    tip: '建议 08:30—09:30 入园。步道湿滑，真实天气与开放情况待核验。',
   },
   {
     id: 'tianxing',
@@ -325,7 +325,7 @@ export const places: Place[] = [
     indoor: false,
     hours: [8, 18],
     factors: [92, 94, 100, 84, 88, 90, 90, 96],
-    tip: '地戏场次待核验，请勿将演示排期当作真实演出安排。',
+    tip: '地戏场次待核验，请勿将参考排期当作真实演出安排。',
     culture: '尊重当地服饰与民俗，不擅自进入居民院落；拍摄人物请先询问。',
   },
   {
@@ -374,7 +374,7 @@ export const places: Place[] = [
     indoor: true,
     hours: [11, 21],
     factors: [100, 90, 100, 90, 92, 90, 85, 98],
-    tip: '餐厅为演示供给。用餐前询问鱼类、辣椒及其他过敏原。',
+    tip: '餐厅为参考供给。用餐前询问鱼类、辣椒及其他过敏原。',
   },
   {
     id: 'xiaoqikong',
@@ -678,17 +678,17 @@ export function score(
   let total = Math.round(rawTotal);
   if (factors[2] === 0) {
     total = 0;
-    warnings.push('模拟闭园：不推荐安排，其他高分不能抵消未开放。');
+    warnings.push('闭园：不推荐安排，其他高分不能抵消未开放。');
   } else if (
     scenario === 'rain' &&
     p.category === '野趣户外' &&
     attributes.weatherSensitive
   ) {
     total = Math.min(total, 35);
-    warnings.push('模拟降雨：户外挑战项目暂缓，需核验运营方、体力与天气条件。');
+    warnings.push('降雨：户外挑战项目暂缓，需核验运营方、体力与天气条件。');
   } else if (scenario === 'rain' && attributes.weatherSensitive) {
     total = Math.min(total, 60);
-    warnings.push('模拟降雨：天气敏感景观降级推荐，步道与开放情况需核验。');
+    warnings.push('降雨：天气敏感景观降级推荐，步道与开放情况需核验。');
   }
   return {
     factors,
@@ -771,7 +771,7 @@ export function createPresetTrip(
     preferences: [],
     pace: '均衡',
     days,
-    notes: `三日详细样例：${preset.intro}\n门票、餐饮、开放、住宿和交通金额均为规划参考；没有完成任何预订。每天从首站开始，住宿往返及到达/返程交通另查。\n${admission > options.budget ? '注意：已列地点的模拟费用超出预算，请删减后再出发。' : '当前预算还需覆盖交通、住宿及未列出的自理餐饮。'}`,
+    notes: `三日详细样例：${preset.intro}\n门票、餐饮、开放、住宿和交通金额均为规划参考；没有完成任何预订。每天从首站开始，住宿往返及到达/返程交通另查。\n${admission > options.budget ? '注意：已列地点的费用超出预算，请删减后再出发。' : '当前预算还需覆盖交通、住宿及未列出的自理餐饮。'}`,
   };
 }
 export function fillEmptyTripWithPreset(trip: Trip, presetId: string): Trip {
@@ -957,7 +957,7 @@ export function makeTrip(
         ? `另有 ${remaining.length} 个地点未排入，请在添加地点中补充或延长旅行。`
         : '',
       budgetSkipped
-        ? `有 ${budgetSkipped} 个地点因模拟门票/体验费用超出预算未排入。预算未计入交通和住宿，请继续核验。`
+        ? `有 ${budgetSkipped} 个地点因门票/体验费用超出预算未排入。预算未计入交通和住宿，请继续核验。`
         : '',
       days.some((d) => !d.items.length)
         ? '部分日期因候选地点或预算不足留白。未自动添加未选地点；可以补充地点或另建详细三日样例。'
@@ -1345,7 +1345,7 @@ export function organizeSocialPosts(postIds: string[]) {
   const selected = [...new Set(postIds)]
     .map((id) => socialPosts.find((p) => p.id === id))
     .filter((p): p is SocialPost => Boolean(p));
-  if (!selected.length) throw new Error('请先选择至少一篇演示内容。');
+  if (!selected.length) throw new Error('请先选择至少一篇内容。');
   const stops: {
     placeId: string;
     sources: { postId: string; quote: string; at?: string }[];
@@ -1374,7 +1374,7 @@ export function organizeSocialPosts(postIds: string[]) {
 export const socialStories: Record<string, SocialStory> = {
   ...featuredStories,
 };
-export const storageKey = 'qianlv-demo-v1';
+export const storageKey = 'qianlv-v1';
 export function attachTripSources(trip: Trip, postIds: string[]): Trip {
   return {
     ...trip,
@@ -1404,7 +1404,7 @@ export function recommendSocialPlaces(
     .slice(0, 4)
     .map((p) => ({
       placeId: p.id,
-      reason: `${p.region}同区域 · ${placeAttributes[p.id].nature} · 模拟推荐指数 ${score(p, 'normal', preferences).total}`,
+      reason: `${p.region}同区域 · ${placeAttributes[p.id].nature} · 推荐指数 ${score(p, 'normal', preferences).total}`,
     }));
 }
 export async function parseGuide(input: string): Promise<string[]> {
@@ -1448,7 +1448,7 @@ export function replan(
     const optimized = optimize([...items].reverse());
     return {
       items: optimized,
-      reason: '模拟拥堵：调整访问顺序以避开原定到达窗口。道路实况尚未接入。',
+      reason: '拥堵：调整访问顺序以避开原定到达窗口。道路实况尚未接入。',
     };
   }
   const outdoor = items.find((i) => !placeById(i.placeId).indoor);

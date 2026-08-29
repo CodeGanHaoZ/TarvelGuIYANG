@@ -42,7 +42,7 @@ export const scenicMarkerMeta: Record<
 };
 
 /**
- * Demonstration-only internal wayfinding data. It must not be treated as an
+ * Reference-only internal wayfinding data. It must not be treated as an
  * official park GIS layer, live shuttle location, or proof that a path is open.
  */
 export const huangguoshuScenicStops: ScenicStop[] = [

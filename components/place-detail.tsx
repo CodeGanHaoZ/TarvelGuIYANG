@@ -85,7 +85,7 @@ export function PlaceDetail({
         </p>
       ) : (
         <label className="score-scenario">
-          模拟情景
+          情景
           <select
             value={scenario}
             onChange={(e) => setScenario(e.target.value)}
@@ -362,7 +362,7 @@ export function PlaceDetail({
             </p>
           ))}
           <p className="source-note">
-            分数越高表示越适宜；不同玩法沿用各自的品类特征。天气、开放与交通信息都是模拟输入，不是实时评估。
+            分数越高表示越适宜；不同玩法沿用各自的品类特征。天气、开放与交通信息都是参考输入，不是实时评估。
           </p>
         </div>
       )}
