@@ -227,7 +227,7 @@ test('GoScore exposes five factors without endorsing closed or late visits', () 
   const place = placeById('huangguoshu');
   assert.deepEqual(
     goScore(place).factors.map((f) => f.name),
-    ['天气', '人流', '适合你', '交通', '时间'],
+    ['天气', '人流', '适合你', '交通', '时段适配'],
   );
   for (const scenario of ['normal', 'rain', 'crowd', 'closed']) {
     const result = goScore(place, { scenario });

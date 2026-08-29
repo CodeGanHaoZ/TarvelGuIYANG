@@ -370,7 +370,7 @@ export function goScore(
         (profile !== 'standard' && place.category === '野趣户外' ? 25 : 0),
     ),
   );
-  const time =
+  const timeFit =
     end !== undefined &&
     (end > place.hours[1] * 60 || (start ?? 0) >= place.hours[1] * 60)
       ? 20
@@ -382,11 +382,11 @@ export function goScore(
     Math.round(base.factors[3] - Math.max(0, travelMinutes - 45) / 4),
   );
   let total = Math.round(
-    base.total * 0.65 + fit * 0.15 + time * 0.12 + traffic * 0.08,
+    base.total * 0.65 + fit * 0.15 + timeFit * 0.12 + traffic * 0.08,
   );
   const warnings = [...base.warnings];
   if (base.total === 0) total = 0;
-  if (time === 20) {
+  if (timeFit === 20) {
     total = Math.min(45, total);
     warnings.push('计划结束时间超出模拟开放时段，请调整顺序或停留。');
   }
@@ -428,9 +428,9 @@ export function goScore(
       },
       { name: '交通', value: traffic, note: '结合到达本地点的交通耗时估算。' },
       {
-        name: '时间',
-        value: time,
-        note: '结合停留长度与模拟营业时段；不是预约可用性。',
+        name: '时段适配',
+        value: timeFit,
+        note: '判断计划到达时间、停留时长是否落在开放时段内；不代表预约成功。',
       },
     ],
   };
