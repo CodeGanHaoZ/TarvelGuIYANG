@@ -3,7 +3,7 @@ FROM node:22.13-alpine AS base
 RUN npm install -g pnpm@11.24.0
 WORKDIR /app
 
-# ---------- 全量依赖（构建用） ----------
+# ---------- 安装全量依赖（构建用） ----------
 FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
@@ -14,18 +14,15 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm build
 
-# ---------- 生产依赖（运行时用，体积更小） ----------
-FROM base AS prod-deps
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod
-
-# ---------- 运行镜像 ----------
+# ---------- 运行镜像（使用 standalone 输出） ----------
 FROM node:22.13-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY package.json ./
+ENV HOSTNAME=0.0.0.0
+
+# 复制 standalone 构建产物
+COPY --from=build /app/dist/standalone/ ./
+
 EXPOSE 3000
-CMD ["npx", "vinext", "start"]
+CMD ["node", "server.js"]
